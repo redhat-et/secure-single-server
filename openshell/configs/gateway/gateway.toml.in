@@ -1,0 +1,17 @@
+[openshell]
+version = 1
+
+[openshell.gateway]
+bind_address        = "127.0.0.1:8080"
+health_bind_address = "127.0.0.1:8081"
+log_level           = "info"
+compute_drivers     = ["podman"]
+disable_tls         = true
+
+[openshell.drivers.podman]
+default_image     = "@@ODH_SANDBOX_IMAGE@@"
+supervisor_image  = "@@ODH_SUPERVISOR_IMAGE@@"
+image_pull_policy = "IfNotPresent"
+sandbox_namespace = "openshell"
+grpc_endpoint     = "http://host.openshell.internal:8080"
+enable_bind_mounts = true

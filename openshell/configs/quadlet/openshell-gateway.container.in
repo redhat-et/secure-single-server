@@ -1,0 +1,33 @@
+[Unit]
+Description=OpenShell sandbox gateway (odh, pinned)
+After=network-online.target
+Wants=network-online.target
+
+# The gateway needs the rootless Podman socket to spawn sibling sandbox containers.
+# install.sh (Task 3) enables podman.socket for the user.
+# /var/lib/openshell is bind-mounted at the same absolute path inside and out
+# so sandbox bind-mount sources resolve on the host.
+[Container]
+Image=@@ODH_GATEWAY_IMAGE@@
+ContainerName=openshell-gateway
+Pull=never
+Network=openshell.network
+PublishPort=127.0.0.1:8080:8080
+PublishPort=127.0.0.1:8081:8081
+Volume=%h/.config/openshell/gateway.toml:/etc/openshell/gateway.toml:ro,z
+Volume=/var/lib/openshell:/var/lib/openshell:z
+Environment=OPENSHELL_GATEWAY_CONFIG=/etc/openshell/gateway.toml
+Environment=OPENSHELL_DB_URL=sqlite:/var/lib/openshell/gateway.db?mode=rwc
+Environment=XDG_DATA_HOME=/var/lib/openshell
+Environment=HOME=/var/lib/openshell
+AddHost=host.openshell.internal:host-gateway
+Exec=
+
+[Service]
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=900
+TimeoutStopSec=30
+
+[Install]
+WantedBy=default.target
