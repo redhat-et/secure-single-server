@@ -13,38 +13,55 @@ permissions:
 
 jobs:
   openshell:
-    name: OpenShell ${{ matrix.arch }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - {runner: ubuntu-24.04, arch: amd64}
-          - {runner: ubuntu-24.04-arm, arch: arm64}
-    runs-on: ${{ matrix.runner }}
+    name: OpenShell x64 (RHEL 9)
+    # GitHub-hosted RHEL runner images are only available as **larger runners**
+    # (Linux x64, public preview). An org admin must create a larger runner on
+    # the redhat-et org using the RHEL 9 partner image; its assigned name is the
+    # label referenced here. Update this label to match the provisioned runner.
+    runs-on: openshell-rhel9-x64
     timeout-minutes: 25
     env:
-      CONTAINER_ENGINE: docker
+      CONTAINER_ENGINE: podman
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with: {persist-credentials: false}
       - name: Install tools
-        run: sudo apt-get update && sudo apt-get install -y jq ripgrep shellcheck python3-yaml
+        run: |
+          # RHEL base/AppStream provide python3, PyYAML, podman, and curl.
+          sudo dnf install -y python3-pyyaml
+          # shellcheck is not packaged in RHEL repos; install a pinned static binary.
+          SC_VER=v0.10.0
+          curl -fsSL "https://github.com/koalaman/shellcheck/releases/download/${SC_VER}/shellcheck-${SC_VER}.linux.x86_64.tar.xz" -o /tmp/sc.tar.xz
+          tar -C /tmp -xf /tmp/sc.tar.xz
+          sudo install -m 0755 "/tmp/shellcheck-${SC_VER}/shellcheck" /usr/local/bin/shellcheck
+          shellcheck --version
       - name: Static checks
         run: bash openshell/tests/openshell-static.sh
       - name: Native architecture check
-        env: {EXPECTED_ARCH: "${{ matrix.arch }}"}
+        env: {EXPECTED_ARCH: amd64}
         run: |
           source scripts/common/lib.sh
           test "$(oci_architecture "$(uname -m)")" = "$EXPECTED_ARCH"
+      - name: Enable rootless podman socket
+        run: |
+          export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+          loginctl enable-linger "$(id -un)" || true
+          systemctl --user enable --now podman.socket || true
       - name: Boot pinned gateway without provider keys
         run: |
+          export XDG_RUNTIME_DIR="/run/user/$(id -u)"
           sudo install -d -o "$(id -u)" /var/lib/openshell
           bash openshell/tests/openshell-image.sh
       # These steps are skipped (not failed) unless the repo variable
-      # OPENSHELL_SELF_HOSTED == 'true'; they need a host-capable runner.
+      # OPENSHELL_SELF_HOSTED == 'true'; they spawn sandbox + supervisor
+      # containers and reach the network, which needs a host-capable runner.
       - name: Policy proof (skipped unless OPENSHELL_SELF_HOSTED == 'true')
         if: ${{ vars.OPENSHELL_SELF_HOSTED == 'true' }}
-        run: bash openshell/tests/openshell-policy.sh
+        run: |
+          export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+          bash openshell/tests/openshell-policy.sh
       - name: Integrated smoke (skipped unless OPENSHELL_SELF_HOSTED == 'true')
         if: ${{ vars.OPENSHELL_SELF_HOSTED == 'true' }}
-        run: bash tests/openshell-praxis/smoke.sh
+        run: |
+          export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+          bash tests/openshell-praxis/smoke.sh

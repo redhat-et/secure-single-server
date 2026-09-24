@@ -63,14 +63,19 @@ Network policies are enforced per-binary with granular endpoint allowlists. See 
 
 ## CI Validation
 
-The `.github/workflows/openshell-validate.yml` workflow runs automated tests on both amd64 and arm64 GitHub-hosted runners:
+The `.github/workflows/openshell-validate.yml` workflow runs automated tests on a
+GitHub-hosted **RHEL 9 x64 larger runner**, matching the target platform (RHEL 9 +
+rootless Podman). The runner label is `openshell-rhel9-x64`; an org admin provisions
+it from the RHEL 9 partner image (Linux x64, public preview). arm64 is not covered by
+CI (RHEL runner images are x64-only in preview).
 
 **Always-on tests** (no secrets required):
-- Static checks (shellcheck, documentation link validation, schema validation)
-- Gateway boot test (pinned ODH control plane without provider credentials)
+- Static checks (shellcheck via pinned binary, schema validation)
+- Gateway boot test (pinned ODH control plane without provider credentials, under rootless Podman)
 
-**Gated tests** (require self-hosted RHEL runner with `OPENSHELL_SELF_HOSTED == 'true'`):
-- Policy proof (requires Podman driver to spawn sibling supervisor/sandbox containers)
-- Integrated smoke test (requires network-reachable ODH gateway and Praxis all-in-one)
+**Gated tests** (run only when the repo variable `OPENSHELL_SELF_HOSTED == 'true'`):
+- Policy proof (spawns sibling supervisor/sandbox containers via the Podman driver)
+- Integrated smoke test (requires a network-reachable ODH gateway and Praxis all-in-one)
 
-The gated tests are skipped (not failed) on ephemeral GitHub-hosted runners that cannot spawn sibling containers or reach the host network.
+The gated tests are skipped (not failed) by default; enable them once the runner is
+confirmed able to spawn sibling containers and reach the host network.
