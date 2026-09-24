@@ -29,7 +29,10 @@ note "Starting gateway"
 systemctl --user daemon-reload
 systemctl --user start openshell-gateway.service
 
+note "Waiting for gateway health"
+sleep 2
+
 note "Registering CLI gateway 'local'"
-openshell_cli gateway add http://127.0.0.1:8080 --name local || true
-openshell_cli gateway select local || true
+openshell_cli gateway add http://127.0.0.1:8080 --name local
+openshell_cli gateway select local
 note "OpenShell gateway installed. Health: http://127.0.0.1:8081/healthz"

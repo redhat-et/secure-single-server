@@ -24,6 +24,8 @@ render_template() {  # <template.in> <output>
 # Run the openshell CLI from the pinned odh CLI image against the local gateway.
 openshell_cli() {
   "${CONTAINER_ENGINE}" run --rm --network host \
+    --userns=keep-id \
+    -e HOME=/home/openshell \
     -v "${HOME}/.config/openshell:/home/openshell/.config/openshell:z" \
     "${ODH_CLI_IMAGE}" "$@"
 }
