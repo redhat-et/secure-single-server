@@ -2,6 +2,8 @@
 
 OpenShell provides sandboxed execution environments for AI coding assistants with per-binary network and filesystem policy enforcement. This standalone variant deploys a local gateway on RHEL 9 using rootless Podman, with harness workloads pre-installed in pinned public aipcc images.
 
+OpenShell is an upstream project: [opendatahub-io/openshell](https://github.com/opendatahub-io/openshell) (mirrored at [NVIDIA/openshell](https://github.com/NVIDIA/openshell)). This repo consumes it as pinned `quay.io/opendatahub/odh-openshell-*` control-plane images; see that project for the policy schema and CLI reference.
+
 ## Architecture
 
 **Gateway → Injected ODH Supervisor → aipcc Workload Sandbox**
