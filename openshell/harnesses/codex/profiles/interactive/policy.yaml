@@ -1,0 +1,30 @@
+version: 1
+filesystem_policy:
+  include_workdir: true
+  read_only: [/usr, /lib, /lib64, /etc, /proc, /dev/urandom, /opt]
+  read_write: [/sandbox, /sandbox/persist, /home, /tmp, /dev/null]
+landlock: {compatibility: best_effort}
+network_policies:
+  model_api:
+    name: model-api
+    endpoints:
+      - {host: api.openai.com, port: 443, protocol: rest, enforcement: enforce}
+      - {host: auth.openai.com, port: 443, protocol: rest, enforcement: enforce}
+    binaries: [{path: /usr/sbin/node}, {path: /usr/local/sbin/codex}]
+  github_api:
+    name: github-api
+    endpoints: [{host: api.github.com, port: 443, protocol: rest, enforcement: enforce, access: read-only}]
+    binaries: [{path: /usr/sbin/node}, {path: /usr/sbin/git}]
+  github_git:
+    name: github-git
+    endpoints: [{host: github.com, port: 443, enforcement: enforce}]
+    binaries: [{path: /usr/sbin/git}]
+  npm_registry:
+    name: npm-registry
+    endpoints: [{host: registry.npmjs.org, port: 443, enforcement: enforce}]
+    binaries: [{path: /usr/sbin/node}, {path: /usr/sbin/npm}]
+  docs_sites:
+    name: docs-sites
+    endpoints:
+      - {host: docs.anthropic.com, port: 443, enforcement: enforce, access: read-only}
+    binaries: [{path: /usr/sbin/node}]
