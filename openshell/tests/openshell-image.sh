@@ -4,8 +4,10 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 OS_DIR="${ROOT}/openshell"
 CE="${CONTAINER_ENGINE:-podman}"
 # shellcheck source=../scripts/lib.sh
+# shellcheck disable=SC1091
 source "${OS_DIR}/scripts/lib.sh"
 NAME=openshell-gateway-citest
+# shellcheck disable=SC2329
 cleanup() { "${CE}" rm -f "${NAME}" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 
