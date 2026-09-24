@@ -9,8 +9,35 @@ require_command podman
 note "Enabling rootless podman socket for the gateway"
 systemctl --user enable --now podman.socket
 
+note "Configuring cgroup delegation for nested containers"
+if [[ ! -f /etc/systemd/system/user@.service.d/delegate.conf ]]; then
+  sudo mkdir -p /etc/systemd/system/user@.service.d
+  sudo tee /etc/systemd/system/user@.service.d/delegate.conf > /dev/null << 'DELEGATE_EOF'
+[Service]
+Delegate=cpu cpuset io memory pids
+DELEGATE_EOF
+  sudo systemctl daemon-reload
+  note "Cgroup delegation configured; restarting user session"
+  sudo systemctl restart "user@$(id -u).service"
+  sleep 2
+else
+  note "Cgroup delegation already configured"
+fi
+
 note "Preparing /var/lib/openshell (source==target bind path)"
 sudo install -d -o "$(id -u)" -g "$(id -g)" /var/lib/openshell
+
+note "Generating JWT signing keys for sandbox auth"
+if [[ ! -f /var/lib/openshell/tls/jwt/signing.pem ]]; then
+  podman run --rm --userns=keep-id \
+    -e HOME=/var/lib/openshell -e XDG_DATA_HOME=/var/lib/openshell \
+    -v /var/lib/openshell:/var/lib/openshell:z \
+    "${ODH_GATEWAY_IMAGE}" generate-certs \
+      --output-dir /var/lib/openshell/tls \
+      --server-san 127.0.0.1 --server-san localhost --server-san host.openshell.internal
+else
+  note "JWT keys already exist, skipping generation"
+fi
 
 note "Rendering gateway config and quadlet"
 install -d "${HOME}/.config/openshell" "${HOME}/.config/containers/systemd"
