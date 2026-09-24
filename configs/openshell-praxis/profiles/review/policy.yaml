@@ -1,0 +1,12 @@
+version: 1
+filesystem_policy:
+  include_workdir: false
+  read_only: [/usr, /lib, /lib64, /etc, /proc, /dev/urandom, /opt, /sandbox]
+  read_write: [/tmp, /dev/null, /home]
+landlock: {compatibility: best_effort}
+network_policies:
+  praxis_gateway:
+    name: praxis-gateway
+    endpoints:
+      - {host: host.openshell.internal, port: "@@PRAXIS_PORT@@", protocol: rest, enforcement: enforce}
+    binaries: [{path: /usr/sbin/node}]

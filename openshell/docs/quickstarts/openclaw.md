@@ -46,7 +46,7 @@ The installer will:
 Verify the gateway is running:
 
 ```bash
-curl http://127.0.0.1:8081/healthz
+curl http://127.0.0.1:8091/healthz
 ```
 
 ## About OpenClaw
