@@ -48,6 +48,7 @@ guide](docs/testing/README.md).
 | Exercise the installer, systemd, SELinux, account separation, logout, and reboot | [Local RHEL 9 VM](docs/testing/rhel-vm.md) |
 | Plan and launch two separately controlled RHEL test VMs | [AWS two-VM test guide](docs/testing/aws.md) |
 | Test Codex, OpenCode, and Claude Code with protected provider keys, in-memory and Valkey profiles | [Harness acceptance](docs/testing/harnesses.md) |
+| OpenShell sandboxing (standalone) | [OpenShell demos](openshell/docs/README.md) |
 
 These paths are for development and pre-production validation. They do not
 replace final acceptance on the target RHEL server.
