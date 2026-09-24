@@ -17,7 +17,7 @@ Four profiles are available, each with graded permissions:
 | automation    | ✓       | ✓ (RO) | ✓   | ✗    | CI/CD, automated tasks     |
 | interactive   | ✓       | ✓ (RO) | ✓   | ✓    | Full-featured, persistence |
 
-All profiles permit **only** the Praxis loopback gateway (`host.openshell.internal:8080`). No profile permits direct provider access.
+For **model/provider egress**, all profiles permit **only** the Praxis loopback gateway (`host.openshell.internal:8080`) — no profile permits direct provider access to `api.anthropic.com` or `api.openai.com`. Beyond model egress, `dev`, `automation`, and `interactive` additionally allow the graded GitHub (read-only), npm, and Docs endpoints shown in the table above; only `review` is restricted to the Praxis gateway alone.
 
 ## Creating a Sandbox
 
