@@ -12,28 +12,28 @@ permissions:
   contents: read
 
 jobs:
-  openshell:
-    name: OpenShell x64 (RHEL 9)
-    # GitHub-hosted RHEL runner images are only available as **larger runners**
-    # (Linux x64, public preview). An org admin must create a larger runner on
-    # the redhat-et org using the RHEL 9 partner image; its assigned name is the
-    # label referenced here. Update this label to match the provisioned runner.
-    runs-on: openshell-rhel9-x64
-    timeout-minutes: 25
-    env:
-      CONTAINER_ENGINE: podman
+  # Static analysis runs inside a Red Hat UBI 9 container (RHEL 9 userspace) on a
+  # standard GitHub-hosted x64 runner. UBI is freely pullable without a
+  # subscription, so this matches the target RHEL 9 platform with no dedicated
+  # runner and no cost. arm64 is intentionally not covered.
+  static:
+    name: OpenShell static (RHEL 9 / UBI9)
+    runs-on: ubuntu-24.04
+    container:
+      image: registry.access.redhat.com/ubi9/ubi:latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with: {persist-credentials: false}
       - name: Install tools
         run: |
-          # RHEL base/AppStream provide python3, PyYAML, podman, and curl.
-          sudo dnf install -y python3-pyyaml
-          # shellcheck is not packaged in RHEL repos; install a pinned static binary.
+          # python3, PyYAML, and tar/xz come from RHEL repos; shellcheck is not
+          # packaged for RHEL, so install a pinned static binary.
+          dnf install -y python3 python3-pyyaml tar xz findutils
           SC_VER=v0.10.0
           curl -fsSL "https://github.com/koalaman/shellcheck/releases/download/${SC_VER}/shellcheck-${SC_VER}.linux.x86_64.tar.xz" -o /tmp/sc.tar.xz
           tar -C /tmp -xf /tmp/sc.tar.xz
-          sudo install -m 0755 "/tmp/shellcheck-${SC_VER}/shellcheck" /usr/local/bin/shellcheck
+          install -m 0755 "/tmp/shellcheck-${SC_VER}/shellcheck" /usr/local/bin/shellcheck
           shellcheck --version
       - name: Static checks
         run: bash openshell/tests/openshell-static.sh
@@ -42,6 +42,23 @@ jobs:
         run: |
           source scripts/common/lib.sh
           test "$(oci_architecture "$(uname -m)")" = "$EXPECTED_ARCH"
+
+  # The boot, policy, and integrated-smoke tests need a podman-capable host that
+  # can run the ODH gateway image and spawn sibling supervisor/sandbox
+  # containers. GitHub-hosted runners cannot do this reliably, so these steps are
+  # gated behind the repo variable OPENSHELL_SELF_HOSTED and skipped (not failed)
+  # by default. Point OPENSHELL_SELF_HOSTED='true' at a RHEL 9 + rootless podman
+  # host (self-hosted runner) to exercise them.
+  runtime:
+    name: OpenShell runtime (podman host)
+    if: ${{ vars.OPENSHELL_SELF_HOSTED == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CONTAINER_ENGINE: podman
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: {persist-credentials: false}
       - name: Enable rootless podman socket
         run: |
           export XDG_RUNTIME_DIR="/run/user/$(id -u)"
@@ -52,16 +69,11 @@ jobs:
           export XDG_RUNTIME_DIR="/run/user/$(id -u)"
           sudo install -d -o "$(id -u)" /var/lib/openshell
           bash openshell/tests/openshell-image.sh
-      # These steps are skipped (not failed) unless the repo variable
-      # OPENSHELL_SELF_HOSTED == 'true'; they spawn sandbox + supervisor
-      # containers and reach the network, which needs a host-capable runner.
-      - name: Policy proof (skipped unless OPENSHELL_SELF_HOSTED == 'true')
-        if: ${{ vars.OPENSHELL_SELF_HOSTED == 'true' }}
+      - name: Policy proof
         run: |
           export XDG_RUNTIME_DIR="/run/user/$(id -u)"
           bash openshell/tests/openshell-policy.sh
-      - name: Integrated smoke (skipped unless OPENSHELL_SELF_HOSTED == 'true')
-        if: ${{ vars.OPENSHELL_SELF_HOSTED == 'true' }}
+      - name: Integrated smoke
         run: |
           export XDG_RUNTIME_DIR="/run/user/$(id -u)"
           bash tests/openshell-praxis/smoke.sh

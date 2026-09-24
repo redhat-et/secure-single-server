@@ -63,19 +63,21 @@ Network policies are enforced per-binary with granular endpoint allowlists. See 
 
 ## CI Validation
 
-The `.github/workflows/openshell-validate.yml` workflow runs automated tests on a
-GitHub-hosted **RHEL 9 x64 larger runner**, matching the target platform (RHEL 9 +
-rootless Podman). The runner label is `openshell-rhel9-x64`; an org admin provisions
-it from the RHEL 9 partner image (Linux x64, public preview). arm64 is not covered by
-CI (RHEL runner images are x64-only in preview).
+The `.github/workflows/openshell-validate.yml` workflow has two jobs, x64 only
+(arm64 is not covered by CI):
 
-**Always-on tests** (no secrets required):
-- Static checks (shellcheck via pinned binary, schema validation)
-- Gateway boot test (pinned ODH control plane without provider credentials, under rootless Podman)
+**`static`** — always on, no secrets. Runs inside a Red Hat **UBI 9 container**
+(RHEL 9 userspace) on a standard GitHub-hosted runner, so it matches the target
+RHEL 9 platform with no dedicated runner and no cost:
+- Static checks (shellcheck via pinned binary, image-pin and schema validation)
+- Native architecture check
 
-**Gated tests** (run only when the repo variable `OPENSHELL_SELF_HOSTED == 'true'`):
+**`runtime`** — gated behind the repo variable `OPENSHELL_SELF_HOSTED == 'true'`
+and skipped (not failed) by default. These need a podman-capable RHEL 9 host that
+can run the ODH gateway image and spawn sibling supervisor/sandbox containers:
+- Gateway boot test (pinned ODH control plane without provider credentials)
 - Policy proof (spawns sibling supervisor/sandbox containers via the Podman driver)
 - Integrated smoke test (requires a network-reachable ODH gateway and Praxis all-in-one)
 
-The gated tests are skipped (not failed) by default; enable them once the runner is
-confirmed able to spawn sibling containers and reach the host network.
+Point `OPENSHELL_SELF_HOSTED='true'` at a self-hosted RHEL 9 + rootless Podman
+runner to exercise the `runtime` job.
