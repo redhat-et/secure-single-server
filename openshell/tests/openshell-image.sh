@@ -10,6 +10,7 @@ source "${OS_DIR}/scripts/lib.sh"
 : "${XDG_RUNTIME_DIR:=/run/user/$(id -u)}"
 NAME=openshell-gateway-citest
 # shellcheck disable=SC2329
+# shellcheck disable=SC2317  # invoked via trap, not directly
 cleanup() { "${CE}" rm -f "${NAME}" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 

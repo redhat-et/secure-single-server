@@ -30,6 +30,7 @@ if [[ -n "${CONFIG_DIR}" ]]; then
   # Render @@PRAXIS_PORT@@ in the policy (mirrors tests/openshell-praxis/smoke.sh).
   POL="$(mktemp)"
   # shellcheck disable=SC2329
+  # shellcheck disable=SC2317  # invoked via trap, not directly
   cleanup() { rm -f "${POL}"; }
   trap cleanup EXIT
   sed "s#@@PRAXIS_PORT@@#${PRAXIS_PORT}#g" "${POLICY_SRC}" > "${POL}"
