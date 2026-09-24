@@ -44,11 +44,11 @@ install -d "${HOME}/.config/openshell" "${HOME}/.config/containers/systemd"
 render_template "${OS_DIR}/configs/gateway/gateway.toml.in" "${HOME}/.config/openshell/gateway.toml"
 render_template "${OS_DIR}/configs/quadlet/openshell-gateway.container.in" \
   "${HOME}/.config/containers/systemd/openshell-gateway.container"
-cp "${OS_DIR}/configs/quadlet/openshell.network" \
-  "${HOME}/.config/containers/systemd/openshell.network"
+# No openshell.network file: the gateway quadlet uses Network=host.
 
-note "Pulling pinned images"
-for img in "${ODH_GATEWAY_IMAGE}" "${ODH_SUPERVISOR_IMAGE}" "${ODH_SANDBOX_IMAGE}" "${ODH_CLI_IMAGE}"; do
+note "Pulling pinned images (odh control plane + aipcc harness workloads)"
+for img in "${ODH_GATEWAY_IMAGE}" "${ODH_SUPERVISOR_IMAGE}" "${ODH_SANDBOX_IMAGE}" "${ODH_CLI_IMAGE}" \
+           "${ODH_OPENCODE_IMAGE}" "${ODH_OPENCLAW_IMAGE}" "${ODH_CODEX_IMAGE}"; do
   podman pull "${img}"
 done
 
