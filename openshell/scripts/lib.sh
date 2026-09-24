@@ -18,6 +18,9 @@ render_template() {  # <template.in> <output>
     -e "s#@@ODH_SUPERVISOR_IMAGE@@#${ODH_SUPERVISOR_IMAGE}#g" \
     -e "s#@@ODH_SANDBOX_IMAGE@@#${ODH_SANDBOX_IMAGE}#g" \
     -e "s#@@ODH_CLI_IMAGE@@#${ODH_CLI_IMAGE}#g" \
+    -e "s#@@ODH_OPENCODE_IMAGE@@#${ODH_OPENCODE_IMAGE}#g" \
+    -e "s#@@ODH_OPENCLAW_IMAGE@@#${ODH_OPENCLAW_IMAGE}#g" \
+    -e "s#@@ODH_CODEX_IMAGE@@#${ODH_CODEX_IMAGE}#g" \
     "${in}" > "${out}"
 }
 
