@@ -4,7 +4,6 @@ filesystem_policy:
   read_only: [/usr, /lib, /lib64, /etc, /proc, /dev/urandom, /workspace]
   read_write: [/tmp, /dev/null, /sandbox]
 landlock: {compatibility: hard_requirement}
-process: {run_as_user: sandbox, run_as_group: sandbox}
 network_policies:
   anthropic_api:
     name: anthropic-api

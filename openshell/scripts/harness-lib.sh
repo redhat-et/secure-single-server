@@ -38,17 +38,33 @@ harness_forward() {  # <sandbox> <port>
 
 harness_destroy() { openshell_cli sandbox delete "$1" 2>/dev/null || true; }
 
-# Two-phase create: bootstrap egress -> install harness -> lock to profile.
-harness_create() {  # <harness> <name> <profile_dir> <bootstrap_policy> <install_cmd>
-  local harness="$1" name="$2" profile_dir="$3" bootstrap="$4" install_cmd="$5"
+# Two-phase create with policy update:
+# 1. Create sandbox with profile policy (filesystem immutable from birth)
+# 2. Add temporary npm network egress for install
+# 3. Run install (npm needs registry.npmjs.org)
+# 4. Remove npm network egress (lock to profile)
+harness_create() {  # <name> <profile_dir> <install_cmd>
+  local name="$1" profile_dir="$2" install_cmd="$3"
   require_command ssh
-  note "Creating default-deny sandbox ${name} for ${harness}"
-  openshell_cli sandbox create --name "${name}" --no-auto-providers
-  note "Bootstrap phase: opening install source only"
-  openshell_cli policy set "${name}" --policy "${bootstrap}"
+
+  # Copy profile policy to CLI-accessible location
+  install -d "${HOME}/.config/openshell/policies"
+  cp "${profile_dir}/policy.yaml" "${HOME}/.config/openshell/policies/${name}-profile.yaml"
+
+  note "Creating sandbox ${name} with ${profile_dir##*/} profile policy"
+  openshell_cli sandbox create --name "${name}" --no-auto-providers \
+    --policy "/home/openshell/.config/openshell/policies/${name}-profile.yaml"
+
+  note "Bootstrap phase: adding npm registry egress for install"
+  openshell_cli policy update "${name}" \
+    --add-endpoint "registry.npmjs.org:443:read-only:rest:enforce" \
+    --binary /usr/bin/node --binary /usr/bin/npm --binary /usr/bin/curl
+
   note "Installing pinned harness"
   harness_ssh "${name}" "${install_cmd}"
-  note "Demo phase: applying ${profile_dir##*/} profile policy"
-  openshell_cli policy set "${name}" --policy "${profile_dir}/policy.yaml"
+
+  note "Locking to profile: removing npm registry egress"
+  openshell_cli policy update "${name}" --remove-endpoint "registry.npmjs.org:443"
+
   note "Sandbox ${name} ready under ${profile_dir##*/} profile"
 }

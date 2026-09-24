@@ -52,6 +52,17 @@ for img in "${ODH_GATEWAY_IMAGE}" "${ODH_SUPERVISOR_IMAGE}" "${ODH_SANDBOX_IMAGE
   podman pull "${img}"
 done
 
+note "Installing openshell CLI binary for SSH proxy"
+if [[ ! -f /usr/local/bin/openshell ]]; then
+  _cli_cid="$(podman create "${ODH_CLI_IMAGE}")"
+  podman cp "${_cli_cid}:/usr/local/bin/openshell" /tmp/openshell
+  podman rm "${_cli_cid}"
+  sudo install -m 755 /tmp/openshell /usr/local/bin/openshell
+  rm /tmp/openshell
+else
+  note "openshell CLI binary already installed"
+fi
+
 note "Starting gateway"
 systemctl --user daemon-reload
 systemctl --user start openshell-gateway.service

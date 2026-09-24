@@ -14,7 +14,6 @@ esac; done
 PROFILE_DIR="${H_DIR}/profiles/${PROFILE}"
 [[ -d "${PROFILE_DIR}" ]] || die "no such profile: ${PROFILE}"
 NAME="${NAME:-claude-${PROFILE}}"
-harness_create claude "${NAME}" "${PROFILE_DIR}" \
-  "${H_DIR}/profiles/bootstrap.yaml" \
-  "sudo npm install -g @anthropic-ai/claude-code@2.1.281"
+harness_create "${NAME}" "${PROFILE_DIR}" \
+  "npm install -g @anthropic-ai/claude-code@2.1.281"
 note "Connect with: ${H_DIR}/connect.sh --name ${NAME}"
