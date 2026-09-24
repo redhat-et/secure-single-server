@@ -45,4 +45,17 @@ grep -q '\[openshell.gateway.gateway_jwt\]' "${gt}" || fail "gateway.toml missin
 grep -q 'supervisor_image *= *"@@ODH_SUPERVISOR_IMAGE@@"' "${gt}" || fail "supervisor image placeholder missing"
 grep -q 'default_image *= *"@@ODH_OPENCODE_IMAGE@@"' "${gt}" || fail "default_image must be an aipcc workload image (@@ODH_OPENCODE_IMAGE@@)"
 
+# 5. Every profile policy is schema-valid.
+if command -v python3 >/dev/null 2>&1; then
+  while IFS= read -r p; do
+    python3 - "$p" <<'PY' || fail "invalid policy: $p"
+import sys, yaml
+d = yaml.safe_load(open(sys.argv[1]))
+assert d.get("version") == 1, "version"
+assert "network_policies" in d, "network_policies"
+assert "filesystem_policy" in d, "filesystem_policy"
+PY
+  done < <(find "${OS_DIR}" -path '*/profiles/*/policy.yaml')
+fi
+
 printf 'openshell-static: OK\n'
