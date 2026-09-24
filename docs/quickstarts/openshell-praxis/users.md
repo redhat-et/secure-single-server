@@ -21,19 +21,39 @@ All profiles permit **only** the Praxis loopback gateway (`host.openshell.intern
 
 ## Creating a Sandbox
 
-Navigate to a harness directory and create a sandbox with an integrated profile.
+Each harness `create.sh` accepts `--config <dir>`. When given, the profile is
+read from `<dir>/profiles/<PROFILE>/policy.yaml` (the integrated policies) instead
+of the harness's own standalone profiles, and the harness is pointed at the Praxis
+loopback using `<dir>/harness-provider.json.in`.
+
+Two environment variables control the integrated create:
+
+- `OPENSHELL_MODEL_ID` (**required**) — the administrator-approved model id. The
+  create fails fast if it is unset (a placeholder model id would silently fail at
+  request time).
+- `PRAXIS_PORT` (optional) — the Praxis loopback port. **Defaults to `8080`.**
+
+The default sandbox name is `<harness>-<profile>` (e.g. `opencode-dev`); override
+with `--name`.
 
 ### Example: OpenCode with dev profile
 
 ```bash
 cd openshell/harnesses/opencode
+export OPENSHELL_MODEL_ID='administrator-approved-model-id'
 ./create.sh --profile dev --config /path/to/configs/openshell-praxis
 ```
+
+OpenCode reads its global provider config from `~/.config/opencode/opencode.json`
+(see <https://opencode.ai/docs/config/>). The integrated `create.sh` renders
+`harness-provider.json.in` (substituting `PRAXIS_PORT` and `OPENSHELL_MODEL_ID`)
+and installs it there inside the sandbox automatically.
 
 ### Example: OpenClaw with interactive profile
 
 ```bash
 cd openshell/harnesses/openclaw
+export OPENSHELL_MODEL_ID='administrator-approved-model-id'
 ./create.sh --profile interactive --config /path/to/configs/openshell-praxis
 ```
 
@@ -41,12 +61,21 @@ cd openshell/harnesses/openclaw
 
 ```bash
 cd openshell/harnesses/codex
+export OPENSHELL_MODEL_ID='administrator-approved-model-id'
 ./create.sh --profile automation --config /path/to/configs/openshell-praxis
 ```
 
+**OpenClaw and Codex**: these harnesses do not consume the OpenCode config
+format, and their in-sandbox provider-config path is harness-specific. For them,
+`create.sh --config` applies the Praxis-only **network policy** to the sandbox and
+renders the provider file locally, then **prints the exact `harness_ssh ... 'cat >
+<path>'` command** for you to run once you know the harness's provider-config
+path. It deliberately does not push the file to an invented path. Follow the
+printed instructions to install the rendered provider config.
+
 ## Provider Configuration
 
-The integrated harness provider configuration (`configs/openshell-praxis/harness-provider.json.in`) points to the Praxis loopback:
+The integrated harness provider configuration (`configs/openshell-praxis/harness-provider.json.in`) points to the Praxis loopback. `create.sh` renders `@@PRAXIS_PORT@@` (default 8080) and `@@MODEL_ID@@` (from `OPENSHELL_MODEL_ID`) before installing it:
 
 ```json
 {
@@ -59,7 +88,7 @@ The integrated harness provider configuration (`configs/openshell-praxis/harness
         "apiKey": "local-placeholder"
       },
       "models": {
-        "MODEL_ID": {
+        "administrator-approved-model-id": {
           "name": "Administrator-approved model"
         }
       }
@@ -89,21 +118,26 @@ You are now in a credential-starved sandbox. The harness can reach the Praxis lo
 
 ## Verifying Isolation
 
-From inside the sandbox, attempt to reach a provider directly (this should fail):
+The aipcc harness images do not ship `curl` or `python3`, so use the pre-installed
+`node` runtime to probe endpoints from inside the sandbox.
+
+Attempt to reach a provider directly (this should fail — the endpoint is not in
+the integrated policy):
 
 ```bash
-curl -v https://api.anthropic.com/v1/messages
+node --input-type=module -e "try{await fetch('https://api.anthropic.com/v1/messages',{signal:AbortSignal.timeout(10000)});console.log('reachable')}catch(e){console.log('denied')}"
 ```
 
-Expected result: **Connection refused or timeout** (network policy denies the endpoint).
+Expected result: **denied** (network policy blocks the endpoint).
 
-Verify the Praxis loopback is reachable:
+Verify the Praxis loopback host alias resolves:
 
 ```bash
-curl -v http://host.openshell.internal:8080/healthz
+getent hosts host.openshell.internal
 ```
 
-Expected result: **200 OK** (Praxis health endpoint responds).
+Expected result: the alias resolves to the host address (Praxis is reachable on
+`host.openshell.internal:8080`).
 
 ## Policy Details
 

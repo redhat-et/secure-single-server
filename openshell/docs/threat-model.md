@@ -109,12 +109,25 @@ ODH_CODEX_IMAGE=quay.io/aipcc/base-images/agentic/codex@sha256:f62cb7aa71cb145da
 - **Never stored** in the repository, configuration files, or CI pipelines
 - **Never passed** via command-line arguments (which are visible in `ps` output)
 
+**Mechanism**: `connect.sh` (via the `harness_ssh`/`harness_connect_tty` helpers in
+`openshell/scripts/harness-lib.sh`) forwards `OPENAI_API_KEY` and
+`ANTHROPIC_API_KEY` to the sandbox using `ssh -o SendEnv=OPENAI_API_KEY -o
+SendEnv=ANTHROPIC_API_KEY`. `SendEnv` forwards only variables that are actually
+set in the connecting user's environment; unset variables are silently skipped.
+
+**Host-validation caveat**: `SendEnv` only takes effect if the sandbox image's
+sshd `AcceptEnv`s these variables. This cannot be verified from the harness
+repository; it must be confirmed on the host during the smoke run (the same
+host-validation posture as the `host.openshell.internal` reachability caveat).
+Do not assume the credential reaches the harness until `AcceptEnv` is confirmed
+on the deployed sandbox image.
+
 **Benefit**:
 - No risk of committed credentials in Git history
 - No credentials at rest in sandbox configuration files
 - Credentials exist only in the runtime environment of the connecting user
 
-**Verification**: Inspect `connect.sh` scripts to confirm credentials are passed via environment variables (e.g., `ssh -o SendEnv=ANTHROPIC_API_KEY`).
+**Verification**: Inspect `openshell/scripts/harness-lib.sh` to confirm credentials are forwarded via `ssh -o SendEnv=OPENAI_API_KEY -o SendEnv=ANTHROPIC_API_KEY`, and confirm the sandbox sshd `AcceptEnv`s them on the host.
 
 ## Deployment Considerations
 

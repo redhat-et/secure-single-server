@@ -6,6 +6,8 @@ CE="${CONTAINER_ENGINE:-podman}"
 # shellcheck source=../scripts/lib.sh
 # shellcheck disable=SC1091
 source "${OS_DIR}/scripts/lib.sh"
+# Default XDG_RUNTIME_DIR so the podman socket path resolves under set -u.
+: "${XDG_RUNTIME_DIR:=/run/user/$(id -u)}"
 NAME=openshell-gateway-citest
 # shellcheck disable=SC2329
 cleanup() { "${CE}" rm -f "${NAME}" >/dev/null 2>&1 || true; }

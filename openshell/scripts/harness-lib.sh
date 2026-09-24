@@ -19,14 +19,22 @@ _proxy_cmd() {  # <sandbox>
 
 harness_ssh() {  # <sandbox> <cmd...>
   local name="$1"; shift
+  # SendEnv forwards the provider credentials that are set in the caller's
+  # environment; unset vars are silently skipped. The sandbox sshd must
+  # AcceptEnv them (see threat model / quickstart host-validation note).
   ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+    -o SendEnv=OPENAI_API_KEY -o SendEnv=ANTHROPIC_API_KEY \
     -o "ProxyCommand=$(_proxy_cmd "${name}")" \
     "${OPENSHELL_SANDBOX_USER}@${name}" "$@"
 }
 
 harness_connect_tty() {  # <sandbox> [cmd...]
   local name="$1"; shift || true
+  # SendEnv forwards the provider credentials that are set in the caller's
+  # environment; unset vars are silently skipped. The sandbox sshd must
+  # AcceptEnv them (see threat model / quickstart host-validation note).
   ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+    -o SendEnv=OPENAI_API_KEY -o SendEnv=ANTHROPIC_API_KEY \
     -o "ProxyCommand=$(_proxy_cmd "${name}")" \
     "${OPENSHELL_SANDBOX_USER}@${name}" "$@"
 }

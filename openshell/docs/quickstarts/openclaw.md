@@ -99,7 +99,7 @@ Or for a custom-named sandbox:
 ./connect.sh --name my-session
 ```
 
-This establishes an SSH connection with the OpenClaw Control UI running inside the sandbox and forwards port 18789 to your local machine.
+This establishes an SSH connection with the OpenClaw Control UI running inside the sandbox and forwards port 18789 to your local machine. `connect.sh` forwards `OPENAI_API_KEY`/`ANTHROPIC_API_KEY` via `ssh SendEnv` (only variables set in your environment are sent). The sandbox image must `AcceptEnv` them for the credential to reach the harness; this is confirmed on the host during the smoke run (a host-validation step, like the `host.openshell.internal` reachability caveat), not by this repository.
 
 ## Access the Control UI
 

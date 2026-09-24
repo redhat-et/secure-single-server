@@ -40,9 +40,11 @@ jobs:
         run: |
           sudo install -d -o "$(id -u)" /var/lib/openshell
           bash openshell/tests/openshell-image.sh
-      - name: Policy proof (host-capable runners only)
+      # These steps are skipped (not failed) unless the repo variable
+      # OPENSHELL_SELF_HOSTED == 'true'; they need a host-capable runner.
+      - name: Policy proof (skipped unless OPENSHELL_SELF_HOSTED == 'true')
         if: ${{ vars.OPENSHELL_SELF_HOSTED == 'true' }}
         run: bash openshell/tests/openshell-policy.sh
-      - name: Integrated smoke (host-capable runners only)
+      - name: Integrated smoke (skipped unless OPENSHELL_SELF_HOSTED == 'true')
         if: ${{ vars.OPENSHELL_SELF_HOSTED == 'true' }}
         run: bash tests/openshell-praxis/smoke.sh

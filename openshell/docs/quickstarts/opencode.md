@@ -91,7 +91,7 @@ Or for a custom-named sandbox:
 ./connect.sh --name my-session
 ```
 
-This establishes an SSH connection with the OpenCode CLI ready to use. Your provider credentials are injected from the environment at connection time.
+This establishes an SSH connection with the OpenCode CLI ready to use. `connect.sh` forwards `OPENAI_API_KEY`/`ANTHROPIC_API_KEY` via `ssh SendEnv` (only variables set in your environment are sent). The sandbox image must `AcceptEnv` them for the credential to reach the harness; this is confirmed on the host during the smoke run (a host-validation step, like the `host.openshell.internal` reachability caveat), not by this repository.
 
 ## Teardown
 

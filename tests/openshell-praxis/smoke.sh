@@ -13,8 +13,8 @@ trap cleanup EXIT
 
 # Single-phase create with the integrated dev profile (Praxis-loopback only; no
 # direct provider hosts). Then prove a direct provider host is denied.
-# The rendered policy is produced by scripts/openshell-praxis/install; for this
-# test, render @@PRAXIS_PORT@@ into a temp copy (default 8080; override via env).
+# The installer renders no policy; this test renders @@PRAXIS_PORT@@ into a temp
+# copy of the integrated policy itself (default 8080; override via env).
 PRAXIS_PORT="${PRAXIS_PORT:-8080}"
 POL="$(mktemp)"
 sed "s#@@PRAXIS_PORT@@#${PRAXIS_PORT}#g" \
