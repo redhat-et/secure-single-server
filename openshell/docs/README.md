@@ -60,3 +60,17 @@ Each harness includes four profiles with different network and filesystem polici
 | `interactive` | Read-write + persist | Model + GitHub + npm + docs sites | Full-featured interactive sessions with persistent workspace |
 
 Network policies are enforced per-binary with granular endpoint allowlists. See individual harness READMEs for profile-specific details.
+
+## CI Validation
+
+The `.github/workflows/openshell-validate.yml` workflow runs automated tests on both amd64 and arm64 GitHub-hosted runners:
+
+**Always-on tests** (no secrets required):
+- Static checks (shellcheck, documentation link validation, schema validation)
+- Gateway boot test (pinned ODH control plane without provider credentials)
+
+**Gated tests** (require self-hosted RHEL runner with `OPENSHELL_SELF_HOSTED == 'true'`):
+- Policy proof (requires Podman driver to spawn sibling supervisor/sandbox containers)
+- Integrated smoke test (requires network-reachable ODH gateway and Praxis all-in-one)
+
+The gated tests are skipped (not failed) on ephemeral GitHub-hosted runners that cannot spawn sibling containers or reach the host network.
