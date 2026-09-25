@@ -115,3 +115,8 @@ unreliable during canary testing; retained harness/session claims were removed.
 
 [Review resolution matrix](../openshell/REVIEW-FOLLOWUP.md) maps F01–F10 to changes
 and the remaining qualification boundaries.
+
+The final review payload also completed a second upgrade/reboot and passed the
+same host checks. The booted Codex OS digest was
+`sha256:d89f2ca4fb098f9e568816fb72c035dc3e2c05a152b4c8b86e7f918eec13d801`.
+This is a local containers-storage validation digest, not a published registry tag.
