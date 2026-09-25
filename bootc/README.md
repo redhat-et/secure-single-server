@@ -1,5 +1,11 @@
 # RHEL 9 bootc images
 
+bootc turns the reviewed Praxis/OpenShell setup into a repeatable host deployment.
+Choose a harness image, provision credentials separately, then update or roll back
+the OS as an image. OpenShell supplies the sandbox; Praxis supplies model access
+and shared quotas. Their combined inference path remains
+[experimental](../docs/quickstarts/openshell-praxis/users.md).
+
 Build one x86_64 bootable base and three derived OS images:
 
 ```text
