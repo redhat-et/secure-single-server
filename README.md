@@ -41,6 +41,11 @@ system you are operating:
 
 ## Administrator deployment
 
+For an immutable OS deployment, see the [RHEL 9 bootc images](bootc/README.md):
+one Praxis/OpenShell base with separate Codex, OpenCode, and OpenClaw variants.
+This initial path targets x86_64 and pulls pinned workload containers on first
+boot into persistent rootless storage.
+
 An administrator starts from a reviewed local checkout, transfers only the
 deployment bundle to a private staging directory on RHEL, and installs one
 persistent profile. Git and the repository are not required on the server,

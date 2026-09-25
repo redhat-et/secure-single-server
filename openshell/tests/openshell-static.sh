@@ -54,8 +54,13 @@ d = yaml.safe_load(open(sys.argv[1]))
 assert d.get("version") == 1, "version"
 assert "network_policies" in d, "network_policies"
 assert "filesystem_policy" in d, "filesystem_policy"
+for name, policy in d["network_policies"].items():
+    for endpoint in policy.get("endpoints", []):
+        if endpoint.get("protocol") == "rest":
+            assert endpoint.get("access") or endpoint.get("rules"), \
+                f"{name}: REST endpoint requires access or rules"
 PY
-  done < <(find "${OS_DIR}" -path '*/profiles/*/policy.yaml')
+  done < <(find "${OS_DIR}" "${ROOT}/configs/openshell-praxis" -path '*/profiles/*/policy.yaml')
 fi
 
 printf 'openshell-static: OK\n'

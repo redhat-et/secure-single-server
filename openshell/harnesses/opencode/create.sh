@@ -7,22 +7,22 @@ source "${H_DIR}/../../scripts/harness-lib.sh"
 # shellcheck source=../../configs/images.env
 # shellcheck disable=SC1091
 source "${OPENSHELL_DIR:-${H_DIR}/../..}/configs/images.env"
-PROFILE=""; NAME=""; CONFIG_DIR=""
+PROFILE=""; NAME=""; HARNESS_CONFIG_DIR=""
 while [[ $# -gt 0 ]]; do case "$1" in
   --profile) PROFILE="$2"; shift 2;;
   --name) NAME="$2"; shift 2;;
-  --config) CONFIG_DIR="$2"; shift 2;;
+  --config) HARNESS_CONFIG_DIR="$2"; shift 2;;
   *) die "unknown arg: $1";;
 esac; done
 [[ -n "${PROFILE}" ]] || die "usage: create.sh --profile <review|dev|automation|interactive> [--name N] [--config <dir>]"
 
-if [[ -n "${CONFIG_DIR}" ]]; then
+if [[ -n "${HARNESS_CONFIG_DIR}" ]]; then
   # Integrated openshell-praxis flow: profile + provider config come from
-  # <CONFIG_DIR> (e.g. configs/openshell-praxis) instead of this harness dir.
-  [[ -d "${CONFIG_DIR}" ]] || die "no such config dir: ${CONFIG_DIR}"
-  POLICY_SRC="${CONFIG_DIR}/profiles/${PROFILE}/policy.yaml"
+  # <HARNESS_CONFIG_DIR> (e.g. configs/openshell-praxis) instead of this harness dir.
+  [[ -d "${HARNESS_CONFIG_DIR}" ]] || die "no such config dir: ${HARNESS_CONFIG_DIR}"
+  POLICY_SRC="${HARNESS_CONFIG_DIR}/profiles/${PROFILE}/policy.yaml"
   [[ -f "${POLICY_SRC}" ]] || die "no such profile in config dir: ${POLICY_SRC}"
-  PROVIDER_SRC="${CONFIG_DIR}/harness-provider.json.in"
+  PROVIDER_SRC="${HARNESS_CONFIG_DIR}/harness-provider.json.in"
   [[ -f "${PROVIDER_SRC}" ]] || die "provider template not found: ${PROVIDER_SRC}"
   NAME="${NAME:-opencode-${PROFILE}}"
   PRAXIS_PORT="${PRAXIS_PORT:-8080}"
