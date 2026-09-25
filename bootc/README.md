@@ -21,6 +21,8 @@ selection and scripts/policies. Harness binaries run in the pinned workload
 containers, not directly on the host. This initial bootc path uses Praxis's
 in-memory quota profile and administrator-operated OpenShell. It does not yet
 provide Valkey, remote-gateway TLS/JWT, or ordinary-user access to OpenShell.
+It is a deployment foundation for the [phased gateway goals](../docs/roadmap.md),
+not completion of the durable-quota or retained-session requirements.
 
 ## Pull on first boot
 

@@ -1,8 +1,14 @@
-# Harnesses with OpenShell, Praxis and bootc
+# Secure single-server AI gateway
 
-Give an AI coding harness a controlled place to work, a shared model gateway,
-and a repeatable host deployment. This repository brings those pieces together
-on RHEL 9 using rootless Podman and digest-pinned images.
+Give people access to approved AI coding models on one administrator-managed
+RHEL server without handing out provider credentials. The goal is to control
+shared inference usage, protect the server and workspaces, and make the setup
+repeatable as more harnesses and model providers are added.
+
+The starting workflow is a user logging into RHEL and running Claude Code,
+Codex or OpenCode through Praxis. OpenShell extends that model with sandboxed
+execution and, as a qualification target, retained work that collaborators can
+reconnect to. bootc packages the host setup into a reviewed OS image.
 
 | Component | What it adds to a harness |
 | --- | --- |
@@ -28,6 +34,10 @@ OpenShell governs the harness's execution environment. Praxis governs model
 requests routed through it. bootc packages their host setup so each machine
 starts from the same reviewed deployment. These are complementary controls;
 OS rollback does not roll back sandbox workspaces or application data.
+
+The [scope and roadmap](docs/roadmap.md) connects these building blocks to the
+phased goals: durable quotas, model routing, guardrails, private inference,
+individual access controls, retained work and usage visibility.
 
 ## Start here
 
@@ -60,7 +70,8 @@ Use the [integration matrix](docs/quickstarts/openshell-praxis/users.md) for det
 OpenShell currently assumes a trusted single operator; local management is not a
 multi-tenant authorization boundary. Praxis quotas are shared, not per-user or
 USD budgets. The bootc profile uses in-memory quotas; the mutable Praxis deployment
-also offers Valkey for persistent token usage. Read the
+offers Valkey for persistent token usage. Durable quotas are a baseline target;
+the bootc memory profile is a development step toward it. Read the
 [OpenShell trust model](openshell/docs/threat-model.md) and
 [quota semantics](docs/quickstarts/common/token-quotas.md) before granting access.
 
