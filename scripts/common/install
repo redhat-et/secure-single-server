@@ -43,7 +43,7 @@ Usage:
     --valkey-url-secret NAME --valkey-acl-secret NAME [OPTIONS]
 
 Options:
-  --scenario all-in-one|remote-gateway  Set by the scenario install wrapper.
+  --scenario all-in-one|remote-gateway|openshell-praxis  Set by the scenario install wrapper.
   --tls-cert PATH --tls-key PATH        Remote: PEM full chain and matching key.
   --jwt-public-key PATH                 Remote: RSA public verification key only.
   --development-fedora                  Allow mutable Fedora for development.
@@ -172,9 +172,43 @@ ensure_service_account() {
 }
 
 case "${scenario}" in
-  all-in-one|remote-gateway) ;;
-  *) die "scenario must be all-in-one or remote-gateway" ;;
+  all-in-one|remote-gateway|openshell-praxis) ;;
+  *) die "scenario must be all-in-one, remote-gateway, or openshell-praxis" ;;
 esac
+
+if [[ "${scenario}" == openshell-praxis ]]; then
+  note "installing openshell-praxis scenario (OpenShell gateway + Praxis all-in-one loopback)"
+
+  # Assert Praxis all-in-one is installed
+  [[ -f "${SCENARIO_FILE}" ]] || die "Praxis all-in-one must be installed first (no SCENARIO_FILE found)"
+  installed_scenario="$(<"${SCENARIO_FILE}")"
+  [[ "${installed_scenario}" == "all-in-one" ]] || die "Praxis scenario must be all-in-one; found: ${installed_scenario}"
+  [[ -f "${PROFILE_FILE}" ]] || die "Praxis profile not found; ensure all-in-one gateway is fully installed"
+
+  # Check Praxis health
+  health="$(as_service podman inspect praxis-shared-gateway \
+    --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' 2>/dev/null || true)"
+  [[ "${health}" == "healthy" ]] || die "Praxis all-in-one gateway is not healthy; current state: ${health}"
+  note "Praxis all-in-one gateway is healthy"
+
+  # Install OpenShell gateway
+  note "installing OpenShell gateway"
+  runuser -u "$(logname)" -- "${REPO_DIR}/openshell/scripts/install.sh"
+
+  # Record scenario
+  printf '%s\n' "${scenario}" >"${SCENARIO_FILE}.new"
+  uid="$(service_uid)"
+  gid="$(service_gid)"
+  chown root:"${gid}" "${SCENARIO_FILE}.new"
+  chmod 0640 "${SCENARIO_FILE}.new"
+  mv -f "${SCENARIO_FILE}.new" "${SCENARIO_FILE}"
+
+  note "openshell-praxis scenario installed successfully"
+  note "OpenShell gateway: http://127.0.0.1:8091/healthz"
+  note "Praxis loopback: http://127.0.0.1:8080/v1 (via OpenShell sandbox only)"
+  exit 0
+fi
+
 if [[ "${scenario}" == remote-gateway && "${prepare_only}" == 0 ]]; then
   [[ "${profile}" != switchyard ]] || die "remote Switchyard is not qualified; use memory or valkey"
   require_command python3

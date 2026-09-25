@@ -4,6 +4,41 @@ Run an administrator-managed Praxis AI gateway on RHEL 9. Keep provider
 credentials out of harness accounts and apply shared token quotas. Choose
 where users run their harnesses before installing the gateway.
 
+## What you'll be running
+
+This repository is a deployment and demonstration environment. The software it
+installs comes from two upstream projects — read their pages to understand the
+system you are operating:
+
+- **Praxis** — an administrator-managed AI gateway that fronts an
+  OpenAI-compatible provider, keeps provider credentials out of harness
+  accounts, and enforces shared token quotas. This repo deploys the pinned
+  `quay.io/opendatahub/praxis-experimental` image. Source:
+  [praxis-proxy/experimental](https://github.com/praxis-proxy/experimental) — an
+  experimental proving ground, so features may change before promotion.
+- **OpenShell** — a policy-enforced runtime that sandboxes AI coding agents.
+  Each agent runs in its own container whose filesystem, network, and provider
+  credentials are governed by declarative YAML policies, coordinated by a gateway
+  control plane over rootless Podman. The OpenShell demos deploy the pinned
+  `quay.io/opendatahub/odh-openshell-*` control-plane images. Source:
+  [opendatahub-io/openshell](https://github.com/opendatahub-io/openshell)
+  (mirrored at [NVIDIA/openshell](https://github.com/NVIDIA/openshell)).
+
+**What you use, and what to expect when following these processes:**
+
+- **Harnesses** — the AI coding CLIs you actually drive. The Praxis scenarios
+  target Claude Code, Codex, and OpenCode; the OpenShell demos use OpenCode,
+  OpenClaw, and Codex. You bring the harness; the administrator supplies approved
+  model IDs and either a RHEL login (all-in-one) or a gateway URL plus a caller
+  JWT (remote gateway).
+- **Credentials stay out of your hands.** Provider API keys live only with the
+  administrator behind Praxis, or are injected into an OpenShell sandbox at
+  runtime — never written into the repository, harness accounts, or CI.
+- **Platform and status.** Everything targets RHEL 9 with rootless Podman 4.6+,
+  and all images are pinned by `@sha256`. Both upstreams are early/experimental
+  here: treat these flows as demonstration and pre-production validation, not a
+  supported product.
+
 ## Administrator deployment
 
 An administrator starts from a reviewed local checkout, transfers only the
@@ -48,6 +83,7 @@ guide](docs/testing/README.md).
 | Exercise the installer, systemd, SELinux, account separation, logout, and reboot | [Local RHEL 9 VM](docs/testing/rhel-vm.md) |
 | Plan and launch two separately controlled RHEL test VMs | [AWS two-VM test guide](docs/testing/aws.md) |
 | Test Codex, OpenCode, and Claude Code with protected provider keys, in-memory and Valkey profiles | [Harness acceptance](docs/testing/harnesses.md) |
+| OpenShell sandboxing (standalone) | [OpenShell demos](openshell/docs/README.md) |
 
 These paths are for development and pre-production validation. They do not
 replace final acceptance on the target RHEL server.
