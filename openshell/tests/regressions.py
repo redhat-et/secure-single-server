@@ -55,7 +55,7 @@ sys.stdin.read()
 
     def test_invalid_arguments_never_create(self):
         for h in ('codex','opencode','openclaw'):
-            for args in (('--profile',),('--profile','../dev'),('--unknown','x'),('--config',)):
+            for args in (('--profile',),('--profile','../dev'),('--unknown','x'),('--config',),('--backend','anthropic')):
                 r=self.create(h,*args)
                 self.assertNotEqual(r.returncode,0)
                 self.assertNotIn('unbound variable',r.stderr)

@@ -2,9 +2,7 @@
 set -euo pipefail
 ROOT=/usr/share/secure-single-server
 # shellcheck disable=SC1091
-source "${ROOT}/scripts/common/lib.sh"
-# shellcheck disable=SC1091
-source "${ROOT}/openshell/configs/images.env"
+source "${ROOT}/openshell/scripts/lib.sh"
 
 as_openshell() {
   local uid

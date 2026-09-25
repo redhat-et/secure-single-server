@@ -4,6 +4,9 @@ OS_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=./lib.sh
 # shellcheck disable=SC1091
 source "${OS_DIR}/scripts/lib.sh"
+# shellcheck source=./gateway-lib.sh
+# shellcheck disable=SC1091
+source "${OS_DIR}/scripts/gateway-lib.sh"
 require_root
 [[ $# == 2 && "$1" == --owner && "$2" =~ ^[a-z_][a-z0-9_-]*$ ]] || die 'usage: sudo install.sh --owner openshell-svc (dedicated locked account)'
 owner="$2"
@@ -46,12 +49,7 @@ for img in "${ODH_GATEWAY_IMAGE}" "${ODH_SUPERVISOR_IMAGE}" "${ODH_SANDBOX_IMAGE
            "${ODH_OPENCODE_IMAGE}" "${ODH_OPENCLAW_IMAGE}" "${ODH_CODEX_IMAGE}"; do
   os_run podman pull "${img}"
 done
-if [[ ! -s /var/lib/openshell/tls/jwt/signing.pem ]]; then
-  os_run podman run --rm --userns=keep-id:uid=1001,gid=1001 --user=1001:1001 \
-    -e HOME=/var/lib/openshell -e XDG_DATA_HOME=/var/lib/openshell \
-    -v /var/lib/openshell:/var/lib/openshell:z "${ODH_GATEWAY_IMAGE}" generate-certs \
-    --output-dir /var/lib/openshell/tls --server-san 127.0.0.1 --server-san localhost --server-san host.openshell.internal
-fi
+gateway_ensure_certificates os_run
 # Private extraction; always install the binary from the reviewed image.
 td="$(mktemp -d)"; cid=""
 cleanup() { [[ -z "${cid}" ]] || os_run podman rm -f "${cid}" >/dev/null; rm -rf "${td}"; }
@@ -67,23 +65,8 @@ if [[ ! -e "${marker}" ]]; then
   [[ ! -e "${units}/openshell-gateway.container" && ! -e "${owner_home}/.config/openshell/gateway.toml" ]] || die 'unmanaged OpenShell configuration exists'
   printf '%s\n' "${owner}" >"${marker}"
 fi
-render_template "${OS_DIR}/configs/gateway/gateway.toml.in" "${td}/gateway.toml"
-render_template "${OS_DIR}/configs/quadlet/openshell-gateway.container.in" "${td}/gateway.container"
-install -o "${owner}" -g "$(id -gn "${owner}")" -m 0600 "${td}/gateway.toml" "${owner_home}/.config/openshell/gateway.toml"
-install -m 0644 "${td}/gateway.container" "${units}/openshell-gateway.container"
+gateway_install_config "${owner}" "${owner_home}" "${td}" "${ODH_OPENCODE_IMAGE}" yes
 sha256sum "${owner_home}/.config/openshell/gateway.toml" "${units}/openshell-gateway.container" >"${manifest}.new"
 mv -f "${manifest}.new" "${manifest}"
-os_run systemctl --user daemon-reload
-os_run systemctl --user restart openshell-gateway.service
-for ((attempt=0; attempt<60; attempt++)); do
-  if curl -fsS http://127.0.0.1:8091/healthz >/dev/null 2>&1; then break; fi
-  sleep 2
-done
-curl -fsS http://127.0.0.1:8091/healthz >/dev/null
-if [[ ! -e "${owner_home}/.config/openshell/addon-registered" ]]; then
-  os_run /usr/local/bin/openshell gateway add http://127.0.0.1:8090 --name local
-  os_run /usr/local/bin/openshell gateway select local
-  os_run touch "${owner_home}/.config/openshell/addon-registered"
-fi
-os_run /usr/local/bin/openshell sandbox list >/dev/null
+gateway_start os_run /usr/local/bin/openshell "${owner_home}/.config/openshell/addon-registered"
 note "OpenShell ready as ${owner}; rerun safely to recover a partial installation. Praxis files are untouched."

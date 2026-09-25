@@ -33,15 +33,6 @@ harness_connect_tty() {  # <sandbox> [cmd...]
     "${OPENSHELL_SANDBOX_USER}@${name}" "$@"
 }
 
-harness_forward() {  # <sandbox> <port>
-  local name="$1" port="$2"
-  note "Forwarding 127.0.0.1:${port} -> sandbox ${name}:${port} (Ctrl-C to stop)"
-  ssh -F /dev/null -N -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-    -o "ProxyCommand=$(_proxy_cmd "${name}")" \
-    -L "127.0.0.1:${port}:127.0.0.1:${port}" \
-    "${OPENSHELL_SANDBOX_USER}@${name}"
-}
-
 harness_destroy() { _os sandbox delete "$1" >/dev/null 2>&1 || true; }
 
 # Wait until the sandbox reports phase Ready (or fail on Error/timeout).

@@ -120,3 +120,18 @@ The final review payload also completed a second upgrade/reboot and passed the
 same host checks. The booted Codex OS digest was
 `sha256:d89f2ca4fb098f9e568816fb72c035dc3e2c05a152b4c8b86e7f918eec13d801`.
 This is a local containers-storage validation digest, not a published registry tag.
+
+## Shared gateway cleanup regression (September 25)
+
+After extracting the shared certificate/configuration/startup helpers, all four
+images rebuilt and passed image checks on native AWS RHEL 9 x86_64. Mutable
+OpenShell install, reinstall and uninstall passed. Three focused regressions cover
+the two startup modes, preserved CLI registration and failed health checks;
+build, harness, probe, static, ShellCheck and workflow checks also passed.
+
+The updated Codex image completed a bootc upgrade and reboot. Host checks passed
+for read-only root, SELinux Enforcing, rootless healthy services and loopback-only
+listeners. A new detached sandbox reached Ready and returned `codex-cli 0.155.1`.
+The booted local containers-storage digest was
+`sha256:f6434365a7b85d11b9adeb13d912a4622d4a9d3e08fef0181edc2ca4a6590a9a`.
+The provider/network qualification gaps above remain unchanged.

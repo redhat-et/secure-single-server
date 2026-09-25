@@ -3,6 +3,8 @@ set -Eeuo pipefail
 trap 'printf "bootc reconciliation failed at line %s\n" "${LINENO}" >&2' ERR
 # shellcheck disable=SC1091
 source /usr/share/secure-single-server/bootc/scripts/common
+# shellcheck disable=SC1091
+source "${ROOT}/openshell/scripts/gateway-lib.sh"
 require_root
 cd /
 [[ "$(uname -m)" == x86_64 ]] || die 'bootc currently targets x86_64 only'
@@ -24,42 +26,13 @@ done
 workload="$(harness_image "$(selected_harness)")"
 pull_missing as_openshell "${workload}"
 
-# Private keys and the DB belong to this machine and survive OS replacement.
-if [[ ! -s /var/lib/openshell/tls/jwt/signing.pem ]]; then
-  as_openshell podman run --rm --pull=never --userns=keep-id:uid=1001,gid=1001 --user=1001:1001 \
-    -e HOME=/var/lib/openshell -e XDG_DATA_HOME=/var/lib/openshell \
-    -v /var/lib/openshell:/var/lib/openshell:z \
-    "${ODH_GATEWAY_IMAGE}" generate-certs --output-dir /var/lib/openshell/tls \
-    --server-san 127.0.0.1 --server-san localhost --server-san host.openshell.internal
-fi
+gateway_ensure_certificates as_openshell
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "${tmp}"' EXIT
-render_template "${ROOT}/openshell/configs/gateway/gateway.toml.in" "${tmp}/gateway.toml" \
-  ODH_OPENCODE_IMAGE "${workload}" ODH_SUPERVISOR_IMAGE "${ODH_SUPERVISOR_IMAGE}"
-install -o openshell-svc -g openshell-svc -m 0600 "${tmp}/gateway.toml" \
-  /var/lib/openshell-svc/.config/openshell/gateway.toml
-render_template "${ROOT}/openshell/configs/quadlet/openshell-gateway.container.in" \
-  "${tmp}/gateway.container" ODH_GATEWAY_IMAGE "${ODH_GATEWAY_IMAGE}"
-# The root reconciler controls start order: no user default.target autostart
-# before the selected OS deployment's images have been cached.
-sed '/^\[Install\]/,$d' \
-  "${tmp}/gateway.container" >"${tmp}/openshell-gateway.container"
-os_units="/etc/containers/systemd/users/$(id -u openshell-svc)"
-install -m 0644 "${tmp}/openshell-gateway.container" "${os_units}/openshell-gateway.container"
-as_openshell systemctl --user daemon-reload
-as_openshell systemctl --user restart openshell-gateway.service
-for (( attempt=0; attempt<60; attempt++ )); do
-  if curl --fail --silent http://127.0.0.1:8091/healthz >/dev/null; then break; fi
-  sleep 2
-done
-curl --fail --silent http://127.0.0.1:8091/healthz >/dev/null
-if [[ ! -f /var/lib/openshell-svc/.config/openshell/bootc-registered ]]; then
-  as_openshell openshell gateway add http://127.0.0.1:8090 --name local
-  as_openshell openshell gateway select local
-  as_openshell touch /var/lib/openshell-svc/.config/openshell/bootc-registered
-fi
-as_openshell openshell sandbox list >/dev/null
+# The reconciler starts units only after caching this OS deployment's images.
+gateway_install_config openshell-svc /var/lib/openshell-svc "${tmp}" "${workload}" no
+gateway_start as_openshell /usr/bin/openshell /var/lib/openshell-svc/.config/openshell/bootc-registered
 
 # Secrets are provisioned separately through stdin. Only their names live here.
 openai_secret=praxis-openai-api-key-v1

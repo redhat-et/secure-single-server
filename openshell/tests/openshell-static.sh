@@ -32,7 +32,7 @@ fi
 
 # 3. Gateway quadlet template renders with no leftover placeholders.
 tmp="$(mktemp)"
-render_template "${OS_DIR}/configs/quadlet/openshell-gateway.container.in" "${tmp}"
+render_openshell_template "${OS_DIR}/configs/quadlet/openshell-gateway.container.in" "${tmp}"
 grep -q '@@' "${tmp}" && fail "unrendered placeholder in gateway quadlet"
 grep -q "Image=${ODH_GATEWAY_IMAGE}" "${tmp}" || fail "gateway image not pinned in unit"
 grep -q 'Pull=never' "${tmp}" || fail "gateway unit must set Pull=never"
@@ -65,4 +65,5 @@ PY
 fi
 
 python3 "${OS_DIR}/tests/regressions.py"
+python3 "${OS_DIR}/tests/gateway.py"
 printf 'openshell-static: OK\n'
