@@ -76,3 +76,42 @@ needs its separate integration acceptance. The bootc profile currently uses
 in-memory quotas; it does not qualify Valkey persistence.
 The base-only and OpenClaw images passed build/container checks but have not
 been separately booted or qualified for sandbox CLI execution.
+
+## PR #3 review regression run (September 25)
+
+The shared gateway template now owns the UID mapping and explicit loopback bind
+previously applied only by bootc. All four images were rebuilt on the same native
+AWS RHEL 9 builder and passed `bootc/test-images`. The revised Codex deployment
+booted via `bootc upgrade`; host checks passed for read-only root, SELinux
+Enforcing, rootless healthy services and loopback-only listeners. Detached
+creation without a TTY reached Ready and `codex --version` returned 0.155.1.
+
+Additional review checks:
+
+- All 16 standalone/rendered integrated policy files passed the exact pinned CLI
+  parser in a network-disabled container. Numeric ports now survive rendering.
+- Five build tests, three harness behavioral tests, 33 existing remote/AWS tests,
+  shared-gateway static checks, ShellCheck and OpenShell workflow actionlint passed.
+- HTTP 200, 401, 403 and 500 all passed the probe's reachability regression, with
+  four requests recorded by the local test server. HTTP errors are not denials.
+- Native mutable-RHEL lifecycle: install Praxis with dummy secrets, install the
+  OpenShell add-on, status, rerun add-on, remove add-on, status, reinstall, remove,
+  and uninstall Praxis. The Praxis scenario/manifest hashes remained unchanged
+  through add-on operations; final uninstall preserved secrets and Valkey data.
+- Fresh gateways require explicit provider-profile import. The synthetic provider
+  fixture imported its own profile, created bound and unbound sandboxes, and
+  confirmed raw canaries were absent in both. No real provider credentials were used.
+
+The strict runtime network test did **not** pass: the proposed Praxis alias
+`host.openshell.internal` did not resolve in the sandbox. A controlled destination
+using `host.containers.internal` also failed its positive control with EACCES;
+forcing a guessed loopback proxy was not a working route either. None of those
+failures is counted as a policy denial. Integrated inference, direct-provider
+network enforcement and real tool tasks remain unqualified. Codex/OpenClaw now
+reject integrated `--config`; OpenCode's config path is explicitly experimental.
+The runtime workflow is an opt-in qualification gate and will fail while those
+network prerequisites are unmet. Existing sandbox deletion/recreation also proved
+unreliable during canary testing; retained harness/session claims were removed.
+
+[Review resolution matrix](../openshell/REVIEW-FOLLOWUP.md) maps F01–F10 to changes
+and the remaining qualification boundaries.

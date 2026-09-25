@@ -1,130 +1,67 @@
-# Codex Quickstart
+# Codex sandbox development recipe (experimental)
 
-This guide walks through creating, connecting to, and tearing down an OpenAI Codex sandbox with OpenShell.
+Use a disposable, trusted single-operator RHEL 9 x86_64 host. This is not a
+qualified provider/tool-task quickstart. See [validation](../../../bootc/VALIDATION.md)
+for the combinations exercised. OpenClaw service/browser operation and
+retained harness tasks are not qualified; OpenCode review currently fails to
+create its data directory. Use dev for OpenCode CLI experiments.
 
-## Prerequisites
-
-- RHEL 9 with rootless Podman 4.6 or newer
-- OpenShell gateway installed (run `openshell/scripts/install.sh` if not already installed)
-- OpenAI API key available in your environment (see below)
-
-## Provider Configuration
-
-Codex requires an OpenAI API key. **Never commit API keys to the repository.**
-
-Set your OpenAI API key before connecting:
+On your workstation, clone this repository and transfer/checkout the same revision
+on the RHEL VM. On the VM, install the prerequisites in the
+[RHEL guide](../../../docs/testing/rhel-vm.md), including Podman, Python 3,
+OpenSSH clients, curl and the SELinux management tools. Run from the repository root:
 
 ```bash
-export OPENAI_API_KEY='your-key-here'
+sudo openshell/scripts/install.sh --owner openshell-svc
 ```
 
-Provider credentials are injected **only from the environment** at connect time and are **never stored** in the repository or configuration files.
-
-The Codex harness is configured to access OpenAI endpoints:
-- `api.openai.com` (inference)
-- `auth.openai.com` (authentication)
-
-## Installation
-
-Install the OpenShell gateway and pull the pinned Codex image:
+The owner is a dedicated locked service account with lingering and a user bus.
+Run CLI/harness commands as that account, with its HOME and runtime bus:
 
 ```bash
-cd openshell
-./scripts/install.sh
+uid=$(id -u openshell-svc)
+sudo runuser -u openshell-svc -- env HOME=/var/lib/openshell-svc \
+  XDG_RUNTIME_DIR=/run/user/$uid DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus \
+  "$PWD/openshell/harnesses/codex/create.sh" --profile dev
 ```
 
-The installer will:
-- Enable the rootless Podman socket
-- Configure cgroup delegation for nested containers
-- Generate JWT signing keys for sandbox authentication
-- Pull pinned images including `quay.io/aipcc/base-images/agentic/codex@sha256:f62cb7aa71cb145daf843b5e11c5efc255e19bb44d41c4eab5b1dba912b2342e`
-- Install the `openshell` CLI binary
-- Start the gateway service
+The checkout and its parent directories must be readable by that account.
+On bootc, use `sudo sss-bootc harness create --profile dev` instead.
+Creation is detached and returns after structured Ready status; this does not
+prove a subsequently launched harness task survives SSH disconnect.
 
-Verify the gateway is running:
+No provider key is forwarded over SSH. Standalone credentials must be explicitly
+registered with the pinned CLI's `provider create --credential KEY` environment
+lookup and attached with `create.sh --provider NAME`. Use a hidden prompt in the
+service-owner environment, never a literal key in shell history or an argument:
 
 ```bash
-curl http://127.0.0.1:8091/healthz
+# First import an administrator-reviewed profile matching the pinned binary paths.
+# The fresh gateway has no built-in provider profiles.
+openshell profile lint -f /path/to/reviewed-openai-profile.yaml
+openshell profile import -f /path/to/reviewed-openai-profile.yaml
+read -r -s -p 'Synthetic OpenAI test key: ' OPENAI_API_KEY; printf '\n'
+export OPENAI_API_KEY
+openshell provider create --name test-openai --type openai --credential OPENAI_API_KEY
+unset OPENAI_API_KEY
 ```
 
-## Create a Sandbox
+Initially use synthetic credentials: actual provider rewriting and real tool tasks
+remain unqualified. Do not attach a direct provider in Praxis mode. Codex and
+OpenClaw reject `--config`; OpenCode has an experimental Praxis config path.
+See [integration status](../../../docs/quickstarts/openshell-praxis/users.md).
 
-Navigate to the Codex harness directory:
+Connect with the same owner environment and `connect.sh --name codex-dev`.
+Delete with `openshell sandbox delete codex-dev` as that owner. Deleting/recreating a
+sandbox does not promise workspace retention; export your work first. Do not source
+helper libraries into an interactive shell. `include_workdir` grants filesystem
+permissions; it does not mount your checkout or establish persistence.
 
-```bash
-cd harnesses/codex
-```
+The dev policy restricts GitHub API methods; Git-over-HTTPS to github.com is not
+read-only. Landlock is best-effort and requires inspection of actual runtime
+enforcement. See the [threat model](../threat-model.md).
 
-Create a sandbox with the `dev` profile:
-
-```bash
-./create.sh --profile dev
-```
-
-This creates a sandbox named `codex-dev` with:
-- Read-write workspace access
-- Network access to the OpenAI API, GitHub (read-only), and npm registry
-
-Other available profiles: `review` (read-only), `automation` (CI/CD), `interactive` (full-featured with persistence).
-
-To create a sandbox with a custom name:
-
-```bash
-./create.sh --profile dev --name my-session
-```
-
-## Connect to the Sandbox
-
-Set your OpenAI API key (see Provider Configuration above), then connect:
-
-```bash
-./connect.sh
-```
-
-Or for a custom-named sandbox:
-
-```bash
-./connect.sh --name my-session
-```
-
-This establishes an SSH connection with the Codex CLI ready to use. `connect.sh` forwards `OPENAI_API_KEY`/`ANTHROPIC_API_KEY` via `ssh SendEnv` (only variables set in your environment are sent). The sandbox image must `AcceptEnv` them for the credential to reach the harness; this is confirmed on the host during the smoke run (a host-validation step, like the `host.openshell.internal` reachability caveat), not by this repository.
-
-## Teardown
-
-From `openshell/scripts`, destroy the sandbox:
-
-```bash
-cd ../../scripts
-source harness-lib.sh
-harness_destroy codex-dev
-```
-
-Or for a custom-named sandbox:
-
-```bash
-harness_destroy my-session
-```
-
-## Policy Details
-
-The `dev` profile enforces:
-
-**Filesystem**:
-- Read-write workspace access
-- Read-only access to `/usr`, `/lib`, `/lib64`, `/etc`, `/proc`, `/opt`
-- Read-write access to `/tmp`, `/dev/null`, `/home`
-
-**Network** (per-binary allowlists):
-- OpenAI API endpoints (`api.openai.com`, `auth.openai.com`)
-- GitHub API (read-only access)
-- npm registry
-
-**Landlock LSM**: Best-effort compatibility mode
-
-See `harnesses/codex/profiles/dev/policy.yaml` for the complete policy definition.
-
-## Next Steps
-
-- Review the [Policy Walkthrough](../policy-walkthrough.md) to understand deny-by-default enforcement
-- Read the [Threat Model](../threat-model.md) to understand what OpenShell protects and what it does not
-- Explore other profiles (`review`, `automation`, `interactive`) in `harnesses/codex/profiles/`
+OpenClaw's connect helper opens a shell only. Verify the pinned gateway command
+and authentication before starting a service. A future browser workflow needs both
+a sandbox-to-RHEL loopback forward and a workstation tunnel, for example
+`ssh -N -L 18789:127.0.0.1:18789 USER@RHEL_HOST`. No browser workflow is qualified.

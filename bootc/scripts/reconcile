@@ -43,9 +43,7 @@ render_template "${ROOT}/openshell/configs/quadlet/openshell-gateway.container.i
   "${tmp}/gateway.container" ODH_GATEWAY_IMAGE "${ODH_GATEWAY_IMAGE}"
 # The root reconciler controls start order: no user default.target autostart
 # before the selected OS deployment's images have been cached.
-sed -e '/^\[Install\]/,$d' \
-  -e 's/^PodmanArgs=--userns=keep-id$/PodmanArgs=--userns=keep-id:uid=1001,gid=1001\nUser=1001\nGroup=1001/' \
-  -e 's/^Exec=$/Exec=--bind-address 127.0.0.1 --port 8090/' \
+sed '/^\[Install\]/,$d' \
   "${tmp}/gateway.container" >"${tmp}/openshell-gateway.container"
 os_units="/etc/containers/systemd/users/$(id -u openshell-svc)"
 install -m 0644 "${tmp}/openshell-gateway.container" "${os_units}/openshell-gateway.container"

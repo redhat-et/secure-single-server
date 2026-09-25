@@ -151,12 +151,12 @@ sudo sss-bootc harness connect --name demo-dev
 These commands run the existing harness scripts as `openshell-svc`. Their
 standalone policies permit provider endpoints. The
 [Praxis integration workflow](../docs/quickstarts/openshell-praxis/README.md)
-is separate and still needs per-harness provider configuration and policy
-acceptance. In particular, the existing Codex/OpenClaw integrated setup contains
-manual provider-configuration steps. Successful boot/build checks do not prove
-that harness inference is routed through Praxis or that direct provider access
-is denied. Do not supply provider keys to the OpenShell account when testing
-credential-starved Praxis integration.
+is separate and experimental. Codex and OpenClaw reject `--config`; OpenCode
+renders a provider config but host-alias routing and real inference remain
+unqualified. The pinned AWS sandbox did not resolve `host.openshell.internal`.
+No SSH helper forwards provider keys. Standalone bindings must be explicit with
+`--provider NAME`; integrated mode rejects them. Successful boot/build checks do
+not prove a real model task works or that direct provider access is denied.
 
 Start with `dev` for the CLI smoke test. OpenCode currently attempts to write
 runtime state under `/sandbox/.local/share`, which the shipped read-only
