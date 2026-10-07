@@ -129,7 +129,7 @@ python3 tests/mocked-provider.py --suite openshell --engine podman
 The offline tests execute the real create/connect entry points with fake
 CLI/SSH commands. They cover all three standalone harnesses and four profiles,
 invalid arguments, integrated OpenCode port/model rendering and rejection of
-integrated Codex/OpenClaw configuration. They reuse the merged regressions for
+integrated OpenClaw configuration. They reuse the merged regressions for
 explicit provider bindings, readiness, gateway setup and SSH credential
 isolation. The denial-probe regression runs a real local HTTP server: HTTP
 200, 401, 403 and 500 all establish reachability and cannot prove a network denial.

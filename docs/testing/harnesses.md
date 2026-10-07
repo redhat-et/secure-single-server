@@ -12,7 +12,7 @@ which combinations passed and which still need fixes or live tests.
 <summary>What the launcher configures, and how to compare file-based alternatives</summary>
 
 The [configuration reference](../quickstarts/common/harness-configuration.md)
-shows Codex flags/TOML, OpenCode environment JSON/config files, and Claude
+shows OpenCode environment JSON/config files and Claude
 environment/settings files. The normal acceptance path uses `praxis-harness`
 without `--prompt`, preserving interactive approvals. `--prompt` selects the
 bounded automated tool task mode; record that distinction.
@@ -84,7 +84,6 @@ Open the selector without submitting a prompt:
 
 | Harness | Selector | Expected with the current Qwen setup |
 | --- | --- | --- |
-| Codex | `/model` | Qwen is missing; keep the explicit launcher selection |
 | Claude Code | `/model` | Qwen appears through configured aliases |
 | OpenCode | `/models` | Qwen appears under Praxis |
 
@@ -100,7 +99,6 @@ For OpenShell, run inside the sandbox and record the service-operator versus
 personal-user access mode. Results are grouped by setup in the
 [compatibility matrix](compatibility.md).
 
-Provider configuration references: [Codex model catalog](https://learn.chatgpt.com/docs/config-file/config-reference),
-[OpenCode custom providers](https://opencode.ai/docs/providers#custom-provider),
+Provider configuration references: [OpenCode custom providers](https://opencode.ai/docs/providers#custom-provider),
 and [Claude model configuration](https://code.claude.com/docs/en/model-config).
 These describe configuration; the matrix records the installed versions' results.

@@ -268,19 +268,18 @@ The model argument is the complete gateway alias, such as
 | Harness argument | Configuration supplied at launch | Persistent alternative |
 | --- | --- | --- |
 | `opencode` | `OPENCODE_CONFIG_CONTENT`: provider `praxis`, base URL ending `/v1`, caller JWT, selected model and limits. Chooses OpenAI-compatible or Anthropic SDK from the catalog; `--api anthropic` selects Messages on a dual-API model | Put the provider/model block in `opencode.json` and load the JWT from a private environment variable |
-| `codex` | Command-line provider settings using `/v1/responses`, caller JWT environment variable and context/compaction limits. Local vLLM gets a generated model catalog under `~/.cache/pricetag-harness` | Put the equivalent provider/model settings in `~/.codex/config.toml`, keeping credentials in the environment |
 | `claude-code` | `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, explicit model/context/output settings; local Qwen gets the existing custom-menu settings and compatible reasoning effort | Export the same environment settings before launching `claude`; keep the token in a private file |
 
 Use `--print-config` for the exact settings; token values are redacted.
-The helper changes its child process environment and writes only the Codex
-model catalog, leaving existing harness settings files intact. The CA is
+The helper changes its child process environment, leaving existing harness
+settings files intact. The CA is
 supplied through each client's TLS environment settings. Local Qwen thinking
 remains enabled by the vLLM configuration; this helper does not turn it off.
 
 This is catalog-driven launch configuration. Native model discovery inside
 Claude's `/model` menu remains disabled for this pilot; it is not established
-by successfully fetching `/v1/models`. Codex needs a Responses-capable model,
-Claude needs a Messages-capable model, and OpenCode can use either. The helper
+by successfully fetching `/v1/models`. Claude needs a Messages-capable model,
+and OpenCode can use either. The helper
 rejects combinations that require API translation the gateway does not provide.
 
 </details>

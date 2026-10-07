@@ -3,21 +3,21 @@
 Track feature support and testing here. Keep provider/backend tool-task results
 in [compatibility.md](compatibility.md).
 
-| Feature | Codex | Claude Code | OpenCode | OpenClaw / OpenShell |
-| --- | --- | --- | --- | --- |
-| Model selection | Unified configured catalog | Unified configured picker | Both unified catalogs | Blocked: missing Praxis adapter |
-| Catalog refresh | `praxis-harness-config` | Same; native discovery disabled | Same | Not qualified |
-| Short-history model switching | Passed with Responses adapter [details below](#model-switching-and-reasoning) | Messages round trips passed | Responses/Messages round trips passed with adapter | Not qualified |
-| Thinking and context limits | Per-model context; compaction pending | Unknown-model context override; known Claude windows differ | Per-model context/output; compaction pending | Not qualified |
-| Tool approvals | Native controls | Manual for Qwen; auto classifier blocked | Native controls | Depends on sandbox/adapter |
-| Inspect/change token quota | Praxis administrator commands | Same | Same | Same gateway controls; adapter pending |
-| CLI quota error and recovery | Mock test available; RHEL pending | Mock test available; RHEL pending | Mock test available; RHEL pending | Blocked |
-| Shared vLLM allowance | Shared Valkey budget across Responses, Chat and Messages; API-tested | Same | Same | Adapter pending |
-| Quota persistence | Via Praxis/Valkey | Via Praxis/Valkey | Via Praxis/Valkey | Adapter pending |
+| Feature | Claude Code | OpenCode | OpenClaw / OpenShell |
+| --- | --- | --- | --- |
+| Model selection | Unified configured picker | Both unified catalogs | Blocked: missing Praxis adapter |
+| Catalog refresh | Same; native discovery disabled | Same | Not qualified |
+| Short-history model switching | Messages round trips passed | Responses/Messages round trips passed with adapter | Not qualified |
+| Thinking and context limits | Unknown-model context override; known Claude windows differ | Per-model context/output; compaction pending | Not qualified |
+| Tool approvals | Manual for Qwen; auto classifier blocked | Native controls | Depends on sandbox/adapter |
+| Inspect/change token quota | Praxis administrator commands | Same | Same gateway controls; adapter pending |
+| CLI quota error and recovery | Mock test available; RHEL pending | Mock test available; RHEL pending | Blocked |
+| Shared vLLM allowance | Same | Same | Adapter pending |
+| Quota persistence | Via Praxis/Valkey | Via Praxis/Valkey | Adapter pending |
 
 “Configured” describes available configuration, not a new interactive test pass.
 
-**Contents:** [Codex](#codex) · [Claude Code](#claude-code) ·
+**Contents:** [Claude Code](#claude-code) ·
 [OpenCode](#opencode) · [OpenClaw / OpenShell](#openclaw--openshell) ·
 [Shared gateway checks](#shared-gateway-checks)
 
@@ -35,31 +35,6 @@ The quota commands below run on the **workstation**, after selecting a
 [disposable mock VM](rhel-smoke.md). They use Valkey; use `--profile memory`
 only on a VM prepared with that profile. The feature phase refuses real-provider
 installations, including the manual Qwen CPU/GPU hosts.
-
-## Codex
-
-### Model selection and limits
-
-```console
-codex --profile praxis
-```
-
-Type `/model`, select a configured alias, and run the file/test task. Repeat
-with another provider and back in the same session, then after resume.
-Use the [Responses adapter](#responses-history-experiment) for cloud → Qwen
-returns; the normal listener still rejects encrypted reasoning. Verify
-compaction separately; short-history passes do not qualify it.
-
-### Quota error and recovery
-
-```console
-python3 tests/rhel/run.py --host "$RHEL_HOST" --ssh-key "$SSH_KEY" \
-  --scenario "$RHEL_SCENARIO" --profile valkey --phase features \
-  --feature-provider vllm --harness codex
-```
-
-This checks initial quota denial. Still test denial between tool calls, retry
-behavior and a successful task after recovery, with no duplicated tool execution.
 
 ## Claude Code
 
@@ -123,8 +98,8 @@ Test OpenClaw only through OpenShell. Its Praxis adapter is missing, so model
 selection and quota behavior are **blocked**. Once available, run the same
 selector → tool task → quota denial → recovery checks inside the sandbox.
 
-Keep each sandbox harness separate: OpenCode's recipe is available; the Codex
-Praxis adapter and Claude image/recipe remain missing. Ordinary-user sandbox
+Keep each sandbox harness separate: OpenCode's recipe is available; the Claude
+image/recipe remains missing. Ordinary-user sandbox
 access is blocked by [#12](https://github.com/redhat-et/secure-single-server/issues/12).
 [OpenShell probes](openshell-manual.md) test infrastructure; they do not qualify
 a harness or its retry behavior.
@@ -134,19 +109,19 @@ a harness or its retry behavior.
 ### Model switching and reasoning
 
 Recorded on the all-in-one GPU: Qwen3.8-27B INT4 / vLLM 0.30.0 (32K context,
-8K output budget), Praxis core 0.7.0 / AI 0.4.1, Codex 0.157.1,
-Claude Code 2.1.283 and OpenCode 1.18.32. CPU, remote and OpenShell switching
+8K output budget), Praxis core 0.7.0 / AI 0.4.1, Claude Code 2.1.283 and
+OpenCode 1.18.32. CPU, remote and OpenShell switching
 are not qualified. These are resumed native CLI tasks, not interactive menu captures.
 
-| Round trip in one conversation | Codex | Claude Code | OpenCode |
-| --- | --- | --- | --- |
-| Local Qwen Responses ↔ each configured direct/custom GPT Mini, Luna and Sol | Passed with adapter [1, 2] | Different API | Passed with adapter [1–3] |
-| Direct OpenAI ↔ custom-provider GPT, including forward/reverse Mini → Luna → Sol chain | Passed | Different API | Passed |
-| Messages: every pair of Qwen, hosted Flash, Sonnet and Opus, both ways | Different API | Passed | Passed |
-| Qwen Responses ↔ each of those Messages entries | Different API | Different API | Passed with adapter [1–3] |
-| Direct/custom GPT Mini Responses ↔ each Messages entry | Different API | Different API | Passed |
-| GPT Luna/Sol Responses ↔ each Messages entry | Different API | Different API | Not run |
-| Long history, actual compaction and switching into a smaller context | Not run [4] | Not run | Not run [4] |
+| Round trip in one conversation | Claude Code | OpenCode |
+| --- | --- | --- |
+| Local Qwen Responses ↔ each configured direct/custom GPT Mini, Luna and Sol | Different API | Passed with adapter [1–3] |
+| Direct OpenAI ↔ custom-provider GPT, including forward/reverse Mini → Luna → Sol chain | Different API | Passed |
+| Messages: every pair of Qwen, hosted Flash, Sonnet and Opus, both ways | Passed | Passed |
+| Qwen Responses ↔ each of those Messages entries | Different API | Passed with adapter [1–3] |
+| Direct/custom GPT Mini Responses ↔ each Messages entry | Different API | Passed |
+| GPT Luna/Sol Responses ↔ each Messages entry | Different API | Not run |
+| Long history, actual compaction and switching into a smaller context | Not run | Not run [4] |
 
 Each turn recalled a conversation-only marker and executed unit tests. The
 adapter runs covered 36 turns / 32 switches. Preserve private result JSON and
@@ -200,14 +175,7 @@ including cloud models, depends on the adapter running. Inspect it with
 The path is harness → adapter `18180` → Praxis `8080` → upstream; this is
 neither a new Praxis listener nor a new filter chain. Messages stays on `8081`.
 
-From a project directory, choose a harness:
-
-```console
-codex --profile praxis \
-  -c 'model_providers.praxis.base_url="http://127.0.0.1:18180/v1"'
-```
-
-Append `resume` to choose an existing Codex session. For OpenCode:
+From a project directory, use OpenCode:
 
 ```console
 OPENCODE_CONFIG_CONTENT='{"provider":{"praxis-openai":{"options":{"baseURL":"http://127.0.0.1:18180/v1"}}}}' \
@@ -295,7 +263,7 @@ capacities and namespaces were restored. This does not qualify CLI retry behavio
 The status helper also read both hosts' persisted quota balances without restarting services.
 The GPU now uses one shared vLLM budget: migration preserved existing charges,
 and real Chat/Messages requests added their reported usage to that same ledger.
-Native-file Codex catalogs passed `model/list`; OpenCode passed `opencode models`.
+OpenCode passed `opencode models`.
 Real cloud switching is recorded above; interactive selector captures remain separate.
 
 Remaining qualification: concurrent reservations, expiry during real CPU/GPU

@@ -88,7 +88,7 @@ subordinate IDs, private home, and systemd lingering.
 
 ## 4. Create provider secrets
 
-Use dedicated provider credentials for this gateway. OpenAI is used by Codex and
+Use dedicated provider credentials for this gateway. OpenAI is used by
 OpenCode; Claude Code also requires an Anthropic key. Do not paste keys into
 commands, files, chat, or harness accounts. Run this in a private, unrecorded
 administrator terminal; `sudo` I/O recording must not capture secret input.

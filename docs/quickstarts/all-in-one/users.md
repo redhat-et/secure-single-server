@@ -33,7 +33,6 @@ subprocess.run(["npm", "install", "--global", "--prefix", str(pathlib.Path.home(
                 *[f"{name}@{version}" for name, version in versions.items()]], check=True)
 PYCLIENT
 export PATH="$HOME/.local/bin:$PATH"
-codex --version
 opencode --version
 claude --version
 ```
@@ -63,10 +62,6 @@ Qwen alone supplies both. No config-home environment override is needed.
 Start one CLI from your project:
 
 ```console
-codex --profile praxis
-```
-
-```console
 claude-code
 ```
 
@@ -78,16 +73,12 @@ opencode
 
 | Harness | Menu | Generated configuration |
 | --- | --- | --- |
-| Codex | `/model`: Responses models | `~/.codex/praxis.config.toml`, `~/.codex/model-catalogs/praxis.json` |
 | Claude Code | `/model`: Messages models | `~/.claude/settings.json` |
 | OpenCode | `/models`: both APIs | `~/.config/opencode/opencode.json` |
 
 The menus are snapshots of the gateway's configured aliases, such as
 `vllm/qwen3.8-27b-int4` or `openai/<approved-model>`. They do not automatically
 import upstream catalogs. Refresh and restart the harness after admin changes.
-For Codex, `--profile praxis` loads the generated
-[named profile](https://learn.chatgpt.com/docs/config-file/config-advanced#profiles).
-
 OpenCode uses just two active provider entries: `praxis-openai` at
 `http://127.0.0.1:8080/v1` and `praxis-messages` at `http://127.0.0.1:8081/v1`.
 GPT and local Qwen use Responses under `praxis-openai`; other compatible models
@@ -112,8 +103,8 @@ The pinned vLLM rejects cloud encrypted reasoning when returning to Qwen
 Use a fresh Qwen session, or use Qwen's Messages entry in OpenCode/Claude Code.
 Do not assume a long cloud conversation fits Qwen's smaller context.
 
-Limits come from the approved catalog. Codex/OpenCode use per-model context;
-Codex's compaction headroom does not enforce an output cap. Claude's context
+Limits come from the approved catalog. OpenCode uses per-model context;
+Claude's context
 override covers unknown model IDs; recognized Claude models retain their own
 window. Long-history compaction and downsizing need qualification.
 Claude runs in simple/Manual mode for Qwen compatibility: approve tools yourself;

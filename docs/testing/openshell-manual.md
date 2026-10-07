@@ -51,7 +51,7 @@ Record the sandbox CLI version separately from the direct-host CLI version.
 
 Require generated files, nonempty tests, streamed inference and continuation
 after tool results through Praxis. Do not attach a direct-provider binding.
-Codex/OpenClaw Praxis adapters, Claude's image/recipe and the Anthropic sandbox
+OpenClaw Praxis adapters, Claude's image/recipe and the Anthropic sandbox
 route are still missing. A Ready sandbox or API probe cannot qualify them.
 
 ## 3. Record security and lifecycle separately

@@ -1,6 +1,6 @@
 # External remote-client acceptance
 
-Test that your locally installed Codex, Claude Code and OpenCode can connect to
+Test that your locally installed Claude Code and OpenCode can connect to
 Praxis using its HTTPS URL and your caller JWT. A valid token must let the harness
 complete a small coding task on your machine. Missing, invalid and expired tokens
 must be rejected by the gateway. Provider credentials stay on the server.
@@ -36,12 +36,11 @@ This validates local gateway authentication and client setup before the RHEL run
 
 ### Harness/provider matrix
 
-Every provider includes all three harnesses in the result. Current local results
+Every provider includes each supported harness in the result. Current local results
 use synthetic models behind the real gateway:
 
 | Harness | vLLM | OpenAI | Anthropic |
 | --- | --- | --- | --- |
-| Codex | Passed | Passed | Blocked: Responses-to-Messages translation |
 | Claude Code | Passed | Blocked: Messages-to-OpenAI translation | Passed |
 | OpenCode | Passed | Passed | Passed |
 
@@ -61,7 +60,6 @@ The launcher sets the following for local Qwen:
 
 | Harness | Endpoint | Caller JWT configuration |
 | --- | --- | --- |
-| Codex | `https://GATEWAY/vllm/v1`, Responses API | `PRAXIS_PLACEHOLDER_KEY`, referenced by the Praxis provider's `env_key` |
 | Claude Code | `https://GATEWAY/vllm`, Messages API | `ANTHROPIC_AUTH_TOKEN` |
 | OpenCode | `https://GATEWAY/vllm/v1`, Chat Completions API | Praxis provider `apiKey` and `Authorization: Bearer` header |
 
@@ -141,15 +139,15 @@ python3 tests/remote-client/run.py --url "$GATEWAY_URL" \
 ```
 
 For the mock cloud routes, repeat with `--provider openai --model fixture`
-and `--provider anthropic --model fixture`. Each includes all three harnesses;
-the translation cases above are recorded as blocked. The local synthetic vLLM fixture serves `qwen3-8b`;
+and `--provider anthropic --model fixture`. Each includes each supported
+harness; the translation cases above are recorded as blocked. The local synthetic vLLM fixture serves `qwen3-8b`;
 that does not qualify real 8B or 27B inference.
 
 After the administrator installs real Qwen and supplies a fresh evidence JSON,
 repeat with `--mode real --provider vllm --model qwen3.8-27b-int4`, or the
 installed 8B alias. Automated real cloud calls are refused. Real deadlines are
 60 minutes per CPU harness and 30 per GPU harness; mocks have three minutes.
-Use `--harness codex|opencode|claude` to narrow a rerun. `--output` chooses a
+Use `--harness opencode|claude` to narrow a rerun. `--output` chooses a
 new evidence directory and refuses an existing one.
 
 Default private evidence is `.state/external-client-TIMESTAMP/`: `result.json`,

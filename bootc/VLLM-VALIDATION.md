@@ -37,9 +37,9 @@ and thinking disabled. OpenCode's output limit is 2,048 tokens.
 
 ## Checks
 
-Both CPU and GPU base/Codex/OpenCode/OpenClaw OS variants built and passed
+Both CPU and GPU base/OpenCode/OpenClaw OS variants built and passed
 `bootc/test-images` (eight images). These image checks do not qualify local
-Codex/OpenClaw adapters. Build, profile, provider rendering, isolation and
+OpenClaw adapters. Build, profile, provider rendering, isolation and
 selector regression tests passed, as did ShellCheck, OpenShell static checks
 and the shared gateway static suite.
 

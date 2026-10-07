@@ -1,5 +1,8 @@
 # Why use this architecture?
 
+> **Where this fits:** Step 1 of the recommended route. Read this before
+> deploying anything.
+
 This walkthrough explains why the pieces exist and then follows the validated
 local path through them. It is written for an administrator deciding whether to
 run coding agents for a small team on one managed RHEL server.
@@ -15,7 +18,7 @@ healthy service or a model saying that it ran a command is not accepted as proof
 
 ## The problem it answers
 
-Suppose several people ask to run Codex, OpenCode, or another coding harness on
+Suppose several people ask to run OpenCode, OpenClaw, or another coding harness on
 a shared server. A direct approach is to create accounts, copy a provider key
 into each harness, and let the agent use the shell. That can work on a trusted
 laptop, but it leaves five operational questions unanswered:
@@ -26,7 +29,7 @@ laptop, but it leaves five operational questions unanswered:
 | Where can model traffic go? | An agent or tool can bypass the approved model and contact vLLM or a cloud provider directly. | The local OpenCode policy permits only `host.openshell.internal:8080`. |
 | Who holds provider credentials? | Keys copied into harness homes are hard to rotate and easy to expose through prompts, logs, or tools. | Praxis owns credentials in gateway profiles; this local path has no cloud credential or fallback. |
 | What happens when use grows? | One long-running task can consume a shared model; a cloud profile can also create a provider-bill surprise. | Praxis applies request and shared token limits before routing to the selected upstream. |
-| Can the result be reproduced and recovered? | Hand-edited servers drift, and later updates are hard to reason about. | bootc packages pinned services and harness configuration into a reviewable OS image. |
+| Can the result be reproduced? | Hand-edited servers drift and are difficult to reason about. | bootc packages pinned services and harness configuration into a reviewable OS image. |
 
 The architecture does not try to make the harness smarter. It lets the harness
 remain a normal coding agent while making its execution and model access
@@ -40,7 +43,7 @@ credential. Complete hardware, image, and OS prerequisites are in the
 
 ### 1. Put the model on the host
 
-After building and booting the OpenCode image, select CPU or single-L4 GPU mode:
+After deploying the published OpenCode image, select CPU or single-L4 GPU mode:
 
 ```console
 sudo sss-bootc vllm cpu
@@ -158,25 +161,14 @@ sudo sss-bootc vllm disabled
 | OpenShell | Runs the harness and tools under a declared filesystem and network policy and records allowed and denied operations. | Is not a multi-tenant authorization boundary in the current single-operator deployment. |
 | Praxis | Makes the gateway the model path, strips client credentials, applies shared request and token limits, and chooses the approved upstream. | Does not yet provide per-user quotas, USD budgets, or a qualified usage dashboard. |
 | vLLM | Serves the pinned local Qwen3-8B model on host loopback. | Is unauthenticated and therefore must not be published or exposed directly to harnesses. |
-| bootc | Builds a reviewable, versioned RHEL host with pinned workload images and rollback. | Does not restore workspace data or application state on rollback. |
+| bootc | Provides a reviewable, versioned RHEL host with pinned workload images. | Does not restore workspace data or application state after a deployment change. |
 
-## Where the upstream ideas come from
+## Upstream scope
 
-- [OpenShell](https://github.com/NVIDIA/OpenShell) contributes the sandbox and
-  policy model: agents can be useful while their filesystem, process, and
-  network access remain constrained.
-- [Praxis experimental](https://github.com/praxis-proxy/experimental) is the
-  AI-gateway implementation this repository builds around. Its upstream demos
-  also explore token budgets, provider routing, caller authentication, and
-  trace-driven dashboards.
-- [vLLM](https://github.com/vllm-project/vllm) supplies local model serving.
-- The older [Praxis Ruby framework](https://github.com/praxis/praxis) is not the
-  gateway used here; do not confuse it with the Rust experimental server in
-  `praxis-proxy/experimental`.
-
-This repository uses a narrower, pinned subset of those capabilities. It does
-not import the upstream observability stack, per-user identity mapping, model
-failover, or cloud-provider routing as qualified features.
+This repository uses a narrower, pinned subset of OpenShell, Praxis
+experimental, and vLLM. It does not qualify upstream observability, per-user
+identity mapping, model failover, or cloud-provider routing. The older Praxis
+Ruby framework is unrelated to the gateway used here.
 
 ## Know when not to use it
 
@@ -187,16 +179,17 @@ boundaries. It is not yet the right answer if you require all of the following:
 - per-user authentication and personal quotas;
 - USD spend caps or billing chargeback;
 - production multi-tenant isolation;
-- Codex or OpenClaw through the local Qwen path;
+- OpenClaw through the local Qwen path;
 - sustained-load or coding-quality guarantees.
 
 Read the [integration matrix](../openshell-praxis/users.md) and
 [trust model](../../../openshell/docs/threat-model.md) before extending the
 validated path.
 
-## Continue
+## Next step
 
 - [Deploy the local Qwen3-8B example](../../../bootc/VLLM.md)
-- [Read the OpenShell + Praxis integration guide](../openshell-praxis/README.md)
-- [Understand quota semantics](../common/token-quotas.md)
-- [Review the testing and acceptance guide](../../testing/README.md)
+- Before extending the path, read the
+  [integration matrix](../openshell-praxis/users.md) and
+  [quota semantics](../common/token-quotas.md).
+- [Reproduce the acceptance evidence](../../testing/README.md).

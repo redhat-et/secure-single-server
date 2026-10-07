@@ -1,5 +1,8 @@
 # Remote HTTPS/JWT gateway
 
+> **Where this fits:** An alternate route. Use this when harnesses and tools
+> remain on approved client machines and only model traffic reaches the server.
+
 Harnesses run on users' own machines. RHEL runs Praxis and, for persistent
 token quotas, one private Valkey container. No user SSH account is required
 on the gateway. Follow [installation](install.md), then [user setup](users.md).
@@ -7,7 +10,7 @@ on the gateway. Follow [installation](install.md), then [user setup](users.md).
 ```mermaid
 flowchart LR
   subgraph Client[User laptop or application host]
-    H[Claude Code / Codex / OpenCode]
+    H[Claude Code / OpenCode]
     W[Local workspace and tools]
     H --- W
   end
@@ -57,3 +60,9 @@ Using 8443 avoids changing the host's privileged-port policy.
 
 TLS certificates and JWT verification keys are replaced through a reviewed
 same-profile reinstall/restart. Automatic certificate renewal is not supplied.
+
+## Next step
+
+- Reproduce the scenario with the [testing guide](../../testing/README.md).
+- If tools must be contained on the server instead of client machines, read
+  the [OpenShell + Praxis guide](../openshell-praxis/README.md).
