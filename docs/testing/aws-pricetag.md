@@ -1,9 +1,17 @@
 # AWS remote gateway with PriceTag
 
-Use this guide to launch two independent RHEL VMs. Both run Praxis, PriceTag
+Use this guide for a fresh real-provider RHEL VM and an optional, separate
+performance VM. Both run Praxis, PriceTag
 metering/dashboards and PostgreSQL, with no local model weights or GPU. Both
 start with SSH and HTTPS restricted to your workstation's public IPv4 `/32`.
 The AWS scenario is `remote-gateway`, with inference `none`.
+
+Follow the sections in order: launch → copy source → prepare host/images →
+configure providers → start services → provision users → browser/OpenCode.
+Blocks are labelled by machine. Stop at the first failed command. The performance
+VM sections are optional; do not run them when you only need the real gateway.
+AWS administrator commands run only in your own workstation terminal. Never copy
+AWS credentials onto a VM or give them to a deployment assistant.
 
 | VM name | Purpose | Upstreams | Initial access |
 | --- | --- | --- | --- |
@@ -16,7 +24,9 @@ load test to the real server. After qualifying the real deployment, follow
 [opening its HTTPS endpoint](#open-the-real-server-to-any-ip-later) if users
 need access from any IP. That step is separate from the initial launch.
 
-## Initial capacity
+<details>
+<summary>Instance sizing, disk and service limits</summary>
+
 
 Use `configs/aws/pricetag-cloud.json`: **m7i.2xlarge, 8 vCPU, 32 GiB RAM,
 150 GiB encrypted gp3 root disk**. This is a conservative test candidate for
@@ -41,13 +51,20 @@ requests per second: stream duration, user pauses, dashboard polling and
 accounting costs all affect capacity. The public edge retains its 30 requests/s
 limit and burst 120; 429s must be reported rather than counted as throughput.
 
-## Launch the two VMs with restricted access
+</details>
 
-Use the checkout containing this guide. Install AWS CLI v2, Python 3.9+, jq,
+## 1. Launch the real VM — AWS admin workstation
+
+Use a normal clone of `redhat-et/secure-single-server` on the branch you intend
+to deploy (`main` after merge, or the fetched PR branch while reviewing).
+Replace the checkout path in the first block. Install AWS CLI v2, Python 3.9+, jq,
 curl and OpenSSH on your workstation. Run in Bash or zsh, stopping on any
-error. Set up the shared launch session once:
+error. From this checkout, set up the launch session once:
 
 ```console
+cd /absolute/path/to/secure-single-server
+SERVER_CHECKOUT="$(git rev-parse --show-toplevel)"
+cd "$SERVER_CHECKOUT"
 source scripts/aws/session.sh
 aws_test_credentials
 REGION=eu-central-1
@@ -85,6 +102,9 @@ PRICETAG_INSTANCE=$(jq -er '.InstanceId' \
   aws_test_verify pricetag-real
 ```
 
+<details>
+<summary>Optional: launch the separate performance VM</summary>
+
 Plan and launch the performance server separately:
 
 ```console
@@ -106,13 +126,15 @@ PRICETAG_INSTANCE=$(jq -er '.InstanceId' \
   aws_test_verify pricetag-perf
 ```
 
+</details>
+
 Launch returns before boot finishes. If verification reports `pending`, the VM
 has already been created: run its wait/verify block again, not `aws_test_deploy`.
 The [AWS waiter](https://docs.aws.amazon.com/cli/latest/reference/ec2/wait/instance-running.html)
 only waits for the EC2 running state; SSH and application readiness are separate
 checks. If it fails, inspect the instance state before continuing.
 
-Keep both journals:
+Keep the real-server journal (and the performance journal if launched):
 
 ```console
 REAL_STATE=".state/$RUN_PREFIX-pricetag-real.json"
@@ -126,13 +148,16 @@ settings still loaded, run:
 
 ```console
 printf 'Run prefix: %s\n' "$RUN_PREFIX"
-aws_test_verify pricetag-real && aws_test_verify pricetag-perf
+aws_test_verify pricetag-real
+if [ -f ".state/$RUN_PREFIX-pricetag-perf.json" ]; then
+  aws_test_verify pricetag-perf
+fi
 ```
 
 This prints each instance ID, current state, public IP, hardware, access mode,
 SSH login, key path and journal path. It performs read-only AWS checks and does
 not print credential values. Share this output with the deployment operator.
-The selected `RHEL_HOST` afterwards is the performance VM; explicitly select
+If both were checked, `RHEL_HOST` afterwards points to the performance VM; explicitly select
 the real VM again before working on it. For a new terminal, restore the existing
 run using [AWS operations](aws-operations.md); do not generate a new run prefix.
 
@@ -147,7 +172,7 @@ use HTTPS localhost with the same JWT authentication. PostgreSQL, metering and
 mock-provider ports remain private. Both deployments initially restrict the
 shared dashboard/inference HTTPS listener to the workstation `/32`.
 
-## Prepare each fresh host
+## 2. Select the host and copy source — workstation
 
 Run this section once for each VM. On the workstation, from this server checkout,
 select the destination explicitly before copying files:
@@ -163,29 +188,40 @@ directories; the existing-GPU guide's smaller copy command omits the fresh-host
 installer, provider templates and performance fixtures:
 
 ```console
+(
 set -o pipefail
 git ls-files -z scripts configs tests | tar --no-xattrs --null -T - -czf - | \
   ssh -o IdentitiesOnly=yes -o ForwardAgent=no -i "$SSH_KEY" "$RHEL_HOST" \
     'mkdir -p ~/secure-single-server-pricetag && tar -xzf - -C ~/secure-single-server-pricetag'
-EXPERIMENTAL_CHECKOUT='/absolute/path/to/reviewed/experimental-checkout'
-git -C "$EXPERIMENTAL_CHECKOUT" ls-files -z \
-  Cargo.toml Cargo.lock Containerfile LICENSE rust-toolchain.toml crates demos/ai-gateway | \
-  tar --no-xattrs -C "$EXPERIMENTAL_CHECKOUT" --null -T - -czf - | \
+) &&
+printf '%s\n' "${RHEL_HOST#*@}" | \
   ssh -o IdentitiesOnly=yes -o ForwardAgent=no -i "$SSH_KEY" "$RHEL_HOST" \
-    'mkdir -p ~/experimental && tar -xzf - -C ~/experimental'
+    'umask 077; cat > ~/pricetag-gateway-host'
+```
+
+After a successful copy, open a second workstation terminal for SSH. Reuse the
+printed key/host values there, or connect from this terminal and keep it open
+while running RHEL steps:
+
+```console
 ssh -o IdentitiesOnly=yes -o ForwardAgent=no -i "$SSH_KEY" "$RHEL_HOST"
 ```
 
-Replace `EXPERIMENTAL_CHECKOUT` with the reviewed checkout containing
-`manual_jwt`. These commands copy tracked/staged source files, not `.state`, Git
-metadata or credential directories. Stop if either copy fails. Build images
-natively on each RHEL host; do not reuse ARM images from an ARM laptop.
+The source command copies tracked/staged files, including pending changes in this
+checkout, but excludes `.state`, Git metadata and credential directories. Before
+merge, use the reviewed PR checkout on both the workstation and VM. Stop if the
+copy fails. Build images natively on RHEL; ARM laptop images do not qualify x86_64.
+The copy also saves this VM's public IP in `~/pricetag-gateway-host` for TLS
+and dashboard Origin configuration. If clients will use DNS, replace that value
+with the intended DNS name before preparation.
 
-On RHEL, install the base prerequisites and prepare only the service account:
+## 3. Prepare the host and images — RHEL
+
+Install base prerequisites and prepare only the service account:
 
 ```console
-sudo dnf install -y podman git python3 python3-pyyaml openssl policycoreutils-python-utils shadow-utils
-cd ~/secure-single-server-pricetag
+sudo dnf install -y podman git python3 python3-pyyaml openssl policycoreutils-python-utils shadow-utils &&
+cd ~/secure-single-server-pricetag &&
 sudo scripts/common/install --prepare
 ```
 
@@ -204,10 +240,23 @@ host the source clone below must not already exist. The helper builds its pinned
 revision, not the moving repository HEAD:
 
 ```console
-git clone https://github.com/redhat-et/pricetag-metering.git ~/pricetag-metering
-python3 scripts/pricetag/build-metering --source ~/pricetag-metering
+git clone https://github.com/praxis-proxy/experimental.git ~/experimental &&
+  git -C ~/experimental fetch origin pull/46/head &&
+  git -C ~/experimental checkout --detach 8b435909da436e498dc8ffcd1c69b0ecb6896880
+```
+
+Build unmodified metering, then Praxis; stop if either build fails:
+
+```console
+git clone https://github.com/redhat-et/pricetag-metering.git ~/pricetag-metering &&
+python3 scripts/pricetag/build-metering --source ~/pricetag-metering &&
 podman build --build-arg FEATURES=otel -t localhost/praxis-experimental:manual-jwt \
   -f ~/experimental/Containerfile ~/experimental
+```
+
+Load both images into the service account and record their immutable IDs:
+
+```console
 PRICETAG_UID=$(id -u praxis-svc)
 svc() {
   (cd /tmp && sudo -u praxis-svc env \
@@ -215,11 +264,11 @@ svc() {
     DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$PRICETAG_UID/bus" "$@")
 }
 set -o pipefail
-podman save localhost/pricetag-metering:upstream-557ceb1 | svc podman load
-podman save localhost/praxis-experimental:manual-jwt | svc podman load
-PRAXIS_IMAGE=$(svc podman image inspect localhost/praxis-experimental:manual-jwt --format '{{.Id}}')
-METERING_IMAGE=$(svc podman image inspect localhost/pricetag-metering:upstream-557ceb1 --format '{{.Id}}')
-PRAXIS_IMAGE="sha256:${PRAXIS_IMAGE#sha256:}"
+podman save localhost/pricetag-metering:upstream-557ceb1 | svc podman load &&
+podman save localhost/praxis-experimental:manual-jwt | svc podman load &&
+PRAXIS_IMAGE=$(svc podman image inspect localhost/praxis-experimental:manual-jwt --format '{{.Id}}') &&
+METERING_IMAGE=$(svc podman image inspect localhost/pricetag-metering:upstream-557ceb1 --format '{{.Id}}') &&
+PRAXIS_IMAGE="sha256:${PRAXIS_IMAGE#sha256:}" &&
 METERING_IMAGE="sha256:${METERING_IMAGE#sha256:}"
 ```
 
@@ -228,98 +277,162 @@ for the matching installation section below. The `sha256:` normalization handles
 Podman versions that omit that prefix from local image IDs. Continue with only
 the real-provider or performance section for this host, then client setup.
 
-## Install the real-provider server
+## 4. Configure providers and start the real gateway — RHEL
 
-Run this section only on `pricetag-real`. Start with one real OpenAI provider;
-add other native providers after this path passes. This does not install an
-old gateway as a prerequisite. Provider keys and caller JWTs are different:
-provider keys stay in service-account Podman secrets; users receive only JWTs.
+Run on **RHEL, pricetag-real only**. This is fresh installation, not an upgrade.
+The repository helper creates inputs under `/root/pricetag-provider-inputs` and
+stores provider keys as versioned rootless Podman secrets. Root administrators
+can access secrets; ordinary users receive only their own gateway JWT.
 
-Enter the provider key at a hidden prompt on RHEL. Shell tracing must be off:
+### Configure direct OpenAI
+
+Review the non-secret presets in `configs/pricetag/provider-models.json`, then
+run this block. Skip it for a PriceTag-only gateway:
 
 ```console
-(
-set -o pipefail
-set +x
-set +a
-unset PRICETAG_OPENAI_KEY
-sudo -v &&
-printf 'OpenAI API key: ' &&
-IFS= read -r -s PRICETAG_OPENAI_KEY &&
-printf '\n' &&
-printf '%s' "$PRICETAG_OPENAI_KEY" | sudo scripts/common/secret-set openai v1
-)
+cd ~/secure-single-server-pricetag
+sudo python3 scripts/pricetag/providers openai --debug
 ```
 
-Stop on an error. To rotate later, create a new version and update only the
-new gateway's secret reference; do not overwrite an existing secret. Podman
-secrets protect against ordinary users, but the host administrator can access
-them. Do not use `scripts/common/providers enable` against this standalone
-PriceTag installation: that helper manages the older gateway deployment.
+Paste the OpenAI key at the hidden prompt. The helper checks `/v1/models` over
+verified HTTPS and enables only advertised preset IDs. It never prints the key
+or provider error bodies. The presets are Mini, Luna and Sol, with limits recorded
+in the preset file; they are not an assertion that every account has access.
 
-Choose an upstream model actually available to the account, with reviewed
-context/output limits and a matching PriceTag pricing entry. These are
-non-secret values. The following creates inputs, without starting a listener:
+### Optional: add a remote PriceTag inference provider
+
+This upstream is separate from the PriceTag metering service being installed.
+Skip this block for an OpenAI-only gateway:
 
 ```console
-install -d -m 0700 "$HOME/pricetag-real-inputs"
-printf 'OpenAI model ID: '
-IFS= read -r PRICETAG_MODEL
-printf 'Reviewed context window: '
-IFS= read -r PRICETAG_CONTEXT
-printf 'Reviewed maximum output: '
-IFS= read -r PRICETAG_OUTPUT
-export PRICETAG_MODEL PRICETAG_CONTEXT PRICETAG_OUTPUT
-python3 - <<'PYINPUTS'
-import json, os, sys
-from pathlib import Path
-import yaml
-sys.path.insert(0, "scripts/common")
-from unified_config import validate
-source = yaml.safe_load(Path('configs/all-in-one/shared-gateway.yaml').read_text())
-model = os.environ['PRICETAG_MODEL'].strip()
-context = int(os.environ['PRICETAG_CONTEXT'])
-output = int(os.environ['PRICETAG_OUTPUT'])
-models = [{'id': 'openai/' + model, 'provider': 'openai', 'model': model,
-           'apis': ['openai'], 'context': context, 'output': output}]
-models = validate(models)
-folder = Path.home() / 'pricetag-real-inputs'
-for name, value in [('providers.json', source), ('models.json', models), ('prices.json', {})]:
-    with (folder / name).open('x') as file:
-        json.dump(value, file, indent=2)
-PYINPUTS
+sudo python3 scripts/pricetag/providers pricetag --debug
 ```
 
-The source template contains legacy quota definitions, but the PriceTag renderer
-removes them and installs external metering. The catalog enables only OpenAI,
-so no Anthropic secret or route is enabled. A missing model price stops startup;
-review `prices.json` to map the gateway alias to a different explicitly chosen
-pricing entry if necessary. Do not silently substitute a guessed price.
+Enter the upstream hostname once, review both printed credential destinations,
+then paste its key at the hidden prompt. HTTPS and the OpenAI `/v1` suffix are
+added automatically. Direct OpenAI keeps its separate key. The default path
+requires successful model discovery; preset IDs not advertised by that catalog
+are skipped. A credential-dependent catalog can omit working models. Absence
+does not establish that inference is unavailable.
 
-Create a secret-reference input and the private network Quadlet. This reference
-file contains no secret value and is not installed as a running service:
+<details>
+<summary>Authentication, incomplete catalogs and setup retries</summary>
+
+For the paired route convention, the helper maps the leading
+`ai-gateway-unified-` / `ai-gateway-openai-` hostname prefix; otherwise both APIs
+use the same host. Supply both overrides when the API hosts are unrelated:
 
 ```console
-printf '%s\n' '[Container]' \
-  'Secret=praxis-openai-api-key-v1,type=env,target=OPENAI_API_KEY' \
-  > "$HOME/pricetag-real-inputs/provider-secrets.container"
+sudo python3 scripts/pricetag/providers pricetag \
+  --anthropic-url 'MESSAGES_HOST' --openai-url 'OPENAI_HOST' --debug
+```
+
+Use the prompt or the override command, not both. One PriceTag key must authorize
+both APIs. Messages discovery uses `x-api-key` and `anthropic-version`;
+OpenAI discovery uses `Authorization: Bearer`. Follow the instructions for your
+credential. For a gateway whose catalog needs the same header on both API hosts,
+add `--catalog-auth x-api-key` or `--catalog-auth bearer`. This changes **discovery
+only**. Inference defaults to Messages `x-api-key` and OpenAI Bearer headers;
+use `--messages-auth bearer` when your credential requires Bearer for Messages
+discovery and inference. The Messages client supplies `anthropic-version`. Credentials never go in an
+inference JSON body. A successful catalog request does not prove both inference
+APIs accept that key.
+
+Pin a reviewed model when the catalog omits it:
+
+```console
+sudo python3 scripts/pricetag/providers pricetag --debug \
+  --pin-model anthropic:rits/zai-org/glm-5-3
+```
+
+Pins are restricted to `configs/pricetag/provider-models.json`; repeat the option
+for other reviewed presets. They are marked unverified when not advertised and
+do not bypass authentication failures. GLM uses **262,144 context / 65,536 maximum
+output tokens**, and is **text-only**. The OpenCode launcher declares text-only
+modalities and disables attachments. Start a fresh conversation without images;
+images in history can still cause upstream HTTP 400. Test inference before
+distributing access. Do not increase client limits beyond the documented caps.
+
+If the initial `/v1/models` returns **404, 405 or 501**, first verify
+the URL. For an endpoint known not to implement discovery, explicitly opt in:
+
+```console
+sudo python3 scripts/pricetag/providers pricetag --allow-unverified-models --debug
+```
+
+This warns and uses the reviewed presets for the affected API, recording it as
+unverified. It does **not** validate that key, model entitlement or served limits.
+Test real inference before distributing access. Authentication errors (401/403),
+TLS failures, timeouts, rate limits and other server errors still stop setup.
+An empty or malformed catalog is not treated as missing discovery.
+
+Before activation, add `--replace` to replace saved inputs using a new key.
+On a running gateway, OpenAI key replacement and PriceTag endpoint/key replacement are supported;
+follow [provider maintenance](pricetag.md#replace-a-running-gateways-pricetag-endpoint-or-key).
+Do not rerun `prepare` to update a running deployment.
+
+The other Messages presets have conservative configured limits, not verified
+upstream maxima. A pricing row does not create an inference route. Review exact upstream
+IDs, native APIs, limits and prices before adding presets. Debug output omits
+keys and response bodies but includes your entered endpoints; redact those
+addresses before posting logs publicly.
+
+</details>
+
+### Export, prepare and start
+
+Export all configured providers; OpenAI-only and PriceTag-only are supported:
+
+```console
+sudo python3 scripts/pricetag/providers export
+```
+
+Aliases remain `openai/MODEL` and `pricetag/MODEL`. Praxis selects the configured
+native API/provider key and rewrites the alias to the upstream ID. Inspect the
+exported `models.json`, `providers.json` and `prices.json` if needed; they contain
+configuration and secret references, not key values.
+
+Use the host saved during source transfer. For DNS, replace this value with
+the exact name clients will use before running preparation:
+
+```console
+GATEWAY_HOST="$(cat ~/pricetag-gateway-host)"
 PRICETAG_UID=$(id -u praxis-svc)
 sudo install -m 0644 configs/common/quadlet/praxis.network \
-  "/etc/containers/systemd/users/$PRICETAG_UID/praxis.network"
-```
-
-Continue with the selected real server's hostname:
-
-```console
-GATEWAY_HOST='REPLACE_WITH_REAL_SERVER_PUBLIC_IP_OR_DNS'
+  "/etc/containers/systemd/users/$PRICETAG_UID/praxis.network" &&
 sudo python3 scripts/pricetag/prepare.py \
   --hostname "$GATEWAY_HOST" --praxis-image "$PRAXIS_IMAGE" \
   --metering-image "$METERING_IMAGE" \
-  --providers "$HOME/pricetag-real-inputs/providers.json" \
-  --models "$HOME/pricetag-real-inputs/models.json" \
-  --provider-unit "$HOME/pricetag-real-inputs/provider-secrets.container" \
-  --price-sources "$HOME/pricetag-real-inputs/prices.json" --monthly-usd 5
+  --providers /root/pricetag-provider-inputs/providers.json \
+  --models /root/pricetag-provider-inputs/models.json \
+  --provider-unit /root/pricetag-provider-inputs/provider-secrets.container \
+  --price-sources /root/pricetag-provider-inputs/prices.json \
+  --price-seeds configs/pricetag/price-seeds.json --monthly-usd 5
 ```
+
+<details>
+<summary>How the pricing catalog and supplemental seeds work</summary>
+
+`configs/pricetag/price-seeds.json` supplies reviewed fallback USD-per-million
+rates for selected models missing from the pinned catalog. Review these against
+the provider's rates before launch; existing fetched prices are preserved.
+Only selected source IDs are seeded. Missing unseeded prices stop startup rather
+than silently choosing another model's rate. Flat rates do not cover every
+upstream charge or long-context surcharge.
+
+This file is supplemental, not the full pricing catalog:
+
+| Model | Price source in the pinned metering build | Inference availability |
+| --- | --- | --- |
+| `gpt-5.4-mini` | Already present in the bundled catalog; no additional seed needed | The provider helper enables it only when upstream discovery advertises it |
+| `gpt-6-luna`, `gpt-6.1-sol` | Additional fallback rows in `price-seeds.json` | Also require upstream discovery |
+| `rits/zai-org/glm-5-3` | Metering already seeds all token rates at zero | Messages preset; enable when advertised or explicitly pin for an incomplete catalog, then test inference |
+
+Gateway aliases such as `openai/gpt-5.4-mini` and `pricetag/gpt-5.4-mini`
+receive copies of their selected source prices during bootstrap. A rate-card
+entry does not make a model available through `/v1/models`.
+
+</details>
 
 Review `/etc/praxis-pricetag/quadlets`, `models.json` and `bootstrap.sql`, then:
 
@@ -327,22 +440,21 @@ Review `/etc/praxis-pricetag/quadlets`, `models.json` and `bootstrap.sql`, then:
 sudo scripts/pricetag/start
 ```
 
-The running gateway has USD enforcement and PriceTag's retained 10-billion-token
-monthly safety net, with no Praxis token-rate limiter. For another real provider,
-add its native API cluster, HTTPS authority/SNI, credential-injection environment
-variable, matching Podman secret reference, model catalog entries and reviewed
-prices. Do not assume every provider supports both OpenAI and Anthropic APIs.
-Keep such changes in the PriceTag deployment and preserve its database/issuer;
-first-time preparation refuses existing directories.
+Do not rerun `prepare` after successful preparation. `start` can retry a failed
+startup and preserves the existing database/issuer. It starts PostgreSQL,
+metering and Praxis as rootless Quadlet/systemd services with boot persistence.
+The gateway uses USD enforcement plus PriceTag's retained 10-billion-token
+monthly safety net; the Praxis token-rate limiter is removed.
 
-## Install the performance server
+<details>
+<summary>Alternative for the separate performance VM: install the mock provider</summary>
 
 Run this section only on `pricetag-perf`. Its mock mode is independent of the
 real-provider configuration and does not mount real provider secrets.
 Choose this VM's public IP/DNS name:
 
 ```console
-GATEWAY_HOST='REPLACE_WITH_THIS_VM_PUBLIC_IP_OR_DNS'
+GATEWAY_HOST="$(cat ~/pricetag-gateway-host)"
 printf '%s\n' '{"demo-model":"Qwen3.8-27B-FP8"}' > ~/pricetag-mock-prices.json
 sudo python3 scripts/pricetag/prepare.py --mock-provider \
   --hostname "$GATEWAY_HOST" --praxis-image "$PRAXIS_IMAGE" \
@@ -360,243 +472,186 @@ container loopback. It is a test fixture, not an inference service.
 sudo scripts/pricetag/start
 ```
 
-## Client access and qualification
+</details>
 
-Run on each RHEL VM after startup. Preparation already created Alice's initial
-JWT; link that subject to a person and rotate it before distributing credentials:
+## 5. Verify services and provision users — RHEL
+
+Run after starting either deployment. Define `svc` in each new SSH session:
+
+```console
+PRICETAG_UID=$(id -u praxis-svc)
+svc() {
+  (cd /tmp && sudo -u praxis-svc env \
+    XDG_RUNTIME_DIR="/run/user/$PRICETAG_UID" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$PRICETAG_UID/bus" "$@")
+}
+svc systemctl --user status pricetag-db.service pricetag-metering.service \
+  pricetag-gateway.service --no-pager
+loginctl show-user praxis-svc -p Linger
+sudo curl --fail --cacert /etc/praxis-pricetag/ca.pem https://localhost:8443/login >/dev/null
+```
+
+Expect all three services `active (running)` and `Linger=yes`. For the performance
+VM also check `svc systemctl --user status pricetag-provider --no-pager`.
+Allow TCP 8443 in the public interface's zone if firewalld is active. The AWS
+security group continues to restrict source IPs. Run on RHEL:
+
+```console
+if sudo systemctl is-active --quiet firewalld; then
+  GATEWAY_IFACE=$(ip -o route get 1.1.1.1 | awk '{for(i=1;i<=NF;i++) if($i=="dev") {print $(i+1); exit}}')
+  GATEWAY_ZONE=$(sudo firewall-cmd --get-zone-of-interface="$GATEWAY_IFACE")
+  if [ -z "$GATEWAY_ZONE" ] || [ "$GATEWAY_ZONE" = "no zone" ]; then
+    GATEWAY_ZONE=$(sudo firewall-cmd --get-default-zone)
+  fi
+  sudo firewall-cmd --zone="$GATEWAY_ZONE" --add-port=8443/tcp &&
+    sudo firewall-cmd --permanent --zone="$GATEWAY_ZONE" --add-port=8443/tcp
+fi
+```
+
+PostgreSQL and metering ports remain private.
+
+Provision the two initial users with independent $5 monthly allowances:
 
 ```console
 cd ~/secure-single-server-pricetag
 sudo python3 scripts/pricetag/user --subject alice --name Alice --rotate \
-  --monthly-usd 5 --output /root/pricetag-admin/alice-ready.jwt
-sudo python3 -c 'import json; print("\n".join(m["id"] for m in json.load(open("/etc/praxis-pricetag/models.json"))))'
+  --monthly-usd 5 --output /root/pricetag-admin/alice-ready.jwt &&
+sudo python3 scripts/pricetag/user --subject bob --name Bob --rotate \
+  --monthly-usd 5 --output /root/pricetag-admin/bob-ready.jwt &&
+sudo python3 scripts/pricetag/credentials list
 ```
 
-Record the real model alias printed above (`openai/` plus the selected model ID).
-The performance server advertises only `demo-model`. Raw JWT issuance alone does
-not create the person relationship required for individual overrides. Use
-[the credential administration guide](pricetag.md#administrator-scripts-provision-rotate-and-revoke)
-for new users, further rotations and revocation. Use a new output filename for
-each rotation; preparation and token issuance refuse to overwrite existing state.
+Expect `Credential saved` for each user. `credentials list` shows JWT status,
+not proof of identity/budget setup. These commands link spending identities,
+set overrides and rotate the initial JWTs. Do not delete an existing output
+file to rerun a successful rotation; use a new filename for deliberate renewal.
+See [user administration](pricetag.md#administrator-scripts-provision-rotate-and-revoke)
+for adding users, changing budgets, rotation and revocation.
 
-Back on the workstation, from this checkout and with the AWS session restored,
-select the host again. Use a distinct client directory for each VM:
+| Login | Current JWT path after the steps above |
+| --- | --- |
+| Admin | `/root/pricetag-admin/admin.jwt` |
+| Alice | `/root/pricetag-admin/alice-ready.jwt` |
+| Bob | `/root/pricetag-admin/bob-ready.jwt` |
+
+Read only the token you need, on RHEL:
 
 ```console
+sudo cat /root/pricetag-admin/admin.jwt
+```
+
+For a user login substitute their path from the table. Initial `alice.jwt` and
+`bob.jwt` are now superseded. Signing keys stay on RHEL. JWTs have no automatic
+expiry; browser sessions can survive JWT revocation until their seven-day expiry.
+
+## 6. Connect your browser and OpenCode — workstation
+
+Leave the RHEL shell open. In the original workstation terminal, select the
+intended VM again. Restoring
+an existing terminal/session is covered in [AWS operations](aws-operations.md).
+This does not launch another instance:
+
+```console
+cd "$SERVER_CHECKOUT"
 VM_NAME=pricetag-real
 aws_test_verify "$VM_NAME"
 CLIENT_DIR="$HOME/.config/praxis-pricetag/$RUN_PREFIX-$VM_NAME"
+GATEWAY_URL="https://${RHEL_HOST#*@}:8443"
 install -d -m 0700 "$CLIENT_DIR"
 umask 077
 ssh -o IdentitiesOnly=yes -o ForwardAgent=no -i "$SSH_KEY" "$RHEL_HOST" \
-  'sudo -n cat /etc/praxis-pricetag/ca.pem' > "$CLIENT_DIR/ca.pem"
-ssh -o IdentitiesOnly=yes -o ForwardAgent=no -i "$SSH_KEY" "$RHEL_HOST" \
-  'sudo -n cat /root/pricetag-admin/alice-ready.jwt' > "$CLIENT_DIR/caller.jwt"
-ssh -o IdentitiesOnly=yes -o ForwardAgent=no -i "$SSH_KEY" "$RHEL_HOST" \
-  'sudo -n cat /root/pricetag-admin/admin.jwt' > "$CLIENT_DIR/admin.jwt"
-chmod 0600 "$CLIENT_DIR/caller.jwt" "$CLIENT_DIR/admin.jwt"
-GATEWAY_URL="https://${RHEL_HOST#*@}:8443"
+  'sudo -n cat /etc/praxis-pricetag/ca.pem' > "$CLIENT_DIR/ca-next.pem" &&
+  mv "$CLIENT_DIR/ca-next.pem" "$CLIENT_DIR/ca.pem"
 ```
 
-Complete the preview below for the selected real server first. Later repeat this
-client section with `VM_NAME=pricetag-perf` and `MODEL_ALIAS=demo-model`. Stop on
-any SSH/copy error.
-If preparation used a DNS hostname instead of the IP, set `GATEWAY_URL` to that
-exact HTTPS hostname and port. Never copy issuer/CA signing keys. Admin JWTs are
-for dashboard administration, not harnesses or budget-denial tests.
+If preparation used DNS, set `GATEWAY_URL` to that exact HTTPS hostname and port.
+Copying the CA does not import it into browser trust. On macOS, open the CA in
+Keychain Access and trust it for SSL, or accept a browser certificate exception
+if your browser permits one. This exception does not configure CLI trust.
 
-On the real VM's client setup, choose its actual model alias and preview:
+On macOS:
 
 ```console
-MODEL_ALIAS='openai/REPLACE_WITH_SELECTED_MODEL_ID'
-python3 scripts/pricetag/harness opencode --url "$GATEWAY_URL" \
+open "$CLIENT_DIR/ca.pem"
+open "$GATEWAY_URL/login"
+```
+
+Paste the admin JWT read on RHEL and visit `/admin#quotas` to inspect allowances.
+Use a separate browser profile with Alice's JWT for `/dashboard`. Browser-only
+use needs no local JWT file. No SSH tunnel is required.
+
+For OpenCode, copy only Alice's JWT to a private local file:
+
+```console
+umask 077
+ssh -o IdentitiesOnly=yes -o ForwardAgent=no -i "$SSH_KEY" "$RHEL_HOST" \
+  'sudo -n cat /root/pricetag-admin/alice-ready.jwt' > "$CLIENT_DIR/caller-next.jwt" &&
+  mv "$CLIENT_DIR/caller-next.jwt" "$CLIENT_DIR/caller.jwt"
+```
+
+Choose a configured alias from the successful provider setup output. Preview:
+
+```console
+MODEL_ALIAS='openai/gpt-6-luna'
+python3 "$SERVER_CHECKOUT/scripts/pricetag/harness" opencode --url "$GATEWAY_URL" \
   --token-file "$CLIENT_DIR/caller.jwt" --ca-file "$CLIENT_DIR/ca.pem" \
   --model "$MODEL_ALIAS" --print-config
 ```
 
-Remove `--print-config` to launch an installed OpenCode. Run the helper by absolute
-path from the project you want to work on so OpenCode keeps that working directory.
-For the performance server use `MODEL_ALIAS=demo-model` and preview only: the mock
-cannot perform useful coding work. On-VM harnesses use `https://localhost:8443`
-with that same VM's CA/JWT; no additional public-IP ingress rule is needed.
+If that model was skipped, use an enabled alias instead. With OpenCode installed,
+change into your project directory and launch with the same settings:
 
-Trust the appropriate CA in your browser separately from CLI trust. Open
-`$GATEWAY_URL/login` and paste `caller.jwt` for usage, or use a separate browser
-profile with `admin.jwt` and open `$GATEWAY_URL/admin#quotas` for budgets. JWTs
-have no automatic expiry; existing browser cookies can survive JWT revocation
-for seven days. No SSH tunnel is needed.
+```console
+cd /absolute/path/to/your/project
+python3 "$SERVER_CHECKOUT/scripts/pricetag/harness" opencode --url "$GATEWAY_URL" \
+  --token-file "$CLIENT_DIR/caller.jwt" --ca-file "$CLIENT_DIR/ca.pem" \
+  --model "$MODEL_ALIAS"
+```
 
-First verify invalid JWT rejection, private-route isolation, user/admin access,
-USD denial, revocation and accounting persistence. Keep both IP-bound during
-this qualification. On the performance VM only, follow
-[the performance procedure](pricetag-perf.md) for distinct users, staged load,
-stream completion and exact database reconciliation.
+`--model` selects the starting model, not the whole menu. Run `/models` in
+OpenCode to switch among all advertised aliases:
 
-Measure at 1, 5, 10 and 20 active users. Report successful completions, errors,
-latency percentiles, time to first response byte, CPU/RAM and database growth.
-Run a short smoke test before a longer soak. Repeat with the load generator on
-a separate client to separate generator CPU from gateway capacity; IP-bound
-access still applies. A local Podman result does not qualify RHEL capacity.
+| OpenCode provider | Catalog entries | Wire API |
+| --- | --- | --- |
+| `praxis-openai` | Direct `openai/…` and upstream `pricetag/…` OpenAI models | Responses for GPT-5/GPT-6/o1/o3/o4; Chat for other OpenAI models |
+| `praxis-messages` | Messages-capable `pricetag/…` aliases | Anthropic Messages |
 
-Keep the performance VM synthetic so repeated tests do not spend real provider
-budgets. Add real providers or a private remote vLLM to the real VM only after
-reviewing native API support and model pricing.
+<details>
+<summary>What the per-session harness configuration changes</summary>
+
+The launcher carries each model's context/output limits, enables only those
+providers, filters inherited model entries and uses the starting model for
+background tasks. Configuration is per process; your persistent OpenCode file
+is unchanged. Relaunch to refresh the gateway catalog. Provider secrets remain
+on RHEL; the client has only its caller JWT and public CA.
+
+For on-VM testing use `https://localhost:8443` with the same CA and user JWT;
+JWT authentication still applies. The performance VM uses `demo-model`; preview
+only for harness configuration, since its fixture cannot do coding tasks.
+
+</details>
+
+## 7. Qualify the deployment and continue administration
+
+A working catalog does not prove every upstream can complete requests. Test a
+small inference and a real tool task on each intended model; check usage and
+USD budgets in the dashboard. Also verify invalid-JWT denial, ordinary-user
+admin denial, revocation and accounting after restart. Keep access IP-bound
+until these pass.
+
+For later user creation, JWT rotation/revocation and allowance changes, use
+[user administration](pricetag.md#administrator-scripts-provision-rotate-and-revoke).
+Those operations do not require first-time preparation again.
+
+For the separate mock-only VM, follow [performance and storage measurements](pricetag-perf.md).
+Use distinct test users and staged load; record request metrics together with
+CPU/RAM, PostgreSQL/WAL, logs and disk growth. A workstation/Podman result is
+not evidence of RHEL capacity. No automatic raw-usage retention is configured;
+review the retention section before a long-running deployment.
 
 
 ## Open the real server to any IP later
 
-Keep the initial deployment restricted. Run this section only after the real
-server passes client and authorization checks and you choose to allow users
-from any IPv4 address. The performance server stays restricted.
-
-The endpoint remains **HTTPS on port 8443**. Opening the security-group rule
-removes the source-IP restriction; it does not remove inference JWT validation,
-dashboard login, admin authorization, Origin checks or USD enforcement.
-Inference, user dashboards and the admin dashboard currently share this port:
-**the admin login/routes will also be reachable from any IPv4 address**, with
-PriceTag enforcing the authenticated role. A security group cannot distinguish
-URL paths. If admin access must remain IP-restricted, implement and test a
-separate application/listener boundary before opening this shared listener.
-
-Non-expiring JWTs still require manual revocation/rotation. Existing browser
-cookies can survive JWT revocation for seven days; global session-secret
-rotation is the available emergency logout for all browsers. Retain the
-request-rate limit, review service errors and maintain encrypted backups.
-
-### TLS and hostname
-
-For ordinary browser users, obtain a publicly trusted server certificate for
-the public hostname. Prefer choosing that DNS name at initial preparation:
-it is included in both the certificate and the dashboard's explicit allowed
-Origins. DNS/certificate issuance and automatic renewal are operator-managed;
-this deployment does not provision them. A private test CA can remain for
-managed clients that explicitly trust it, but opening ingress does not make
-browsers trust that CA automatically.
-
-If replacing the laboratory certificate on RHEL, validate the new chain/key,
-check that it covers `GATEWAY_HOST`, then install them and restart Praxis using the `svc` function from image
-loading:
-
-```console
-sudo scripts/remote-gateway/credentials check-tls \
-  --cert /root/pricetag-tls/fullchain.pem --key /root/pricetag-tls/privkey.pem
-sudo openssl x509 -in /root/pricetag-tls/fullchain.pem -noout -checkhost "$GATEWAY_HOST"
-sudo install -o root -g praxis-svc -m 0640 /root/pricetag-tls/fullchain.pem \
-  /etc/praxis-pricetag/gateway/tls.pem
-sudo install -o root -g praxis-svc -m 0640 /root/pricetag-tls/privkey.pem \
-  /etc/praxis-pricetag/gateway/tls-key.pem
-sudo restorecon -R /etc/praxis-pricetag/gateway
-svc systemctl --user restart pricetag-gateway
-```
-
-The hostname check above is for a DNS name; IP certificates need the
-corresponding IP SAN check. Back up the existing pair privately before changing
-it. Arrange for renewal to update both files and restart the gateway. If the
-public hostname changes, also update `manual_jwt` dashboard `allowed_origins`
-in `gateway.json` to the new exact `https://HOST:8443` origin and restart.
-Keep `https://localhost:8443` for on-host administration. Update clients to the
-new URL and certificate trust; the user JWT issuer/audience do not change.
-
-### Change only the real VM's HTTPS rule
-
-Run on the workstation with the launch session restored and AWS credentials
-loaded. Additional IAM permission `ec2:ModifySecurityGroupRules` is needed.
-Changing the launch array to `--https-access public` does not update an existing
-VM, and `scripts/aws/https-access` only supports restricted `/32` additions.
-Use the existing rule's ID for this transition.
-
-Verify the real VM against its journal and retain a recovery copy:
-
-```console
-aws_test_verify pricetag-real
-REAL_STATE=".state/$RUN_PREFIX-pricetag-real.json"
-cp -n "$REAL_STATE" "$REAL_STATE.before-public"
-REAL_SG=$(jq -er '.SecurityGroupId' "$REAL_STATE")
-REAL_HTTPS_RULE=$(aws ec2 describe-security-group-rules --region "$REGION" \
-  --filters "Name=group-id,Values=$REAL_SG" --output json | \
-  jq -er '[.SecurityGroupRules[] | select(.IsEgress == false and .IpProtocol == "tcp"
-    and .FromPort == 8443 and .ToPort == 8443 and .CidrIpv4 != null)] |
-    if length == 1 then .[0].SecurityGroupRuleId else error("Expected exactly one IPv4 HTTPS rule") end')
-printf 'Real server security group: %s; HTTPS rule: %s\n' "$REAL_SG" "$REAL_HTTPS_RULE"
-```
-
-Stop on any verification/query error. Confirm these are the **real** server's
-resources before running the mutation:
-
-```console
-HTTPS_CIDR=0.0.0.0/0
-HTTPS_ACCESS=public
-aws ec2 modify-security-group-rules --region "$REGION" --group-id "$REAL_SG" \
-  --security-group-rules \
-  "SecurityGroupRuleId=$REAL_HTTPS_RULE,SecurityGroupRule={IpProtocol=tcp,FromPort=8443,ToPort=8443,CidrIpv4=$HTTPS_CIDR}" \
-  --no-cli-pager
-```
-
-This changes only the selected TCP 8443 rule. SSH remains restricted and the
-performance VM's security group is untouched. This is IPv4 access; no IPv6
-listener/ingress rollout is included.
-[AWS rule modification reference](https://docs.aws.amazon.com/cli/latest/reference/ec2/modify-security-group-rules.html).
-
-After AWS reports success, reconcile the real VM's local journal. The following
-checks the entire observed ingress against the expected new state before
-saving it with the existing atomic journal writer:
-
-```console
-python3 - "$REAL_STATE" "$REGION" "$HTTPS_CIDR" "$HTTPS_ACCESS" <<'PYJOURNAL'
-import copy, importlib.machinery, importlib.util, ipaddress, json, sys
-from pathlib import Path
-loader = importlib.machinery.SourceFileLoader('rhel_vm', 'scripts/aws/rhel-vm')
-spec = importlib.util.spec_from_loader(loader.name, loader)
-vm = importlib.util.module_from_spec(spec)
-loader.exec_module(vm)
-path, region, cidr, access = sys.argv[1:]
-state = json.loads(Path(path).read_text())
-assert state['Region'] == region and state['Scenario'] == 'remote-gateway'
-network = ipaddress.ip_network(cidr, strict=True)
-assert network.version == 4 and ((access == 'public' and cidr == '0.0.0.0/0') or
-                                (access == 'restricted' and network.prefixlen == 32))
-desired = copy.deepcopy(state)
-rules = [r for r in desired['Ingress'] if r.get('IpProtocol') == 'tcp'
-         and r.get('FromPort') == 8443 and r.get('ToPort') == 8443]
-assert len(rules) == 1
-rules[0]['IpRanges'] = [{'CidrIp': cidr}]
-desired['HttpsAccess'] = access
-aws = vm.Aws(region, None, False)
-vm.check_identity(aws, state['AccountId'])
-groups = aws.call('ec2', 'describe-security-groups', group_ids=[state['SecurityGroupId']])['SecurityGroups']
-assert len(groups) == 1
-vm.check_owned(groups[0], state)
-vm.check_ingress(groups[0], desired)
-vm.save_state(Path(path), desired)
-print('Observed ingress verified; real-server journal updated.')
-PYJOURNAL
-aws_test_verify pricetag-real
-aws_test_verify pricetag-perf
-```
-
-If reconciliation fails, the AWS rule may already be public. Inspect the
-reported mismatch and reconcile or roll back; do not relaunch or edit the
-journal to hide unrelated drift. Verify from a second client outside the old
-`/32`: HTTPS login loads, unauthenticated inference returns 401, a valid caller
-can infer and view their own usage, and an ordinary user cannot administer
-budgets. Browser writes require the configured exact public Origin.
-
-### Restore restricted access
-
-Use the same real security group and HTTPS rule ID. Recover the original
-workstation CIDR from the saved journal, then modify that rule back:
-
-```console
-HTTPS_CIDR=$(jq -er '.Ingress[] | select(.FromPort == 8443) | .IpRanges[0].CidrIp' \
-  "$REAL_STATE.before-public")
-HTTPS_ACCESS=restricted
-aws ec2 modify-security-group-rules --region "$REGION" --group-id "$REAL_SG" \
-  --security-group-rules \
-  "SecurityGroupRuleId=$REAL_HTTPS_RULE,SecurityGroupRule={IpProtocol=tcp,FromPort=8443,ToPort=8443,CidrIpv4=$HTTPS_CIDR}" \
-  --no-cli-pager
-```
-
-Rerun the journal-reconciliation block with these variables, then verify both
-VMs again. If your workstation IP changed, choose its current public `/32`
-explicitly instead. No change to JWTs, TLS or spending records is needed when
-changing only the source-IP policy.
+After qualification, use [public HTTPS access and rollback](pricetag-access.md).
+That optional procedure changes the real server's TCP 8443 ingress and reconciles
+its launch journal; SSH and the performance VM remain restricted.
