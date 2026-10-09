@@ -2,8 +2,9 @@
 
 Run this walkthrough in Bash on a disposable, already bootc-managed RHEL 9
 x86_64 host. Have an OpenAI API key and an exact model ID available to your
-account ready. This example uses OpenCode with Praxis; OpenClaw model
-authentication remains unqualified.
+account ready. This published-image example uses OpenCode with Praxis.
+For OpenClaw, use the [bounded model/tool guide](../openshell-praxis/openclaw.md)
+with a rebuilt image containing the integration.
 
 Target a first model response in under five minutes after the host is prepared
 and images are cached. Initial downloads and the OS reboot add time.

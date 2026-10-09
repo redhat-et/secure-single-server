@@ -37,6 +37,9 @@ and thinking disabled. OpenCode's output limit is 2,048 tokens.
 
 ## Checks
 
+The [2026-10-09 OpenClaw results](../docs/testing/openclaw-praxis.md) qualify
+a newer bounded-agent path separately from the historical results below.
+
 Both CPU and GPU base/OpenCode/OpenClaw OS variants built and passed
 `bootc/test-images` (eight images). These image checks do not qualify local
 OpenClaw adapters. Build, profile, provider rendering, isolation and

@@ -95,6 +95,14 @@ for variant in "${variants[@]}"; do
       sss-praxis help
     elif [[ "$1" != vllm-cpu && "$1" != vllm-gpu ]]; then
       sss-bootc help
+      if [[ "$1" == openclaw ]]; then
+        test -x "$root/openshell/harnesses/openclaw/run.sh"
+        python3 "$root/openshell/scripts/render-openclaw.py" \
+          "$root/configs/openshell-praxis/openclaw/harness-provider.json.in" \
+          /tmp/openclaw-test.json 8080 fixture-model ""
+        python3 -c "import json; c=json.load(open(\"/tmp/openclaw-test.json\")); assert c[\"models\"][\"providers\"][\"praxis\"][\"apiKey\"] == \"local-placeholder\""
+        test -f "$root/configs/vllm/openclaw/profiles/dev/policy.yaml"
+      fi
     fi
   ' -- "${variant}"
 done

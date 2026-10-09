@@ -195,8 +195,8 @@ when model access is configured, inference and tool execution.
 Install the [Praxis gateway and OpenShell add-on](../openshell-praxis/install.md),
 then follow the [OpenCode integration configuration](../openshell-praxis/users.md).
 The gateway installation is a prerequisite for the add-on. Use an integrated
-OpenCode sandbox without a direct `--provider` binding. OpenClaw + Praxis is
-unsupported.
+sandbox without a direct `--provider` binding. For OpenClaw, follow the
+[bounded model and tool workflow](../openshell-praxis/openclaw.md).
 
 ## Sandbox operations
 

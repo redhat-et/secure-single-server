@@ -34,6 +34,11 @@ References, as needed:
 - [vLLM administration](../quickstarts/common/vllm.md): installation without the smoke runner and maintenance.
 - [vLLM debugging](vllm-debugging.md): known failures, upstream leads and fix qualification.
 
+## OpenClaw model and tool checks
+
+See [OpenClaw Praxis qualification](openclaw-praxis.md) for the pinned
+client/gateway fixture, OpenShell policy checks, real-model acceptance, and CI.
+
 ## Local development checks
 
 Run the offline regression suite from the repository root:

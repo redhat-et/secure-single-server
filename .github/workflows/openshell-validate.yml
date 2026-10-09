@@ -52,6 +52,8 @@ jobs:
         run: |
           bash openshell/tests/openshell-static.sh
           python3 openshell/tests/probe-test.py
+          python3 tests/openshell-praxis/offline.py
+          python3 bootc/tests/inference.py
       - name: Native architecture check
         env: {EXPECTED_ARCH: amd64}
         run: |
@@ -62,11 +64,31 @@ jobs:
   # Never execute pull-request code on a privileged self-hosted runner.
   runtime:
     name: OpenShell runtime (RHEL 9 fixture)
-    if: ${{ github.event_name == 'workflow_dispatch' && vars.OPENSHELL_SELF_HOSTED == 'true' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && vars.OPENSHELL_SELF_HOSTED == 'true' }}
     runs-on: [self-hosted, Linux, X64, rhel9, openshell-disposable]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with: {persist-credentials: false}
-      - name: Run one fixture lifecycle (dummy credentials only)
+      - name: Run one fixture lifecycle (synthetic model and credentials only)
         run: sudo bash openshell/tests/runtime.sh
+
+  openclaw-client:
+    name: Pinned OpenClaw model and tool contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: {persist-credentials: false}
+      - name: Install fixture dependencies
+        run: sudo apt-get update && sudo apt-get install -y python3-yaml
+      - name: Exercise streamed tool turns and credential handling through Praxis
+        env: {CONTAINER_ENGINE: docker}
+        run: python3 tests/openshell-praxis/openclaw-native.py
+      - name: Upload sanitized evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: openclaw-client-contract
+          path: evidence/mocked-provider/openclaw-native.json
+          retention-days: 7

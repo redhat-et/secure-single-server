@@ -94,7 +94,7 @@ sys.stdin.read()
 
     def test_integrated_contract(self):
         config=str(ROOT/'configs/openshell-praxis')
-        for h in ('codex','openclaw'):
+        for h in ('codex',):
             self.assertNotEqual(self.create(h,'--profile','dev','--config',config).returncode,0)
         self.env['PRAXIS_PORT']='8080";bad'
         self.assertNotEqual(self.create('opencode','--profile','dev','--config',config).returncode,0)

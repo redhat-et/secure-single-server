@@ -12,8 +12,7 @@ for compatibility but is deprecated for new deployments.
 
 The configured request path is **OpenCode → Praxis → vLLM**. Local vLLM
 serving and the host Praxis route can be checked independently. The sandbox
-path uses the trusted host mapping in OpenShell v0.1.2-rhaiv.0. OpenClaw
-local adapters are not enabled.
+path uses the trusted host mapping in OpenShell v0.1.2-rhaiv.0. Rebuilt OpenClaw images also support [bounded local model/tool tasks](../docs/quickstarts/openshell-praxis/openclaw.md); previously published images require a rebuild.
 
 ## Host requirements
 

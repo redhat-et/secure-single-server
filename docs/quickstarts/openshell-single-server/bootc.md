@@ -238,8 +238,8 @@ Replace the example address with your inference server's address. The wrapper
 configures `Qwen/Qwen3-8B` through Praxis automatically. Its `local-placeholder`
 client key is not an upstream credential. This bundled route does not inject a
 key into an authenticated vLLM upstream; use the authenticated local-provider
-recipe above for an existing server that requires one. OpenClaw + Praxis is
-unsupported.
+recipe above for an existing server that requires one. Rebuilt OpenClaw images
+support the [bounded Praxis workflow](../openshell-praxis/openclaw.md).
 
 ## Verify runtime limits and policy
 

@@ -86,6 +86,5 @@ defines profile-bound credential substitution and custom endpoints. OpenCode's
 [provider configuration](https://opencode.ai/docs/providers/#custom-provider) and
 [environment substitution](https://opencode.ai/docs/config/#env-vars) define
 client configuration. These examples describe setup; real inference and tool
-execution must be qualified on the deployed host. OpenClaw model authentication
-and its Praxis adapter remain unqualified or unsupported as described in the
-[reference](reference.md).
+execution must be qualified on the deployed host. For OpenClaw, use the [bounded Praxis workflow](../openshell-praxis/openclaw.md)
+and review its recorded test evidence.

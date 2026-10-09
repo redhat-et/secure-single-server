@@ -1,0 +1,54 @@
+{
+  "agents": {
+    "defaults": {
+      "workspace": "/sandbox",
+      "model": {
+        "primary": "praxis/@@MODEL_ID@@"
+      },
+      "skipBootstrap": true,
+      "timeoutSeconds": 600,
+      "models": {
+        "praxis/@@MODEL_ID@@": {
+          "params": {
+            "chat_template_kwargs": {
+              "enable_thinking": false
+            }
+          }
+        }
+      }
+    }
+  },
+  "models": {
+    "mode": "replace",
+    "providers": {
+      "praxis": {
+        "baseUrl": "http://host.openshell.internal:@@PRAXIS_PORT@@/v1",
+        "apiKey": "local-placeholder",
+        "api": "openai-completions",
+        "models": [
+          {
+            "id": "@@MODEL_ID@@",
+            "name": "Administrator-approved model",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 16384,
+            "maxTokens": 2048
+          }
+        ],
+        "timeoutSeconds": 300
+      }
+    }
+  },
+  "tools": {
+    "profile": "coding",
+    "allow": [
+      "read",
+      "write"
+    ]
+  },
+  "gateway": {
+    "mode": "local"
+  }
+}

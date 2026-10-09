@@ -11,10 +11,12 @@ copy the operator's keys to user accounts.
 
 | Combination | Status |
 | --- | --- |
-| OpenClaw + Praxis | Unsupported; `--config` fails before creating anything |
+| OpenClaw + Praxis | Experimental dev profile; [bounded model/tool workflow](openclaw.md) |
 | Claude Code + Praxis | Sandbox image and recipe are missing |
 | OpenCode + Praxis dev | Experimental; qualify each host, provider and tool task |
 | OpenCode review | CLI data-directory permission limitation; outside supported recipes |
+
+For OpenClaw, use the [dedicated model and tool walkthrough](openclaw.md).
 
 For OpenCode experiments, run as the OpenShell service account using the `os_run` helper from the
 [OpenShell single-server guide](../openshell-single-server/manual.md):

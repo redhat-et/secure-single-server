@@ -3,7 +3,7 @@
 Secure single-server AI harness runs [OpenCode](https://github.com/anomalyco/opencode)
 and [OpenClaw](https://github.com/openclaw/openclaw) on one dedicated RHEL 9
 x86_64 host. [OpenShell](https://github.com/NVIDIA/OpenShell/tree/v0.1.2/docs)
-enforces the execution boundary. For the OpenCode path,
+enforces the execution boundary. For the integrated harness paths,
 [Praxis](https://github.com/praxis/praxis) routes model traffic, while
 [Red Hat bootc](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/index)
 packages the reviewed deployment as a repeatable OS image.
@@ -15,14 +15,14 @@ packages the reviewed deployment as a repeatable OS image.
 
 ## How It Works
 
-The validated OpenCode request path is:
+The integrated request path is:
 
 ```text
-OpenCode → OpenShell sandbox → Praxis → approved model
+OpenCode / OpenClaw → OpenShell sandbox → Praxis → approved model
 ```
 
-OpenClaw is available as an OpenShell sandbox variant; its Praxis adapter is
-not yet qualified.
+OpenClaw supports bounded coding tasks through Praxis; see the
+[OpenClaw walkthrough](docs/quickstarts/openshell-praxis/openclaw.md) and its test evidence.
 
 - **Dedicated always-on execution.** Long-running agents continue on the
   server while your laptop disconnects. Workspaces, audit records, and cached
@@ -30,7 +30,7 @@ not yet qualified.
 - **Policy-enforced harnesses.** OpenShell confines each harness and its tools
   with declared filesystem, network, process, runtime, and service-account
   policies. The gateway records policy decisions for later review.
-- **Centralized model access.** On the OpenCode path, Praxis owns provider
+- **Centralized model access.** On the integrated paths, Praxis owns provider
   credentials and selects the approved upstream. The harness and sandbox do
   not hold provider keys.
 - **Repeatable deployment.** Published bootc images carry the OpenShell CLI,
@@ -56,8 +56,9 @@ With these prerequisites, target a first model response in under five minutes.
 Initial image downloads, bootc OS installation and reboot, and local-model
 loading add time.
 
-The model-enabled quickstart uses OpenCode. OpenClaw model authentication
-remains unqualified.
+The published-image quickstart uses OpenCode. For OpenClaw, use the
+[model and tool walkthrough](docs/quickstarts/openshell-praxis/openclaw.md) with
+a checkout or image containing the new integration.
 
 ### Bootc-enabled operating system
 
@@ -84,7 +85,7 @@ and [Praxis installation walkthrough](docs/quickstarts/openshell-praxis/install.
 - [OpenShell trust model](openshell/docs/threat-model.md): the execution
   boundary and assumptions behind the current single-operator deployment.
 - [Praxis integration](docs/quickstarts/openshell-praxis/README.md): model
-  routing, quota semantics, and the experimental OpenCode path.
+  routing, quota semantics, and the experimental harness paths.
 - [Private vLLM inference](bootc/VLLM.md): the separate CPU or GPU server used
   by the strongest validated local-model path.
 - [Published bootc images](bootc/README.md): available OpenCode and OpenClaw

@@ -7,7 +7,7 @@
 | Harness | Qualified in the single-server OpenShell path | Explicitly not qualified |
 | --- | --- | --- |
 | OpenCode | Sandbox creation, CLI version, shell/file operations, policy allow/deny, runtime limits | Optional Praxis model routing and real inference; the narrower `review` profile |
-| OpenClaw | Sandbox creation, CLI version, shell access, policy allow/deny, runtime limits | Browser/service command, authentication, retained sessions, `--backend`, and Praxis integration |
+| OpenClaw | Sandbox lifecycle and policy controls; [bounded Praxis model/tool tests](../../testing/openclaw-praxis.md) | Browser/gateway authentication, retained sessions, `--backend`, and untested providers |
 
 ## AWS verification
 

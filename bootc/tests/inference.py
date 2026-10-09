@@ -104,6 +104,35 @@ admin "$@"
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('usage-error', result.stderr)
 
+    def test_openclaw_vllm_wrapper_uses_openclaw_recipe_and_runs_agent(self):
+        source = (ROOT / 'bootc/scripts/admin').read_text()
+        block = source[source.index('\n  harness)\n'):source.index('\n  *) die', source.index('\n  harness)\n'))]
+        script = """
+set -euo pipefail
+ROOT=/fixture
+require_root() { :; }
+selected_harness() { echo openclaw; }
+inference_backend() { echo remote-vllm; }
+as_openshell() { printf '%s\\n' "$@"; }
+die() { printf '%s\\n' "$*" >&2; exit 1; }
+case "${1:-help}" in
+""" + block + """
+esac
+"""
+        created = subprocess.run(['bash', '-c', script, 'admin', 'harness', 'create',
+                                  '--profile', 'dev', '--name', 'claw-dev'], text=True, capture_output=True)
+        self.assertEqual(created.returncode, 0, created.stderr)
+        self.assertIn('/fixture/configs/vllm/openclaw', created.stdout)
+        self.assertIn('OPENSHELL_MODEL_ID=Qwen/Qwen3-8B', created.stdout)
+        invalid = subprocess.run(['bash', '-c', script, 'admin', 'harness', 'create',
+                                  '--provider', 'direct'], text=True, capture_output=True)
+        self.assertNotEqual(invalid.returncode, 0)
+        launched = subprocess.run(['bash', '-c', script, 'admin', 'harness', 'run',
+                                   '--name', 'claw-dev', '--message', 'hello'], text=True, capture_output=True)
+        self.assertEqual(launched.returncode, 0, launched.stderr)
+        self.assertIn('/fixture/openshell/harnesses/openclaw/run.sh', launched.stdout)
+        self.assertNotIn('--config', launched.stdout)
+
     def test_inference_checks_survive_python_optimization(self):
         source = (ROOT / 'bootc/scripts/inference-check').read_text()
         self.assertNotIn('assert model ', source)

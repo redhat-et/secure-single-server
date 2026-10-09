@@ -12,6 +12,6 @@ After deployment, follow the [harness checks](verification.md). See the
 [qualification and policy reference](reference.md) for supported behavior,
 recorded AWS evidence, and enforcement limits.
 
-Praxis model routing is optional and experimental for OpenCode. OpenClaw +
-Praxis is unsupported. Follow the [Praxis installation walkthrough](../openshell-praxis/install.md)
+Praxis model routing is optional and experimental for OpenCode and
+[OpenClaw bounded tasks](../openshell-praxis/openclaw.md). Follow the [Praxis installation walkthrough](../openshell-praxis/install.md)
 and [integration matrix](../openshell-praxis/users.md) when selecting that path.

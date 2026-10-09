@@ -572,7 +572,11 @@ aws_test_ssh() { return 1; }
                 continue
             blocks = re.findall(r"^```(?:console|sh|bash)\n(.*?)^```", path.read_text(), re.M | re.S)
             for block in blocks:
-                self.assertNotRegex(block, r"\bexit\s+[0-9]|\$\{[^}]*:\?|set -[a-zA-Z]*[eu]", str(path))
+                # Isolated subshells and quoted child Bash scripts may fail fast;
+                # their shell options and exits cannot close the parent terminal.
+                parent = re.sub(r"^\(\n.*?^\)\s*$", "", block, flags=re.M | re.S)
+                parent = re.sub(r"\bbash -c '.*?^'\s*$", "bash -c CHILD_SCRIPT", parent, flags=re.M | re.S)
+                self.assertNotRegex(parent, r"\bexit\s+[0-9]|\$\{[^}]*:\?|set -[a-zA-Z]*[eu]", str(path))
 
     def test_bad_remote_user_url_keeps_terminal_open_and_clears_credentials(self):
         document = (ROOT / "docs/quickstarts/remote-gateway/users.md").read_text()
