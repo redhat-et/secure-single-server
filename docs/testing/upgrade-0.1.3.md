@@ -52,6 +52,12 @@ or GPU. Saved logs remain outside the committed tree.
 | OpenCode provider attachment and controlled HTTP policies | Passed: attached/unbound credential canaries, reachable allow control, explicit EACCES deny with no request |
 | Application write and process-group negative controls | Passed: `/app` write EACCES, group signal EPERM, direct child signal/cleanup succeeds |
 
+The hosted Docker OpenClaw fixture runs as root, matching AWS qualification:
+upstream UID 1000 creates private files that a different host UID cannot read or
+clean up. This only affects the disposable test process; the deployed OpenShell
+gateway remains rootless. For Docker, use
+`sudo env CONTAINER_ENGINE=docker python3 tests/openshell-praxis/openclaw-native.py`.
+
 Both harnesses are tested against the same upgraded gateway. The OpenCode workload
 image remains unchanged; its integration must still pass when OpenShell changes.
 

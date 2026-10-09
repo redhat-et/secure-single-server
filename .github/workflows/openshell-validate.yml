@@ -84,7 +84,10 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y python3-yaml
       - name: Exercise streamed tool turns and credential handling through Praxis
         env: {CONTAINER_ENGINE: docker}
-        run: python3 tests/openshell-praxis/openclaw-native.py
+        # The upstream UID 1000 creates private state/proof files. Run the
+        # fixture as root, as qualified on AWS, so independent readback and
+        # cleanup work on hosted runners whose login UID is 1001.
+        run: sudo env CONTAINER_ENGINE=docker python3 tests/openshell-praxis/openclaw-native.py
       - name: Upload sanitized evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
