@@ -21,7 +21,7 @@ if [[ -f "${manifest}" ]]; then
 fi
 cd /
 umask 077
-for cmd in podman python3 curl runuser systemctl; do require_command "$cmd"; done
+for cmd in podman python3 curl tar sha256sum runuser systemctl; do require_command "$cmd"; done
 PRAXIS_SERVICE_USER="${owner}" PRAXIS_CONFIG_DIR=/etc/secure-single-server/openshell \
   "${REPO_ROOT}/scripts/common/install" --prepare
 uid="$(id -u "${owner}")"
@@ -46,17 +46,16 @@ if [[ -d /var/lib/openshell ]]; then
   [[ "$(stat -c %u /var/lib/openshell)" == "${uid}" ]] || die '/var/lib/openshell belongs to another owner; migrate explicitly'
 fi
 install -d -o "${owner}" -g "$(id -gn "${owner}")" -m 0700 /var/lib/openshell
-for img in "${ODH_GATEWAY_IMAGE}" "${ODH_SUPERVISOR_IMAGE}" "${ODH_SANDBOX_IMAGE}" "${ODH_CLI_IMAGE}" \
+for img in "${ODH_GATEWAY_IMAGE}" "${ODH_SUPERVISOR_IMAGE}" "${ODH_SANDBOX_IMAGE}" \
            "${ODH_OPENCODE_IMAGE}" "${ODH_OPENCLAW_IMAGE}" "${ODH_CODEX_IMAGE}"; do
   os_run podman pull "${img}"
 done
 gateway_ensure_certificates os_run
-# Private extraction; always install the binary from the reviewed image.
-td="$(mktemp -d)"; cid=""
-cleanup() { [[ -z "${cid}" ]] || os_run podman rm -f "${cid}" >/dev/null; rm -rf "${td}"; }
+# Private extraction; install only the checksum-pinned release binary.
+td="$(mktemp -d)"
+cleanup() { rm -rf "${td}"; }
 trap cleanup EXIT
-cid="$(os_run podman create "${ODH_CLI_IMAGE}")"
-os_run podman cp "${cid}:/usr/local/bin/openshell" - | tar -x -C "${td}"
+"${OS_DIR}/scripts/fetch-cli.sh" "${td}"
 "${td}/openshell" --version
 install -m 0755 "${td}/openshell" /usr/local/bin/openshell
 os_run mkdir -p "${owner_home}/.config/openshell"

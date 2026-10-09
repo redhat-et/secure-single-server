@@ -35,7 +35,9 @@ harness_connect_tty() {  # <sandbox> [cmd...]
     "${OPENSHELL_SANDBOX_USER}@${name}" "$@"
 }
 
-harness_destroy() { _os sandbox delete "$1" >/dev/null 2>&1 || true; }
+harness_destroy() {
+  python3 "${_HL_DIR}/destroy-sandbox.py" "${OPENSHELL_BIN}" "$1"
+}
 
 validate_sandbox_resources() {
   # Reject zero and negative-looking values; OpenShell requires positive

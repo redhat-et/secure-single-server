@@ -25,7 +25,7 @@ for variant in "${variants[@]}"; do
     if [[ "$1" == base ]]; then
       test "$(cat "$root/bootc/vllm-profile")" = any
       test -x /usr/bin/openshell
-      /usr/bin/openshell --version
+      test "$(/usr/bin/openshell --version)" = "openshell 0.1.3"
       test -L /etc/systemd/system/multi-user.target.wants/secure-single-server.service
       test -L /etc/systemd/system/multi-user.target.wants/secure-single-server-vllm.service
       test -x /usr/share/secure-single-server/bootc/scripts/vllm
@@ -77,7 +77,7 @@ for variant in "${variants[@]}"; do
     else
       test "$(cat "$root/bootc/vllm-profile")" = any
       test -x /usr/bin/openshell
-      /usr/bin/openshell --version
+      test "$(/usr/bin/openshell --version)" = "openshell 0.1.3"
       test -L /etc/systemd/system/multi-user.target.wants/secure-single-server.service
       test -L /etc/systemd/system/multi-user.target.wants/secure-single-server-vllm.service
       test -x /usr/share/secure-single-server/bootc/scripts/vllm
@@ -95,6 +95,14 @@ for variant in "${variants[@]}"; do
       sss-praxis help
     elif [[ "$1" != vllm-cpu && "$1" != vllm-gpu ]]; then
       sss-bootc help
+      if [[ "$1" == openclaw ]]; then
+        test -x "$root/openshell/harnesses/openclaw/run.sh"
+        python3 "$root/openshell/scripts/render-openclaw.py" \
+          "$root/configs/openshell-praxis/openclaw/harness-provider.json.in" \
+          /tmp/openclaw-test.json 8080 fixture-model ""
+        python3 -c "import json; c=json.load(open(\"/tmp/openclaw-test.json\")); assert c[\"models\"][\"providers\"][\"praxis\"][\"apiKey\"] == \"local-placeholder\""
+        test -f "$root/configs/vllm/openclaw/profiles/dev/policy.yaml"
+      fi
     fi
   ' -- "${variant}"
 done

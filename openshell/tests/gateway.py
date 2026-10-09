@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Check shared gateway behavior without changing host services or ownership."""
 import os
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -41,14 +42,19 @@ gateway_install_config owner "$TEST_TMP/home" "$TEST_TMP" 'example/harness@sha25
             config = (self.td / 'home/.config/openshell/gateway.toml').read_text()
             unit = (self.td / 'units/openshell-gateway.container').read_text()
             self.assertIn('default_image     = "example/harness@sha256:abc"', config)
-            self.assertIn('sandbox_runtime_image = "quay.io/opendatahub/odh-openshell-sandbox@sha256:', config)
-            for key, filename in (("guest_tls_ca", "ca.crt"),
-                                  ("guest_tls_cert", "client/tls.crt"),
-                                  ("guest_tls_key", "client/tls.key")):
-                self.assertIn(f'{key} = "/var/lib/openshell/tls/{filename}"', config)
+            self.assertIn('sandbox_runtime_image = "ghcr.io/nvidia/openshell/sandbox@sha256:', config)
+            self.assertIn('guest_tls_ca = "/var/lib/openshell/tls/ca.crt"', config)
+            self.assertNotIn('guest_tls_cert', config)
+            self.assertNotIn('guest_tls_key', config)
+            self.assertIn('[openshell.gateway.gateway_jwt]', config)
             self.assertIn('[openshell.gateway.tls]', config)
             self.assertIn('client_ca_path = "/var/lib/openshell/tls/ca.crt"', config)
             self.assertIn('allow_unauthenticated_users = false', config)
+            # Public v0.1.3 GatewayTlsFileConfig rejects internal TLS fields.
+            tls = re.search(r'\[openshell.gateway.tls\]\n(.*?)(?=\n\[|\Z)', config, re.S).group(1)
+            fields = set(re.findall(r'^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=', tls, re.M))
+            self.assertLessEqual(fields, {'cert_path', 'key_path', 'client_ca_path',
+                                         'external_cert_path', 'external_key_path', 'external_server_names'})
             self.assertIn('[openshell.gateway.mtls_auth]', config)
             self.assertNotIn('disable_tls', config)
             self.assertNotIn('grpc_endpoint', config)

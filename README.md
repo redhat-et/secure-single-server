@@ -2,8 +2,8 @@
 
 Secure single-server AI harness runs [OpenCode](https://github.com/anomalyco/opencode)
 and [OpenClaw](https://github.com/openclaw/openclaw) on one dedicated RHEL 9
-x86_64 host. [OpenShell](https://github.com/NVIDIA/OpenShell/tree/v0.1.2/docs)
-enforces the execution boundary. For the OpenCode path,
+x86_64 host. [OpenShell](https://github.com/NVIDIA/OpenShell/tree/v0.1.3/docs)
+enforces the execution boundary. For the integrated harness paths,
 [Praxis](https://github.com/praxis/praxis) routes model traffic, while
 [Red Hat bootc](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/index)
 packages the reviewed deployment as a repeatable OS image.
@@ -15,14 +15,14 @@ packages the reviewed deployment as a repeatable OS image.
 
 ## How It Works
 
-The validated OpenCode request path is:
+The integrated request path is:
 
 ```text
-OpenCode → OpenShell sandbox → Praxis → approved model
+OpenCode / OpenClaw → OpenShell sandbox → Praxis → approved model
 ```
 
-OpenClaw is available as an OpenShell sandbox variant; its Praxis adapter is
-not yet qualified.
+OpenClaw supports bounded coding tasks through Praxis; see the
+[OpenClaw walkthrough](docs/quickstarts/openshell-praxis/openclaw.md) and its test evidence.
 
 - **Dedicated always-on execution.** Long-running agents continue on the
   server while your laptop disconnects. Workspaces, audit records, and cached
@@ -30,7 +30,7 @@ not yet qualified.
 - **Policy-enforced harnesses.** OpenShell confines each harness and its tools
   with declared filesystem, network, process, runtime, and service-account
   policies. The gateway records policy decisions for later review.
-- **Centralized model access.** On the OpenCode path, Praxis owns provider
+- **Centralized model access.** On the integrated paths, Praxis owns provider
   credentials and selects the approved upstream. The harness and sandbox do
   not hold provider keys.
 - **Repeatable deployment.** Published bootc images carry the OpenShell CLI,
@@ -39,42 +39,53 @@ not yet qualified.
 
 ## Quickstart
 
-Use a disposable RHEL 9 x86_64 host that is already bootc-managed. Select the
-published image for one harness, then reboot. Set `harness` to `opencode` or
-`openclaw`:
+The published bootc image can be booted on a bootc-enabled OS or run as an OCI
+container with Podman. Booting it starts the complete OpenShell deployment;
+running a shell in Podman lets you inspect the image. For a working Podman-only
+model call, use the [Podman quickstart](docs/quickstarts/podman/README.md).
 
-```shell
-harness=opencode  # or openclaw
-image="quay.io/redhat-et/secure-single-server-${harness}:v0.1"
-sudo bootc switch "$image"
-sudo bootc status
-sudo systemctl reboot
-```
+Before starting, have:
 
-After reboot, reconnect and set `harness` to the same value. Then verify the
-deployment and create a sandbox:
+- A disposable RHEL 9 x86_64 host and a Bash shell.
+- A bootc-managed host for the bootc route, or Podman already running for the
+  Podman route.
+- A valid OpenAI API key and the exact ID of a model your account can access.
+- The required images already cached for the under-five-minute target.
 
-```shell
-harness=opencode  # or openclaw
-sandbox="${harness}-dev"
-sudo sss-bootc openshell --version
-sudo sss-bootc harness create --profile dev --name "$sandbox"
-sudo sss-bootc harness connect --name "$sandbox"
-```
+With these prerequisites, target a first model response in under five minutes.
+Initial image downloads, bootc OS installation and reboot, and local-model
+loading add time.
 
-For a fresh VM, bare metal, provider secrets, or local inference, follow the
-[single-server guide](docs/quickstarts/openshell-single-server/README.md#bootc-quickstart).
+The published-image quickstart uses OpenCode. For OpenClaw, use the
+[model and tool walkthrough](docs/quickstarts/openshell-praxis/openclaw.md) with
+a checkout or image containing the new integration.
+
+### Bootc-enabled operating system
+
+Follow the [bootc quickstart](docs/quickstarts/bootc/README.md) to deploy the
+published image, enter your OpenAI key, and connect to an OpenCode sandbox
+configured for Praxis. It also links to local inference options.
+
+### Podman
+
+With Podman already running, follow the [Podman quickstart](docs/quickstarts/podman/README.md)
+to inspect the bootc image or make a model call through Praxis. It includes the
+required variables, credential prompt, and cleanup commands.
+
+To install OpenShell, harnesses, and Praxis separately on a fresh VM or bare
+metal, follow the [manual single-server guide](docs/quickstarts/openshell-single-server/manual.md)
+and [Praxis installation walkthrough](docs/quickstarts/openshell-praxis/install.md).
 
 ## Explore Further
 
 - [Architecture walkthrough](docs/quickstarts/architecture-walkthrough/README.md):
   why each layer exists and what its evidence does not prove.
-- [Single-server guide](docs/quickstarts/openshell-single-server/README.md):
-  bootc deployment, verification, harness setup, and policy tests.
+- [Manual single-server guide](docs/quickstarts/openshell-single-server/manual.md):
+  OpenShell installation, harness setup, verification, and policy tests.
 - [OpenShell trust model](openshell/docs/threat-model.md): the execution
   boundary and assumptions behind the current single-operator deployment.
 - [Praxis integration](docs/quickstarts/openshell-praxis/README.md): model
-  routing, quota semantics, and the experimental OpenCode path.
+  routing, quota semantics, and the experimental harness paths.
 - [Private vLLM inference](bootc/VLLM.md): the separate CPU or GPU server used
   by the strongest validated local-model path.
 - [Published bootc images](bootc/README.md): available OpenCode and OpenClaw

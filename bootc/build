@@ -85,6 +85,7 @@ make_base_context() {
     bootc/systemd |
     tar -C "${base_context}" -xf -
   printf 'any\n' >"${base_context}/bootc/vllm-profile"
+  "${ROOT}/openshell/scripts/fetch-cli.sh" "${base_context}/bootc"
 }
 
 make_praxis_context() {
@@ -154,7 +155,6 @@ if [[ "${target}" == base || "${target}" == all ]]; then
   podman build "${repo_args[@]}" "${secret_args[@]}" --arch amd64 \
     --build-arg "RHEL_BOOTC_IMAGE=${RHEL_BOOTC_IMAGE}" \
     --build-arg "RHSM=${rhsm}" \
-    --build-arg "OPENSHELL_CLI_IMAGE=${ODH_CLI_IMAGE}" \
     -f "${base_context}/bootc/Containerfile" -t "${prefix}:base" "${base_context}"
 fi
 

@@ -14,6 +14,8 @@ FAMILIES = {
     "codex": (ROOT / "openshell/harnesses/codex/profiles", "codex.yaml"),
     "openclaw": (ROOT / "openshell/harnesses/openclaw/profiles", "openclaw.yaml"),
     "opencode": (ROOT / "openshell/harnesses/opencode/profiles", "opencode.yaml"),
+    "openclaw-praxis": (ROOT / "configs/openshell-praxis/openclaw/profiles", "openclaw-praxis.yaml"),
+    "openclaw-vllm": (ROOT / "configs/vllm/openclaw/profiles", "openclaw-vllm.yaml"),
     "openshell-praxis": (ROOT / "configs/openshell-praxis/profiles", "openshell-praxis.yaml"),
     "vllm-harness": (ROOT / "configs/vllm/harness/profiles", "vllm-harness.yaml"),
 }
@@ -95,7 +97,7 @@ def check_mutated_policy(prover, boundary, directory):
 def main():
     prover = os.environ.get("OPENSHELL_PROVER_BIN", "openshell-prover")
     policies = discover_policies()
-    assert len(policies) == 17, f"expected 17 shipped policies, found {len(policies)}"
+    assert len(policies) == 19, f"expected 19 shipped policies, found {len(policies)}"
     with tempfile.TemporaryDirectory() as temporary_directory:
         directory = Path(temporary_directory)
         boundaries = {}

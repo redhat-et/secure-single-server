@@ -11,18 +11,20 @@ copy the operator's keys to user accounts.
 
 | Combination | Status |
 | --- | --- |
-| OpenClaw + Praxis | Unsupported; `--config` fails before creating anything |
+| OpenClaw + Praxis | Experimental dev profile; [bounded read/write workflow](openclaw.md); [current fixture qualification](../../testing/upgrade-0.1.3.md) |
 | Claude Code + Praxis | Sandbox image and recipe are missing |
-| OpenCode + Praxis dev | Experimental; qualify each host, provider and tool task |
+| OpenCode + Praxis dev | Experimental; [model, write and bash fixture qualification](../../testing/upgrade-0.1.3.md); qualify each real host/provider/model task |
 | OpenCode review | CLI data-directory permission limitation; outside supported recipes |
 
-For OpenCode experiments, run as the OpenShell service account with the explicit
-HOME/user-bus environment from the
-[OpenShell single-server guide](../openshell-single-server/README.md#manual-rhel-deployment):
+For OpenClaw, use the [dedicated model and tool walkthrough](openclaw.md).
+
+For OpenCode experiments, run as the OpenShell service account using the `os_run` helper from the
+[OpenShell single-server guide](../openshell-single-server/manual.md):
 
 ```bash
-export OPENSHELL_MODEL_ID=administrator-approved-model
-openshell/harnesses/opencode/create.sh --profile dev --config configs/openshell-praxis
+os_run env OPENSHELL_MODEL_ID=administrator-approved-model \
+  "$repo/openshell/harnesses/opencode/create.sh" \
+  --profile dev --config "$repo/configs/openshell-praxis"
 ```
 
 For mutable RHEL Qwen, export `OPENSHELL_MODEL_ID=qwen3-8b` and

@@ -94,9 +94,10 @@ tools. For the sandboxed variant, repeat the model and task checks using the
 
 ## OpenClaw / OpenShell
 
-Test OpenClaw only through OpenShell. Its Praxis adapter is missing, so model
-selection and quota behavior are **blocked**. Once available, run the same
-selector → tool task → quota denial → recovery checks inside the sandbox.
+Test OpenClaw only through OpenShell using the [bounded Praxis workflow](../quickstarts/openshell-praxis/openclaw.md).
+Model/tool contract checks are recorded in [AWS qualification](openclaw-praxis.md).
+Interactive model selection and the complete quota denial/recovery sequence
+remain unqualified; test them separately before making those claims.
 
 Keep each sandbox harness separate: OpenCode's recipe is available; the Claude
 image/recipe remains missing. Ordinary-user sandbox

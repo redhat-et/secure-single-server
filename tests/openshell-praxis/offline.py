@@ -3,13 +3,70 @@
 import json
 import os
 from pathlib import Path
+import runpy
 import subprocess
 import tempfile
 import unittest
+import urllib.error
+import urllib.request
 
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+class OpenCodeFixtureTest(unittest.TestCase):
+    def test_streamed_write_command_and_final_continuation(self):
+        fixture = runpy.run_path(str(Path(__file__).with_name('opencode-provider.py')))
+        body = {'model': 'fixture-model', 'messages': [], 'tools': [
+            {'type': 'function', 'function': {'name': name}} for name in ('write', 'bash')]}
+        complete = fixture['completion']
+        stream = fixture['provider'].events
+        for expected, call_id in [('write', 'call_write'), ('bash', 'call_bash')]:
+            result = complete('/v1/chat/completions', body)
+            call = result['choices'][0]['message']['tool_calls'][0]
+            self.assertEqual(call['function']['name'], expected)
+            self.assertEqual(call['id'], call_id)
+            frames = b''.join(stream('/v1/chat/completions', result))
+            self.assertIn(b'[DONE]', frames)
+            self.assertIn(expected.encode(), frames)
+            body['messages'].append({'role': 'tool', 'tool_call_id': call_id, 'content': 'success'})
+        result = complete('/v1/chat/completions', body)
+        self.assertEqual(result['choices'][0]['finish_reason'], 'stop')
+        self.assertEqual(result['choices'][0]['message']['content'], 'OPENCODE_TOOL_OK')
+        self.assertNotIn('tool_calls', result['choices'][0]['message'])
+
+
+class AuthenticationEvidenceTest(unittest.TestCase):
+    def test_unrelated_failure_cannot_pass_authentication_check(self):
+        native = runpy.run_path(str(Path(__file__).with_name('openclaw-native.py')))
+        check = native['assert_authentication_rejection']
+        fixture = native['fixture_module'].provider.Provider(ports=(0, 0, 0))
+        fixture.start()
+        self.addCleanup(fixture.close)
+        with tempfile.TemporaryDirectory() as directory:
+            proof = Path(directory) / 'proof.txt'
+            failed = subprocess.CompletedProcess([], 125)
+            with self.assertRaisesRegex(RuntimeError, 'No fresh upstream authentication rejection'):
+                check(failed, proof, [])
+            body = json.dumps({'model': 'fixture-model', 'messages': []}).encode()
+            request = urllib.request.Request(
+                f'http://127.0.0.1:{fixture.ports[0]}/v1/chat/completions', data=body,
+                headers={'Content-Type': 'application/json', 'Authorization': 'Bearer wrong-synthetic-key'})
+            with self.assertRaises(urllib.error.HTTPError) as rejected:
+                urllib.request.urlopen(request, timeout=5)
+            self.assertEqual(rejected.exception.code, 403)
+            records = list(fixture.records)
+            check(failed, proof, records)
+            with self.assertRaisesRegex(RuntimeError, 'No fresh upstream authentication rejection'):
+                check(failed, proof, [dict(record, credential_ok=True) for record in records])
+            with self.assertRaisesRegex(RuntimeError, 'No fresh upstream authentication rejection'):
+                check(failed, proof, [dict(record, classification_clean=False) for record in records])
+            with self.assertRaisesRegex(RuntimeError, 'reported as success'):
+                check(subprocess.CompletedProcess([], 0), proof, records)
+            proof.write_text('unexpected success')
+            with self.assertRaisesRegex(RuntimeError, 'reported as success'):
+                check(failed, proof, records)
 
 
 class HarnessTest(unittest.TestCase):
@@ -30,26 +87,30 @@ if args[:2] == ["sandbox", "create"]:
     pathlib.Path(os.environ["CAPTURE"] + ".args").write_text(json.dumps(args))
     p = pathlib.Path(args[args.index("--policy") + 1])
     pathlib.Path(os.environ["CAPTURE"]).write_text(p.read_text())
+if args[:1] == ["logs"]:
+    print("Acknowledged initial policy revision as loaded")
 if args[:2] == ["sandbox", "list"]:
     if "--output" in args and args[args.index("--output") + 1] == "json":
         print(json.dumps({"sandboxes": [{"name": "test", "phase": "Ready"}]}))
     else:
         print("test Ready")
 ''',
-            "ssh": '#!/bin/sh\ncat > "$CAPTURE.provider"\n',
+            "ssh": '#!/bin/sh\nprintf "%s\\n" "$@" > "$CAPTURE.ssh"\ncat > "$CAPTURE.provider"\n',
         }.items():
             script = self.work / name
             script.write_text(source)
             script.chmod(0o755)
 
-    def create(self, harness, profile, integrated=False, success=True):
+    def create(self, harness, profile, integrated=False, success=True, config_dir=None, provider=None):
         # Each invocation must produce fresh evidence, including subtests.
         for name in ("capture", "capture.provider"):
             (self.work / name).unlink(missing_ok=True)
         args = ["bash", str(ROOT / f"openshell/harnesses/{harness}/create.sh"),
                 "--profile", profile, "--name", "test"]
         if integrated:
-            args += ["--config", str(ROOT / "configs/openshell-praxis")]
+            args += ["--config", str(ROOT / (config_dir or "configs/openshell-praxis"))]
+        if provider:
+            args += ["--provider", provider]
         result = subprocess.run(args, env=self.env, capture_output=True, text=True, timeout=10)
         if success:
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -124,11 +185,68 @@ if args[:2] == ["sandbox", "list"]:
             self.assertIn("PRAXIS_API_PREFIX", self.create("opencode", "dev", integrated=True, success=False))
 
     def test_unsupported_integrated_harnesses_reject_config(self):
-        for harness in ("codex", "openclaw"):
+        for harness in ("codex",):
             for profile in ("review", "dev", "automation", "interactive"):
                 with self.subTest(harness=harness, profile=profile):
                     error = self.create(harness, profile, integrated=True, success=False)
                     self.assertIn("--config", error)
+
+    def test_openclaw_praxis_config_and_credential_isolation(self):
+        for folder, prefix in (("configs/openshell-praxis/openclaw", ""),
+                               ("configs/vllm/openclaw", ""),
+                               ("configs/openshell-praxis/openclaw", "/vllm"),
+                               ("configs/openshell-praxis/openclaw", "/providers/team")):
+            with self.subTest(folder=folder, prefix=prefix):
+                self.env["PRAXIS_API_PREFIX"] = prefix
+                policy = self.create("openclaw", "dev", integrated=True, config_dir=folder)
+                config = json.loads((self.work / "capture.provider").read_text())
+                provider = config["models"]["providers"]["praxis"]
+                self.assertEqual(provider["baseUrl"], f"http://host.openshell.internal:18080{prefix}/v1")
+                self.assertEqual(provider["apiKey"], "local-placeholder")
+                self.assertEqual(config["tools"]["allow"], ["read", "write"])
+                self.assertEqual(provider["api"], "openai-completions")
+                self.assertEqual(provider["models"][0]["id"], self.env["OPENSHELL_MODEL_ID"])
+                self.assertEqual(config["agents"]["defaults"]["model"]["primary"],
+                                 "praxis/" + self.env["OPENSHELL_MODEL_ID"])
+                self.assertEqual(config["agents"]["defaults"]["workspace"], "/home/node/.openclaw/workspace")
+                self.assertFalse(policy["filesystem_policy"]["include_workdir"])
+                self.assertIn('/app', policy["filesystem_policy"]["read_only"])
+                self.assertNotIn('/app', policy["filesystem_policy"]["read_write"])
+                if folder == "configs/vllm/openclaw":
+                    self.assertEqual(config["agents"]["defaults"]["models"]["praxis/" + self.env["OPENSHELL_MODEL_ID"]],
+                                     {"params": {"chat_template_kwargs": {"enable_thinking": False}}})
+                else:
+                    self.assertNotIn("models", config["agents"]["defaults"])
+                args = json.loads((self.work / "capture.args").read_text())
+                self.assertIn("--no-auto-providers", args)
+                self.assertNotIn("--provider", args)
+                rule = policy["network_policies"]["praxis_gateway"]
+                self.assertEqual(rule["endpoints"][0]["port"], 18080)
+                self.assertEqual({b["path"] for b in rule["binaries"]},
+                                 {"/usr/local/bin/node", "/usr/local/bin/openclaw"})
+                hosts = {e["host"] for r in policy["network_policies"].values() for e in r["endpoints"]}
+                self.assertNotIn("api.openai.com", hosts)
+                self.assertNotIn("api.anthropic.com", hosts)
+                if folder == "configs/vllm/openclaw":
+                    self.assertEqual(hosts, {"host.openshell.internal"})
+
+    def test_openclaw_invalid_configuration_fails_before_creation(self):
+        folder = "configs/openshell-praxis/openclaw"
+        for port in ("0", "65536", "not-a-port"):
+            self.env["PRAXIS_PORT"] = port
+            self.create("openclaw", "dev", integrated=True, success=False, config_dir=folder)
+        self.env["PRAXIS_PORT"] = "8080"
+        self.create("openclaw", "dev", integrated=True, success=False,
+                    config_dir=folder, provider="direct-key")
+        for profile in ("review", "automation", "interactive"):
+            self.create("openclaw", profile, integrated=True, success=False, config_dir=folder)
+        for model in ("", "model\nmalformed"):
+            self.env["OPENSHELL_MODEL_ID"] = model
+            self.create("openclaw", "dev", integrated=True, success=False, config_dir=folder)
+        self.env["OPENSHELL_MODEL_ID"] = "test-model"
+        for prefix in ("/elsewhere", "/providers/", "/providers/TEAM", "/providers/team/../openai", "/providers/a" + "b" * 32):
+            self.env["PRAXIS_API_PREFIX"] = prefix
+            self.create("openclaw", "dev", integrated=True, success=False, config_dir=folder)
 
     def test_integrated_policy_ports(self):
         for source in (ROOT / "configs/openshell-praxis/profiles").glob("*/policy.yaml"):
@@ -148,6 +266,40 @@ if args[:2] == ["sandbox", "list"]:
                     "--name", "test"], env=self.env, capture_output=True, text=True, timeout=10)
                 self.assertTrue(marker.exists(), "connect failed before invoking SSH")
                 self.assertEqual(result.returncode, 255, result.stderr)
+
+    def test_openclaw_waits_for_initial_policy_before_uploading_config(self):
+        cli = self.work / "openshell"
+        source = cli.read_text().replace('print("Acknowledged initial policy revision as loaded")',
+            'marker = pathlib.Path(os.environ["CAPTURE"] + ".polls")\n'
+            '    count = int(marker.read_text()) + 1 if marker.exists() else 1\n'
+            '    marker.write_text(str(count))\n'
+            '    if count >= 2: print("Acknowledged initial policy revision as loaded")')
+        cli.write_text(source)
+        self.create("openclaw", "dev", integrated=True, config_dir="configs/vllm/openclaw")
+        self.assertEqual((self.work / "capture.polls").read_text(), "2")
+        self.assertTrue((self.work / "capture.provider").exists())
+        cli.write_text(source.replace('if count >= 2: print("Acknowledged initial policy revision as loaded")', 'sys.exit(42)'))
+        (self.work / "capture.provider").unlink()
+        result = subprocess.run(["bash", str(ROOT / "openshell/harnesses/openclaw/create.sh"),
+                                 "--profile", "dev", "--name", "test", "--config", str(ROOT / "configs/vllm/openclaw")],
+                                env=self.env, capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 42)
+        self.assertFalse((self.work / "capture.provider").exists())
+
+    def test_openclaw_run_transmits_prompt_over_stdin_and_propagates_failure(self):
+        prompt = "Write a file; $(touch should-not-exist)\nThen read it."
+        result = subprocess.run(["bash", str(ROOT / "openshell/harnesses/openclaw/run.sh"),
+                                 "--name", "test", "--message", prompt], env=self.env,
+                                capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.work / "capture.provider").read_text(), prompt + "\n")
+        self.assertIn("SQLITE_TMPDIR=/tmp", (self.work / "capture.ssh").read_text())
+        self.assertFalse((ROOT / "should-not-exist").exists())
+        (self.work / "ssh").write_text('#!/bin/sh\ncat >/dev/null\nexit 42\n')
+        result = subprocess.run(["bash", str(ROOT / "openshell/harnesses/openclaw/run.sh"),
+                                 "--name", "test", "--message", "hello"], env=self.env,
+                                capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 42)
 
     def test_invalid_create_arguments_fail_with_an_argument_error(self):
         for harness in ("opencode", "codex", "openclaw"):

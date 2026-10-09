@@ -34,7 +34,9 @@ def validate_profiles(invoke, results):
         policies = sorted((ROOT / 'openshell/harnesses').glob('*/profiles/*/policy.yaml'))
         policies += sorted((ROOT / 'configs/openshell-praxis/profiles').glob('*/policy.yaml'))
         policies += sorted((ROOT / 'configs/vllm/harness/profiles').glob('*/policy.yaml'))
-        assert len(policies) == 17, f'expected all 17 policies, found {len(policies)}'
+        policies += sorted((ROOT / 'configs/openshell-praxis/openclaw/profiles').glob('*/policy.yaml'))
+        policies += sorted((ROOT / 'configs/vllm/openclaw/profiles').glob('*/policy.yaml'))
+        assert len(policies) == 19, f'expected all 19 policies, found {len(policies)}'
         for source in policies:
             output = validate(source.read_text().replace('@@PRAXIS_PORT@@', '18080'))
             passed = accepted(output)

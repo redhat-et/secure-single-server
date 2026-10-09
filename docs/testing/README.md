@@ -34,6 +34,15 @@ References, as needed:
 - [vLLM administration](../quickstarts/common/vllm.md): installation without the smoke runner and maintenance.
 - [vLLM debugging](vllm-debugging.md): known failures, upstream leads and fix qualification.
 
+## OpenShell harness model and tool checks
+
+See [OpenShell 0.1.3 upgrade qualification](upgrade-0.1.3.md) for current AWS
+OpenCode and OpenClaw tests, migration requirements, and coverage limits.
+
+The [earlier OpenClaw Praxis qualification](openclaw-praxis.md) records the
+previous pins and real-Qwen acceptance. Those results are historical and do
+not qualify real inference on the upgraded pins.
+
 ## Local development checks
 
 Run the offline regression suite from the repository root:

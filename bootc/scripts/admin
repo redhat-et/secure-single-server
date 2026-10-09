@@ -15,7 +15,7 @@ Usage (run as root except help):
   sss-bootc secret openai|anthropic VERSION       Read secret from stdin
   sss-bootc activate OPENAI_SECRET ANTHROPIC_SECRET
   sss-bootc openshell ARGS...                    CLI as openshell-svc
-  sss-bootc harness create|connect ARGS...        Selected harness scripts
+  sss-bootc harness create|connect|run ARGS...        Selected harness scripts
 Activation uses the memory quota profile. No provider credentials enter the OS image.
 EOF
     ;;
@@ -102,17 +102,23 @@ EOF
     harness="$(selected_harness)"
     [[ "${harness}" != base ]] || die 'select a harness bootc image first'
     action="${2:-}"
-    case "${action}" in create|connect) ;; *) die 'expected create or connect' ;; esac
+    case "${action}" in
+      create|connect) ;;
+      run) [[ "${harness}" == openclaw ]] || die 'harness run supports OpenClaw only' ;;
+      *) die 'expected create, connect or run' ;;
+    esac
     shift 2
     backend="$(inference_backend)"
     if [[ "${action}" == create && "${backend}" =~ ^(vllm|remote-vllm)$ ]]; then
-      [[ "${harness}" == opencode ]] || die 'Praxis vLLM integration currently supports the OpenCode OS variant only'
+      [[ "${harness}" == opencode || "${harness}" == openclaw ]] || die 'Praxis vLLM integration supports OpenCode and OpenClaw only'
       for argument in "$@"; do
         case "${argument}" in --provider|--config|--provider=*|--config=*) die 'Praxis vLLM integration owns provider configuration; omit --provider and --config' ;; esac
       done
+      config_dir="${ROOT}/configs/vllm/harness"
+      [[ "${harness}" != openclaw ]] || config_dir="${ROOT}/configs/vllm/openclaw"
       as_openshell env OPENSHELL_MODEL_ID=Qwen/Qwen3-8B PRAXIS_PORT=8080 \
         "${ROOT}/openshell/harnesses/${harness}/${action}.sh" \
-        --config "${ROOT}/configs/vllm/harness" "$@"
+        --config "${config_dir}" "$@"
     else
       as_openshell "${ROOT}/openshell/harnesses/${harness}/${action}.sh" "$@"
     fi

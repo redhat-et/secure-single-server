@@ -11,10 +11,9 @@ repository; the guides below are separated by the question they answer.
    before choosing a deployment. It explains what each layer protects, what it
    does not protect, and which evidence is accepted.
 2. **Deploy a sandboxed harness.** Use
-   [OpenShell](https://github.com/NVIDIA/OpenShell/tree/v0.1.2/docs) through the
-   [single-server guide](quickstarts/openshell-single-server/README.md) for
-   [Red Hat bootc](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/index)
-   to deploy [OpenCode](https://github.com/anomalyco/opencode) or
+   [OpenShell](https://github.com/NVIDIA/OpenShell/tree/v0.1.3/docs) through the
+   [manual container guide](quickstarts/openshell-single-server/manual.md) or
+   [bootc deployment guide](quickstarts/openshell-single-server/bootc.md) to deploy [OpenCode](https://github.com/anomalyco/opencode) or
    [OpenClaw](https://github.com/openclaw/openclaw) on one trusted RHEL host.
 3. **Add model routing.** Use
    [Praxis](https://github.com/praxis/praxis) through the
@@ -36,7 +35,9 @@ repository; the guides below are separated by the question they answer.
 | If you need to… | Use |
 | --- | --- |
 | Explain or review the complete system | [Architecture walkthrough](quickstarts/architecture-walkthrough/README.md) |
-| Deploy or evaluate OpenShell quickly | [Single-server bootc quickstart](quickstarts/openshell-single-server/README.md#bootc-quickstart) |
+| Install OpenShell and harness containers separately | [Manual single-server deployment](quickstarts/openshell-single-server/manual.md) |
+| Deploy or evaluate OpenShell quickly | [Single-server bootc quickstart](quickstarts/bootc/README.md) |
+| Inspect the bootc image or make a model call with Podman | [Podman quickstart](quickstarts/podman/README.md) |
 | Combine OpenShell with Praxis | [OpenShell + Praxis guide](quickstarts/openshell-praxis/README.md) |
 | Serve users from accounts on one RHEL host | [All-in-one gateway](quickstarts/all-in-one/README.md) |
 | Connect harnesses on remote client machines | [Remote HTTPS/JWT gateway](quickstarts/remote-gateway/README.md) |
@@ -60,8 +61,8 @@ repository; the guides below are separated by the question they answer.
 
 - [OpenCode](https://github.com/anomalyco/opencode)
 - [OpenClaw](https://github.com/openclaw/openclaw)
-- [OpenShell documentation](https://github.com/NVIDIA/OpenShell/tree/v0.1.2/docs)
-  and [sandbox overview](https://github.com/NVIDIA/OpenShell/blob/v0.1.2/docs/how-it-works/sandboxes/overview.mdx)
+- [OpenShell documentation](https://github.com/NVIDIA/OpenShell/tree/v0.1.3/docs)
+  and [sandbox overview](https://github.com/NVIDIA/OpenShell/blob/v0.1.3/docs/how-it-works/sandboxes/overview.mdx)
 - [Praxis framework](https://github.com/praxis/praxis)
 - [Praxis experimental gateway](https://github.com/praxis-proxy/experimental)
 - [Red Hat bootc](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/index)
@@ -76,4 +77,4 @@ this deployment does not qualify.
 
 Start with the [architecture walkthrough](quickstarts/architecture-walkthrough/README.md).
 If you already understand the system and only need a disposable evaluation,
-use the [bootc quickstart](quickstarts/openshell-single-server/README.md#bootc-quickstart).
+use the [bootc quickstart](quickstarts/bootc/README.md).

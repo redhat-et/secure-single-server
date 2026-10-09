@@ -21,8 +21,8 @@ Service health alone does not qualify that complete model path.
 
 See the [supported matrix and qualification limits](users.md), [add-on installer](install.md),
 [bootc deployment](../../../bootc/README.md), and [threat model](../../../openshell/docs/threat-model.md).
-OpenClaw Praxis configuration is currently unsupported. OpenCode configuration
-remains experimental; qualification depends on the host, provider and tool task.
+[OpenClaw bounded tasks](openclaw.md) and OpenCode configuration remain
+experimental; qualification depends on the host, provider and tool task.
 
 Development profiles also permit selected GitHub/package/documentation traffic;
 they are not restricted to Praxis for all egress. Loopback management requires

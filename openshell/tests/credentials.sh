@@ -9,8 +9,17 @@ name="key-canary-$$"
 unbound="no-key-$$"
 provider="canary-$$"
 td="$(mktemp -d)"
-cleanup() { harness_destroy "${name}"; harness_destroy "${unbound}"; _os provider delete "${provider}" >/dev/null 2>&1 || true; _os profile delete "${provider}" >/dev/null 2>&1 || true; rm -rf "${td}"; }
-trap cleanup EXIT
+cleanup() {
+  local result=0
+  harness_destroy "${name}" || result=1
+  harness_destroy "${unbound}" || result=1
+  _os provider delete "${provider}" >/dev/null 2>&1 || true
+  _os profile delete "${provider}" >/dev/null 2>&1 || true
+  rm -rf "${td}"
+  return "${result}"
+}
+cleanup_exit_status=0
+trap 'cleanup_exit_status=$?; if ! cleanup && (( cleanup_exit_status == 0 )); then cleanup_exit_status=1; fi; exit "$cleanup_exit_status"' EXIT
 # Pinned CLI requires explicit provider profiles; it ships no registered defaults.
 cat >"${td}/profile.yaml" <<YAML
 id: ${provider}

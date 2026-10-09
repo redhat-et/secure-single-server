@@ -1,7 +1,5 @@
 ARG RHEL_BOOTC_IMAGE
-ARG OPENSHELL_CLI_IMAGE
 ARG RHSM=0
-FROM ${OPENSHELL_CLI_IMAGE} AS cli
 FROM ${RHEL_BOOTC_IMAGE}
 ARG RHSM
 
@@ -31,7 +29,7 @@ RUN --mount=type=secret,id=rhsm_org,target=/run/secrets/rhsm_org \
     dnf clean all; \
     rm -rf /var/cache/dnf /var/lib/dnf /var/lib/rhsm /run/cloud-init /run/rhsm; \
     find /var/log -type f -delete
-COPY --from=cli /usr/local/bin/openshell /usr/bin/openshell
+COPY bootc/openshell /usr/bin/openshell
 COPY scripts/common /usr/share/secure-single-server/scripts/common
 COPY configs /usr/share/secure-single-server/configs
 COPY openshell/configs /usr/share/secure-single-server/openshell/configs

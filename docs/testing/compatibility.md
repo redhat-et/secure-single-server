@@ -151,6 +151,10 @@ remains an explicit blocked matrix entry pending API translation integration. RH
 
 ## OpenShell
 
+For the new OpenClaw `agent exec` integration, see the
+[2026-10-09 AWS results and reproduction commands](openclaw-praxis.md).
+The tables below retain the earlier qualification snapshot.
+
 **Ordinary-user access is blocked by [#12](https://github.com/redhat-et/secure-single-server/issues/12)**
 (enrollment and workspace ownership). The results below use the locked
 `openshell-svc` management identity; harnesses run as the sandbox user.
@@ -169,7 +173,8 @@ local-model results below are for Qwen3-8B only.
 | OpenClaw | Tool query | Blocked [1] | Blocked [1] | Blocked [1] |
 | OpenClaw | Model selector | Blocked [1] | Blocked [1] | Blocked [1] |
 
-1. OpenClaw recipes lack Praxis adapters and reject `--config`.
+1. Historical result before the OpenClaw Praxis adapter. See the
+   [2026-10-09 bounded-agent results](openclaw-praxis.md) for the new path.
 2. Claude needs a pinned sandbox image and recipe.
 3. CPU OpenCode creates files but its generated Node tests fail independently.
    CLI exit zero is insufficient. GPU passes all three generated Node tests.
@@ -188,7 +193,8 @@ local-model results below are for Qwen3-8B only.
 | OpenClaw | Tool query | Blocked [1] | Blocked [1] |
 | OpenClaw | Model selector | Blocked [1] | Blocked [1] |
 
-1. OpenClaw needs Praxis adapters.
+1. Historical result before the OpenClaw Praxis adapter. Authenticated synthetic
+   model/tool checks now pass; real OpenAI qualification remains not run.
 2. Claude → OpenAI is an untested target requiring a sandbox image/recipe and
    API translation/integration.
 
@@ -204,7 +210,7 @@ local-model results below are for Qwen3-8B only.
 | OpenClaw | Model selector | Blocked [2] | Blocked [2] |
 
 1. Claude needs a pinned sandbox image and recipe.
-2. Anthropic Messages adapters are missing; OpenClaw also lacks a Praxis adapter.
+2. Anthropic Messages translation is missing from the tested OpenAI-compatible route.
 
 **Remote-gateway: sandbox clients**
 
