@@ -39,35 +39,134 @@ not yet qualified.
 
 ## Quickstart
 
-Use a disposable RHEL 9 x86_64 host that is already bootc-managed. Select the
-published image for one harness, then reboot. Set `harness` to `opencode` or
-`openclaw`:
+The published bootc image can be booted on a bootc-enabled OS or run as an OCI
+container with Podman. Booting it starts the complete OpenShell deployment;
+running a shell in Podman lets you inspect the image. For a working Podman-only
+model call, use the Praxis example below.
 
-```shell
-harness=opencode  # or openclaw
-image="quay.io/redhat-et/secure-single-server-${harness}:v0.1"
+Allow about five minutes **after the host is ready and images are cached**.
+Initial downloads, OS installation/reboot, and local-model loading add time.
+Use Bash and a disposable RHEL 9 x86_64 host. Have an OpenAI API key and an
+exact model ID available to your account ready. OpenCode is the model-enabled
+quickstart; OpenClaw model authentication remains unqualified.
+
+### Bootc-enabled operating system
+
+On an existing bootc-managed host, select the image and reboot:
+
+```bash
+image=quay.io/redhat-et/secure-single-server-opencode:v0.1
 sudo bootc switch "$image"
 sudo bootc status
 sudo systemctl reboot
 ```
 
-After reboot, reconnect and set `harness` to the same value. Then verify the
-deployment and create a sandbox:
+Reconnect after reboot and wait for the deployment service to finish:
 
-```shell
-harness=opencode  # or openclaw
-sandbox="${harness}-dev"
+```bash
+sudo systemctl start secure-single-server.service
 sudo sss-bootc openshell --version
-sudo sss-bootc harness create --profile dev --name "$sandbox"
-sudo sss-bootc harness connect --name "$sandbox"
 ```
 
-To deploy the individual containers on a fresh VM or bare-metal host, follow the
-[manual single-server guide](docs/quickstarts/openshell-single-server/manual.md)
-to install OpenShell and create an OpenCode or OpenClaw harness sandbox. To add
-Praxis for model routing and provider secrets, follow the
-[Praxis installation walkthrough](docs/quickstarts/openshell-praxis/install.md),
-including its prerequisite gateway setup and optional local inference.
+Enter your OpenAI key at the hidden prompt. Praxis stores it in a Podman secret;
+it is not put in the image or harness. The default cloud configuration requires
+an Anthropic secret too; the unused value below allows OpenAI-only evaluation
+and cannot authenticate Anthropic requests. Use fresh secret versions if `v1`
+already exists.
+
+```bash
+(
+  set +x
+  set -euo pipefail
+  sudo -v
+  IFS= read -r -s -p 'OpenAI API key: ' key; printf '\n'
+  printf '%s' "$key" | sudo sss-bootc secret openai v1
+  unset key
+  printf '%s' 'unused-anthropic-key' | sudo sss-bootc secret anthropic v1
+  sudo sss-bootc activate praxis-openai-api-key-v1 praxis-anthropic-api-key-v1
+  sudo sss-bootc inference cloud
+)
+```
+
+Select your model, create the OpenCode sandbox configured for Praxis, and connect:
+
+```bash
+IFS= read -r -p 'OpenAI model ID: ' model_id
+uid="$(id -u openshell-svc)"
+cd /
+sudo runuser -u openshell-svc -- env HOME=/var/lib/openshell-svc \
+  XDG_RUNTIME_DIR=/run/user/"$uid" \
+  DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/"$uid"/bus \
+  OPENSHELL_BIN=/usr/bin/openshell OPENSHELL_MODEL_ID="$model_id" \
+  /usr/share/secure-single-server/openshell/harnesses/opencode/create.sh \
+  --profile dev --name opencode-dev \
+  --config /usr/share/secure-single-server/configs/openshell-praxis
+sudo sss-bootc harness connect --name opencode-dev
+```
+
+Ask `Reply with a short greeting.` A nonempty response verifies model access;
+use the [harness checks](docs/quickstarts/openshell-single-server/verification.md)
+to verify tools and policy. For an existing local API and key, use the
+[local endpoint recipe](docs/quickstarts/openshell-single-server/bootc.md#local-openai-compatible-endpoint-and-key).
+For the bundled private vLLM route, use
+[Praxis/vLLM setup](docs/quickstarts/openshell-single-server/bootc.md#praxis-cloud-secrets-or-private-vllm).
+
+### Run the bootc image in Podman
+
+No model credentials or container environment variables are needed to inspect
+the bootc image. Set `harness` to `opencode` or `openclaw`:
+
+```bash
+harness=opencode
+image="quay.io/redhat-et/secure-single-server-${harness}:v0.1"
+podman run --rm -it --entrypoint /bin/bash "$image"
+```
+
+Inside the container, run `openshell --version` or `sss-bootc help`; use `exit`
+to leave. This command starts Bash, not the boot services. Running the complete nested
+OpenShell deployment inside this container is not a qualified deployment path.
+Use the bootc host or [manual container guide](docs/quickstarts/openshell-single-server/manual.md)
+for sandboxed harness execution.
+
+### Podman-only model call
+
+For a quick inference check without installing an OS image, run the Praxis
+workload directly. From a reviewed repository checkout with Podman installed,
+set `OPENAI_API_KEY` at the hidden prompt and `MODEL_ID` to an accessible model.
+`ANTHROPIC_API_KEY` must also exist for the two-provider config; leave it empty
+when only calling OpenAI. `PRAXIS_IMAGE` pins the workload image.
+
+```bash
+set +x
+IFS= read -r -s -p 'OpenAI API key: ' OPENAI_API_KEY; printf '\n'
+export OPENAI_API_KEY
+export ANTHROPIC_API_KEY=''
+IFS= read -r -p 'OpenAI model ID: ' MODEL_ID
+export PRAXIS_IMAGE='quay.io/opendatahub/praxis-experimental@sha256:a3006352106c2264427faa79b57cf7b49287f3f9bfffe9b2eef869d3429988e8'
+podman run --rm --detach --name praxis-demo \
+  --user 1001:1001 --userns keep-id:uid=1001,gid=1001 \
+  --read-only --security-opt no-new-privileges --cap-drop all \
+  --publish 127.0.0.1:8080:8080 --publish 127.0.0.1:8081:8081 \
+  --env OPENAI_API_KEY --env ANTHROPIC_API_KEY \
+  --volume "$PWD/configs/all-in-one/shared-gateway.yaml:/etc/praxis/shared-gateway.yaml:ro,Z" \
+  "$PRAXIS_IMAGE" -c /etc/praxis/shared-gateway.yaml
+unset OPENAI_API_KEY ANTHROPIC_API_KEY
+python3 -c 'import json,sys; print(json.dumps({"model":sys.argv[1],"messages":[{"role":"user","content":"Reply with a short greeting."}]}))' "$MODEL_ID" | \
+  curl --fail-with-body --retry 10 --retry-connrefused --retry-delay 1 \
+  http://127.0.0.1:8080/v1/chat/completions \
+  -H 'Content-Type: application/json' -H 'Authorization: Bearer local-placeholder' -d @-
+# When finished:
+podman stop praxis-demo
+```
+
+This verifies the Praxis model route; it does not run an OpenShell sandbox.
+The demo container receives the provider key through its environment. For
+protected service-account secrets and startup at boot, use the deployment
+guides. See [Podman details](docs/testing/podman.md).
+
+To install OpenShell, harnesses, and Praxis separately on a fresh VM or bare
+metal, follow the [manual single-server guide](docs/quickstarts/openshell-single-server/manual.md)
+and [Praxis installation walkthrough](docs/quickstarts/openshell-praxis/install.md).
 
 ## Explore Further
 
