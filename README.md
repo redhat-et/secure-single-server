@@ -44,12 +44,20 @@ container with Podman. Booting it starts the complete OpenShell deployment;
 running a shell in Podman lets you inspect the image. For a working Podman-only
 model call, use the [Podman quickstart](docs/quickstarts/podman/README.md).
 
-Target a first model response in under five minutes on a prepared host with
-cached images and a valid key. Initial image downloads, bootc OS installation/
-reboot, and local-model loading add time.
-Use Bash and a disposable RHEL 9 x86_64 host. Have an OpenAI API key and an
-exact model ID available to your account ready. OpenCode is the model-enabled
-quickstart; OpenClaw model authentication remains unqualified.
+Before starting, have:
+
+- A disposable RHEL 9 x86_64 host and a Bash shell.
+- A bootc-managed host for the bootc route, or Podman already running for the
+  Podman route.
+- A valid OpenAI API key and the exact ID of a model your account can access.
+- The required images already cached for the under-five-minute target.
+
+With these prerequisites, target a first model response in under five minutes.
+Initial image downloads, bootc OS installation and reboot, and local-model
+loading add time.
+
+The model-enabled quickstart uses OpenCode. OpenClaw model authentication
+remains unqualified.
 
 ### Bootc-enabled operating system
 
