@@ -102,3 +102,10 @@ labels, client configuration, and absence of inline workload flags when a templa
 is selected. `openshell/tests/templates-runtime.sh` verifies real gateway sync and readback
 twice. The opt-in RHEL runtime suite runs it and exercises actual template-based
 OpenCode and OpenClaw creation through the existing entry points.
+
+The verified sandbox deletion helper has a separate seven-minute default
+(`OPENSHELL_CLEANUP_TIMEOUT` overrides it). On bootc/Podman, 0.1.3 can retain
+`Deleting` metadata after the container is removed until its five-minute orphan
+grace and one-minute reconciliation sweep complete. The helper still requires
+successful complete listings proving absence; it never treats container removal,
+a failed listing, or an expired deadline as success.
