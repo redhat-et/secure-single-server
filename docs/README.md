@@ -36,7 +36,7 @@ repository; the guides below are separated by the question they answer.
 | --- | --- |
 | Explain or review the complete system | [Architecture walkthrough](quickstarts/architecture-walkthrough/README.md) |
 | Install OpenShell and harness containers separately | [Manual single-server deployment](quickstarts/openshell-single-server/manual.md) |
-| Deploy or evaluate OpenShell quickly | [Single-server bootc quickstart](quickstarts/openshell-single-server/bootc.md) |
+| Deploy or evaluate OpenShell quickly | [Single-server bootc quickstart](quickstarts/bootc/README.md) |
 | Inspect the bootc image or make a model call with Podman | [Podman quickstart](quickstarts/podman/README.md) |
 | Combine OpenShell with Praxis | [OpenShell + Praxis guide](quickstarts/openshell-praxis/README.md) |
 | Serve users from accounts on one RHEL host | [All-in-one gateway](quickstarts/all-in-one/README.md) |
@@ -77,4 +77,4 @@ this deployment does not qualify.
 
 Start with the [architecture walkthrough](quickstarts/architecture-walkthrough/README.md).
 If you already understand the system and only need a disposable evaluation,
-use the [bootc quickstart](quickstarts/openshell-single-server/bootc.md).
+use the [bootc quickstart](quickstarts/bootc/README.md).

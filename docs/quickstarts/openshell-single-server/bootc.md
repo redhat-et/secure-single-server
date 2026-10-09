@@ -2,6 +2,7 @@
 
 Use this route for the published OS image. For individual container installation,
 use the [manual guide](manual.md). Review the [qualification and policy limits](reference.md).
+For a short OpenCode/OpenAI walkthrough, use the [bootc quickstart](../bootc/README.md).
 
 
 The quick path uses the project's published RHEL bootc image. Select exactly one
