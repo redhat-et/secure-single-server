@@ -42,7 +42,14 @@ if [[ -n "${HARNESS_CONFIG_DIR}" ]]; then
   [[ -z "${PROVIDER}" ]] || die 'integrated mode cannot attach a direct provider'
   PROVIDER_SRC="${HARNESS_CONFIG_DIR}/harness-provider.json.in"
   [[ -f "${PROVIDER_SRC}" ]] || die "provider template not found: ${PROVIDER_SRC}"
-  OPENSHELL_MODEL_ID="${OPENSHELL_MODEL_ID:-${DEFAULT_MODEL}}"
+  if [[ -n "${backend}" && "${backend}" != cloud ]]; then
+    # Preserve bootc's ownership of the local recipe's model and Praxis port.
+    # The model comes from catalog data, not a harness-specific shell branch.
+    OPENSHELL_MODEL_ID="${DEFAULT_MODEL}"
+    PRAXIS_PORT=8080
+  else
+    OPENSHELL_MODEL_ID="${OPENSHELL_MODEL_ID:-${DEFAULT_MODEL}}"
+  fi
   : "${OPENSHELL_MODEL_ID:?set OPENSHELL_MODEL_ID to the administrator-approved model id}"
   PRAXIS_PORT="${PRAXIS_PORT:-8080}"
   validate_praxis_port

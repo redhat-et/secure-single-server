@@ -10,7 +10,8 @@ Existing `create.sh --profile ...`, `--name`, `--config`, `--provider`, and
 `--policy-advisor` options continue to work. On bootc, `sss-bootc harness create`
 uses the selected harness and inference backend. Cloud mode keeps the existing
 standalone behavior unless `--config` explicitly requests Praxis. Local and
-remote vLLM modes select their catalog recipe and default model; they reject
+remote vLLM modes own the catalog model and Praxis port 8080, matching the
+existing bootc behavior even if the caller has cloud model/port variables set. They reject
 `--provider` and `--config` overrides.
 
 ## Synchronize and inspect

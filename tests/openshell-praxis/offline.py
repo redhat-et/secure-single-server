@@ -280,6 +280,27 @@ if args[:2] == ["sandbox", "list"]:
                 port = policy["network_policies"]["praxis_gateway"]["endpoints"][0]["port"]
                 self.assertIs(type(port), int, "OpenShell schema requires an unsigned integer")
 
+    def test_bootc_local_backend_owns_model_and_port_from_catalog(self):
+        for backend in ("vllm", "remote-vllm"):
+            self.env["OPENSHELL_BOOTC_BACKEND"] = backend
+            for harness in ("opencode", "openclaw"):
+                self.create(harness, "dev")
+                config = json.loads((self.work / "capture.provider").read_text())
+                if harness == "opencode":
+                    provider = config["provider"]["praxis"]
+                    self.assertEqual(config["model"], "praxis/Qwen/Qwen3-8B")
+                    self.assertEqual(provider["options"]["baseURL"], "http://host.openshell.internal:8080/v1")
+                else:
+                    self.assertEqual(config["agents"]["defaults"]["model"]["primary"], "praxis/Qwen/Qwen3-8B")
+                    self.assertEqual(config["models"]["providers"]["praxis"]["baseUrl"], "http://host.openshell.internal:8080/v1")
+                args = json.loads((self.work / "capture.args").read_text())
+                self.assertIn("backend=" + backend, args)
+                self.assertNotIn("--provider", args)
+                for forbidden in ("--provider", "--config"):
+                    self.create(harness, "dev", success=False,
+                                provider="direct" if forbidden == "--provider" else None,
+                                integrated=forbidden == "--config")
+
     def test_catalog_only_profile_reaches_existing_entry_point(self):
         catalog = self.work / "catalog"
         catalog.mkdir()
