@@ -101,7 +101,8 @@ elif a[0]=='get':
         result=self.ensure(); self.assertEqual(result.returncode,0,result.stderr)
         records=json.loads(self.state.read_text())
         for field,value in [('resources',{'cpu':'99','memory':'4Gi'}), ('labels',{}),
-                            ('environment',{'API_KEY':'bad'}), ('driver_config',{'podman':{}})]:
+                            ('environment',{'API_KEY':'bad'}), ('driver_config',{'podman':{}}),
+                            ('resources',{'cpu':'2','memory':'4Gi','gpu':1}), ('command',['unreviewed'])]:
             original=json.loads(json.dumps(records)); original[result.stdout.strip()][field]=value
             self.state.write_text(json.dumps(original))
             failed=self.ensure(); self.assertNotEqual(failed.returncode,0,field)

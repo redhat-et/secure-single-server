@@ -146,6 +146,9 @@ class Gateway:
     def verify(self, name, expected):
         actual = json.loads(self.run('get', name, '--output', 'json').stdout)
         require(isinstance(actual, dict) and actual.get('name') == name, 'invalid template readback')
+        require(set(actual) <= {'id', 'name', 'workspace', 'resource_version', 'created_at',
+                                'labels', 'annotations', 'image', 'environment', 'resources',
+                                'driver_config', 'startup'}, 'unknown template readback field')
         require(all(actual.get(key, {}) == value for key, value in expected.items()),
                 f'template drift detected: {name}; review and remove the conflicting template explicitly')
         require(not any(actual.get(key) for key in ('driver_config', 'startup', 'annotations')),

@@ -71,7 +71,9 @@ The top-level JSON object has `version: 1` and a `templates` array. Entries are
 unique by `(harness, profile, backend)`. Image variables refer to the central
 [`images.env`](../../openshell/configs/images.env) digest pins. Set either `policy`
 for a standalone sandbox or `config_dir` for an integrated policy/provider recipe.
-An optional `model_id` supplies a local recipe's default model. Model and provider
+Paths are relative to the installed repository root, including when a reviewed
+catalog is supplied through `OPENSHELL_TEMPLATE_DIR`; they are not relative to
+the catalog file. An optional `model_id` supplies a local recipe's default model. Model and provider
 configuration is installed per sandbox after creation; it is not stored in the
 workload template. Existing qualified custom `--config` directories remain
 supported for OpenCode profiles and OpenClaw `dev`.
