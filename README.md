@@ -44,8 +44,10 @@ container with Podman. Booting it starts the complete OpenShell deployment;
 running a shell in Podman lets you inspect the image. For a working Podman-only
 model call, use the Praxis example below.
 
-Allow about five minutes **after the host is ready and images are cached**.
-Initial downloads, OS installation/reboot, and local-model loading add time.
+The Podman quickstart assumes **Podman is already started and running**. Target
+a first model response in under five minutes with cached images and a valid key.
+Initial image downloads, bootc OS installation/reboot, and local-model loading
+add time.
 Use Bash and a disposable RHEL 9 x86_64 host. Have an OpenAI API key and an
 exact model ID available to your account ready. OpenCode is the model-enabled
 quickstart; OpenClaw model authentication remains unqualified.
@@ -131,7 +133,7 @@ for sandboxed harness execution.
 ### Podman-only model call
 
 For a quick inference check without installing an OS image, run the Praxis
-workload directly. From a reviewed repository checkout with Podman installed,
+workload directly. From a reviewed repository checkout with the Podman engine already running,
 set `OPENAI_API_KEY` at the hidden prompt and `MODEL_ID` to an accessible model.
 `ANTHROPIC_API_KEY` must also exist for the two-provider config; leave it empty
 when only calling OpenAI. `PRAXIS_IMAGE` pins the workload image.
