@@ -50,7 +50,7 @@ config="$PWD/configs/openshell-praxis/openclaw"
 openshell/harnesses/openclaw/create.sh --profile dev \
   --name openclaw-dev --config "$config"
 openshell/harnesses/openclaw/run.sh --name openclaw-dev --timeout 600 \
-  --message 'Write /sandbox/greeting.txt containing a short greeting, then read it and report its contents.'
+  --message 'Write /home/node/.openclaw/workspace/greeting.txt containing a short greeting, then read it and report its contents.'
 ```
 
 The command returns JSON. Require `ok: true`, a useful `final` response, and
@@ -81,7 +81,7 @@ sudo runuser -u openshell-svc -- env HOME=/var/lib/openshell-svc \
   --profile dev --name openclaw-dev \
   --config /usr/share/secure-single-server/configs/openshell-praxis/openclaw
 sudo sss-bootc harness run --name openclaw-dev --timeout 600 \
-  --message 'Write /sandbox/greeting.txt containing a short greeting, then read it and report its contents.'
+  --message 'Write /home/node/.openclaw/workspace/greeting.txt containing a short greeting, then read it and report its contents.'
 ```
 
 For the bootc-managed vLLM modes, `sudo sss-bootc harness create --profile dev

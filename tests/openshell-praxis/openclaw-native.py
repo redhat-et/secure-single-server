@@ -55,6 +55,12 @@ def main():
     evidence = {'status': 'failed', 'openclaw_image': claw_image, 'praxis_image': praxis_image,
                 'openshell_runtime': 'not covered by this client/gateway test', 'cases': []}
     try:
+        version = run(ENGINE, 'run', '--rm', '--network=none', '--read-only',
+                      '--cap-drop=all', '--security-opt=no-new-privileges',
+                      '--entrypoint', '/usr/local/bin/openclaw', claw_image, '--version')
+        if version.returncode or '2026.9.9' not in version.stdout:
+            raise RuntimeError('Pinned workload does not report the qualified OpenClaw release')
+        evidence['openclaw_version'] = version.stdout.strip()
         for local, prefix in ((False, ""), (False, "/providers/team"), (True, "")):
             fixture_module.REQUIRE_THINKING_DISABLED = local
             fixture = fixture_module.provider.Provider(ports=(18000, 0, 0), model='fixture-model', local=local)
@@ -106,16 +112,16 @@ def main():
                         except OSError:
                             if attempt == 29: raise
                             time.sleep(1)
-                    args = [ENGINE, 'run', '--rm', '--network=host', '--user=1001:1001',
+                    args = [ENGINE, 'run', '--rm', '--network=host', '--user=1000:1000',
                             '--cap-drop=all', '--security-opt=no-new-privileges',
                             '-e', 'HOME=/home/sandbox',
-                            '-v', f'{home}:/home/sandbox:Z', '-v', f'{sandbox}:/sandbox:Z',
+                            '-v', f'{home}:/home/sandbox:Z', '-v', f'{sandbox}:/home/node/.openclaw/workspace:Z',
                             '--entrypoint', '/usr/local/bin/openclaw', claw_image,
                             'agent', 'exec', '--config', '/home/sandbox/.openclaw/openclaw.json',
-                            '--cwd', '/sandbox', '--timeout', '90', '--json',
+                            '--cwd', '/home/node/.openclaw/workspace', '--timeout', '90', '--json',
                             'Write the proof file with the write tool, then confirm completion.']
-                    if Path(ENGINE).name == 'podman':
-                        args.insert(3, '--userns=keep-id:uid=1001,gid=1001')
+                    if Path(ENGINE).name == 'podman' and os.geteuid() != 0:
+                        args.insert(3, '--userns=keep-id:uid=1000,gid=1000')
                     response = run(*args)
                     if response.returncode:
                         raise RuntimeError('OpenClaw execution failed: ' + response.stderr[-3000:] + response.stdout[-3000:])

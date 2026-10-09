@@ -15,6 +15,28 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 
 
+class OpenCodeFixtureTest(unittest.TestCase):
+    def test_streamed_write_command_and_final_continuation(self):
+        fixture = runpy.run_path(str(Path(__file__).with_name('opencode-provider.py')))
+        body = {'model': 'fixture-model', 'messages': [], 'tools': [
+            {'type': 'function', 'function': {'name': name}} for name in ('write', 'bash')]}
+        complete = fixture['completion']
+        stream = fixture['provider'].events
+        for expected, call_id in [('write', 'call_write'), ('bash', 'call_bash')]:
+            result = complete('/v1/chat/completions', body)
+            call = result['choices'][0]['message']['tool_calls'][0]
+            self.assertEqual(call['function']['name'], expected)
+            self.assertEqual(call['id'], call_id)
+            frames = b''.join(stream('/v1/chat/completions', result))
+            self.assertIn(b'[DONE]', frames)
+            self.assertIn(expected.encode(), frames)
+            body['messages'].append({'role': 'tool', 'tool_call_id': call_id, 'content': 'success'})
+        result = complete('/v1/chat/completions', body)
+        self.assertEqual(result['choices'][0]['finish_reason'], 'stop')
+        self.assertEqual(result['choices'][0]['message']['content'], 'OPENCODE_TOOL_OK')
+        self.assertNotIn('tool_calls', result['choices'][0]['message'])
+
+
 class AuthenticationEvidenceTest(unittest.TestCase):
     def test_unrelated_failure_cannot_pass_authentication_check(self):
         native = runpy.run_path(str(Path(__file__).with_name('openclaw-native.py')))
@@ -66,7 +88,7 @@ if args[:2] == ["sandbox", "create"]:
     p = pathlib.Path(args[args.index("--policy") + 1])
     pathlib.Path(os.environ["CAPTURE"]).write_text(p.read_text())
 if args[:1] == ["logs"]:
-    print("provider_env_changed:true")
+    print("Acknowledged initial policy revision as loaded")
 if args[:2] == ["sandbox", "list"]:
     if "--output" in args and args[args.index("--output") + 1] == "json":
         print(json.dumps({"sandboxes": [{"name": "test", "phase": "Ready"}]}))
@@ -186,7 +208,10 @@ if args[:2] == ["sandbox", "list"]:
                 self.assertEqual(provider["models"][0]["id"], self.env["OPENSHELL_MODEL_ID"])
                 self.assertEqual(config["agents"]["defaults"]["model"]["primary"],
                                  "praxis/" + self.env["OPENSHELL_MODEL_ID"])
-                self.assertEqual(config["agents"]["defaults"]["workspace"], "/sandbox")
+                self.assertEqual(config["agents"]["defaults"]["workspace"], "/home/node/.openclaw/workspace")
+                self.assertFalse(policy["filesystem_policy"]["include_workdir"])
+                self.assertIn('/app', policy["filesystem_policy"]["read_only"])
+                self.assertNotIn('/app', policy["filesystem_policy"]["read_write"])
                 if folder == "configs/vllm/openclaw":
                     self.assertEqual(config["agents"]["defaults"]["models"]["praxis/" + self.env["OPENSHELL_MODEL_ID"]],
                                      {"params": {"chat_template_kwargs": {"enable_thinking": False}}})
@@ -198,7 +223,7 @@ if args[:2] == ["sandbox", "list"]:
                 rule = policy["network_policies"]["praxis_gateway"]
                 self.assertEqual(rule["endpoints"][0]["port"], 18080)
                 self.assertEqual({b["path"] for b in rule["binaries"]},
-                                 {"/usr/bin/node-26", "/usr/local/bin/openclaw"})
+                                 {"/usr/local/bin/node", "/usr/local/bin/openclaw"})
                 hosts = {e["host"] for r in policy["network_policies"].values() for e in r["endpoints"]}
                 self.assertNotIn("api.openai.com", hosts)
                 self.assertNotIn("api.anthropic.com", hosts)
@@ -242,18 +267,18 @@ if args[:2] == ["sandbox", "list"]:
                 self.assertTrue(marker.exists(), "connect failed before invoking SSH")
                 self.assertEqual(result.returncode, 255, result.stderr)
 
-    def test_openclaw_waits_for_initial_settings_before_uploading_config(self):
+    def test_openclaw_waits_for_initial_policy_before_uploading_config(self):
         cli = self.work / "openshell"
-        source = cli.read_text().replace('print("provider_env_changed:true")',
+        source = cli.read_text().replace('print("Acknowledged initial policy revision as loaded")',
             'marker = pathlib.Path(os.environ["CAPTURE"] + ".polls")\n'
             '    count = int(marker.read_text()) + 1 if marker.exists() else 1\n'
             '    marker.write_text(str(count))\n'
-            '    if count >= 2: print("provider_env_changed:true")')
+            '    if count >= 2: print("Acknowledged initial policy revision as loaded")')
         cli.write_text(source)
         self.create("openclaw", "dev", integrated=True, config_dir="configs/vllm/openclaw")
         self.assertEqual((self.work / "capture.polls").read_text(), "2")
         self.assertTrue((self.work / "capture.provider").exists())
-        cli.write_text(source.replace('if count >= 2: print("provider_env_changed:true")', 'sys.exit(42)'))
+        cli.write_text(source.replace('if count >= 2: print("Acknowledged initial policy revision as loaded")', 'sys.exit(42)'))
         (self.work / "capture.provider").unlink()
         result = subprocess.run(["bash", str(ROOT / "openshell/harnesses/openclaw/create.sh"),
                                  "--profile", "dev", "--name", "test", "--config", str(ROOT / "configs/vllm/openclaw")],

@@ -37,6 +37,7 @@ elif args[0] == 'build':
     assert not (context / 'rhsm_org').exists()
     assert not (context / 'rhsm_activation_key').exists()
     if args[file_index].endswith('/bootc/Containerfile'):
+        assert (context / 'bootc/openshell').is_file()
         assert (context / 'openshell/configs/images.env').is_file()
         assert (context / 'bootc/scripts/reconcile').is_file()
         assert (context / 'bootc/scripts/vllm-common').is_file()
@@ -78,6 +79,22 @@ else:
     sys.exit(3)
 ''')
         podman.chmod(0o755)
+        # Build/context tests use a synthetic download; fetch-cli tests exercise
+        # checksum enforcement independently.
+        for name, body in {
+            'uname': '#!/bin/sh\nif [ "$1" = -s ]; then echo Linux; else echo x86_64; fi\n',
+            'sha256sum': '#!/bin/sh\ncat >/dev/null\n',
+            'curl': '''#!/usr/bin/env python3
+import io, sys, tarfile
+with tarfile.open(sys.argv[sys.argv.index('-o') + 1], 'w:gz') as archive:
+    payload = b'#!/bin/sh\\necho openshell 0.1.3\\n'
+    member = tarfile.TarInfo('openshell'); member.size = len(payload)
+    archive.addfile(member, io.BytesIO(payload))
+''',
+        }.items():
+            script = self.directory / name
+            script.write_text(body)
+            script.chmod(0o755)
         self.env = {
             **{key: value for key, value in os.environ.items()
                if key not in {'RHSM_ORG_ID', 'RHSM_ACTIVATION_KEY'}},

@@ -15,7 +15,7 @@ trap cleanup EXIT
 "${ROOT}/openshell/harnesses/openclaw/create.sh" --profile dev \
   --name "${name}" --config "${OPENCLAW_TEST_CONFIG}"
 "${ROOT}/openshell/harnesses/openclaw/run.sh" --name "${name}" --timeout 600 --message \
-  'Use the write tool to create /sandbox/acceptance.cjs with exactly this CommonJS code: module.exports = (a, b) => a + b; . Then use the read tool to read that file and report its contents. Do not create tests or execute commands. You must actually call both tools.' >"${td}/result.json"
+  'Use the write tool to create /home/node/.openclaw/workspace/acceptance.cjs with exactly this CommonJS code: module.exports = (a, b) => a + b; . Then use the read tool to read that file and report its contents. Do not create tests or execute commands. You must actually call both tools.' >"${td}/result.json"
 python3 - "${td}/result.json" <<'PY'
 import json,sys
 r=json.load(open(sys.argv[1]))
@@ -25,7 +25,7 @@ assert {'read', 'write'} <= set(summary.get('tools', [])), 'Missing real read/wr
 assert summary.get('failures') == 0, 'A model tool call failed'
 PY
 # Trusted independent tests avoid treating model-authored assertions as proof.
-harness_ssh "${name}" 'cd /sandbox && test -s acceptance.cjs && node' <<'JS'
+harness_ssh "${name}" 'cd /home/node/.openclaw/workspace && test -s acceptance.cjs && node' <<'JS'
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const add = require('./acceptance.cjs');

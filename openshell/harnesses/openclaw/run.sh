@@ -25,4 +25,4 @@ if [[ ! "${TIMEOUT}" =~ ^[1-9][0-9]{0,3}$ ]] || (( TIMEOUT > 3600 )); then
 fi
 # The task travels through stdin, not an interpolated remote command.
 printf '%s\n' "${MESSAGE}" | harness_ssh "${NAME}" \
-  "cd /sandbox && SQLITE_TMPDIR=/tmp openclaw agent exec --config ~/.openclaw/openclaw.json --cwd /sandbox --timeout ${TIMEOUT} --json --message-file -"
+  "mkdir -p /home/node/.openclaw/workspace && cd /home/node/.openclaw/workspace && HOME=/home/node SQLITE_TMPDIR=/tmp openclaw agent exec --config /home/node/.openclaw/openclaw.json --cwd /home/node/.openclaw/workspace --timeout ${TIMEOUT} --json --message-file -"

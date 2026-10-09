@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tests/common"))
@@ -22,7 +23,7 @@ def main():
     engine = os.environ.get("CONTAINER_ENGINE", "podman")
     values = dict(line.split("=", 1) for line in (ROOT / "openshell/configs/images.env").read_text().splitlines()
                   if line.startswith("ODH_"))
-    image = json.loads(values["ODH_CLI_IMAGE"])
+    image = json.loads(values["ODH_GATEWAY_IMAGE"])
     available = subprocess.run([engine, "image", "inspect", image], capture_output=True, check=False)
     if available.returncode:
         subprocess.run([engine, "pull", image], check=True)
@@ -30,11 +31,15 @@ def main():
     def invoke(target):
         return subprocess.run([engine, "run", "--rm", "--network", "none",
                 "--read-only", "--cap-drop", "all", "--security-opt", "no-new-privileges",
-                "--volume", f"{target}:/policy.yaml:ro,Z", image,
+                "--volume", f"{target}:/policy.yaml:ro,Z",
+                "--volume", f"{cli}:/test-openshell:ro,Z", "--entrypoint", "/test-openshell", image,
                 "policy", "set", "schema-only", "--policy", "/policy.yaml",
                 "--gateway-endpoint", "http://127.0.0.1:9"], capture_output=True, text=True, timeout=20)
     try:
-        validate_profiles(invoke, result["profiles"])
+        with tempfile.TemporaryDirectory() as directory:
+            subprocess.run([str(ROOT / 'openshell/scripts/fetch-cli.sh'), directory], check=True)
+            cli = Path(directory) / 'openshell'
+            validate_profiles(invoke, result["profiles"])
         result["status"] = "passed"
     finally:
         save("openshell-schema", result)

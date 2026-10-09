@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """Offline behavioral regressions for harness argument, policy and SSH contracts."""
 import json
+import hashlib
+import io
 import os
 from pathlib import Path
 import subprocess
 import tempfile
+import tarfile
 import unittest
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -154,5 +157,46 @@ sys.stdin.read()
         result=self.approval('approve','regression','--chunk-id','chunk-123','--yes')
         self.assertNotEqual(result.returncode,0,result.stderr)
         self.assertIn('permissions are too broad',result.stderr)
+
+class ReleaseCliTests(unittest.TestCase):
+    def test_release_download_is_architecture_matched_and_fails_closed_on_bad_checksum(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            scripts = work / 'openshell/scripts'; scripts.mkdir(parents=True)
+            configs = work / 'openshell/configs'; configs.mkdir()
+            helper = scripts / 'fetch-cli.sh'
+            helper.write_text((ROOT / 'openshell/scripts/fetch-cli.sh').read_text())
+            archive = work / 'fixture.tar.gz'
+            with tarfile.open(archive, 'w:gz') as stream:
+                payload = b'#!/bin/sh\necho fixture\n'
+                member = tarfile.TarInfo('openshell'); member.size = len(payload)
+                stream.addfile(member, io.BytesIO(payload))
+            digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+            def pins(checksum):
+                (configs / 'images.env').write_text(
+                    f'OPENSHELL_CLI_VERSION=v0.1.3\nOPENSHELL_CLI_SHA256_AMD64={checksum}\n'
+                    f'OPENSHELL_CLI_SHA256_ARM64={checksum}\n')
+            for name, body in {
+                'uname': '#!/bin/sh\nif [ "$1" = -s ]; then echo Linux; else echo "$TEST_ARCH"; fi\n',
+                'curl': '#!/bin/sh\nprintf "%s\\n" "$@" > "$DOWNLOAD_LOG"\nwhile [ "$1" != -o ]; do shift; done\ncp "$ARCHIVE" "$2"\n',
+            }.items():
+                mock = work / name; mock.write_text(body); mock.chmod(0o755)
+            env = dict(os.environ, PATH=f'{work}:{os.environ["PATH"]}', ARCHIVE=str(archive),
+                       DOWNLOAD_LOG=str(work / 'download'))
+            for architecture, target in [('x86_64', 'x86_64'), ('aarch64', 'aarch64')]:
+                with self.subTest(architecture=architecture):
+                    output = work / architecture; output.mkdir()
+                    pins(digest)
+                    env['TEST_ARCH'] = architecture
+                    result = subprocess.run(['bash', str(helper), str(output)], env=env, capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual((output / 'openshell').read_bytes(), payload)
+                    self.assertIn(f'/v0.1.3/openshell-{target}-unknown-linux-musl.tar.gz', (work / 'download').read_text())
+                    (output / 'openshell').unlink()
+                    pins('0' * 64)
+                    result = subprocess.run(['bash', str(helper), str(output)], env=env, capture_output=True, text=True)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertFalse((output / 'openshell').exists())
+
 
 if __name__=='__main__': unittest.main()

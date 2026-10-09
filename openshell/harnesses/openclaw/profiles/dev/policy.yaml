@@ -1,8 +1,8 @@
 version: 1
 filesystem_policy:
-  include_workdir: true
-  read_only: [/usr, /lib, /lib64, /etc, /proc, /dev/urandom, /opt]
-  read_write: [/sandbox, /home, /tmp, /dev/null]
+  include_workdir: false
+  read_only: [/usr, /lib, /lib64, /etc, /proc, /dev/urandom, /opt, /app]
+  read_write: [/home, /tmp, /dev/null]
 landlock: {compatibility: best_effort}
 network_policies:
   model_api:
@@ -10,16 +10,16 @@ network_policies:
     endpoints:
       - {host: api.anthropic.com, port: 443, protocol: rest, access: read-write, enforcement: enforce}
       - {host: api.openai.com, port: 443, protocol: rest, access: read-write, enforcement: enforce}
-    binaries: [{path: /usr/sbin/node}, {path: /usr/local/sbin/openclaw}]
+    binaries: [{path: /usr/local/bin/node}, {path: /usr/local/bin/openclaw}]
   github_api:
     name: github-api
     endpoints: [{host: api.github.com, port: 443, protocol: rest, enforcement: enforce, access: read-only}]
-    binaries: [{path: /usr/sbin/node}, {path: /usr/sbin/git}]
+    binaries: [{path: /usr/local/bin/node}, {path: /usr/bin/git}]
   github_git:
     name: github-git
     endpoints: [{host: github.com, port: 443}]
-    binaries: [{path: /usr/sbin/git}]
+    binaries: [{path: /usr/bin/git}]
   npm_registry:
     name: npm-registry
     endpoints: [{host: registry.npmjs.org, port: 443}]
-    binaries: [{path: /usr/sbin/node}, {path: /usr/sbin/npm}]
+    binaries: [{path: /usr/local/bin/node}, {path: /usr/local/bin/npm}]

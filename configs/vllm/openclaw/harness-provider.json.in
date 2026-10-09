@@ -1,7 +1,7 @@
 {
   "agents": {
     "defaults": {
-      "workspace": "/sandbox",
+      "workspace": "/home/node/.openclaw/workspace",
       "model": {
         "primary": "praxis/@@MODEL_ID@@"
       },

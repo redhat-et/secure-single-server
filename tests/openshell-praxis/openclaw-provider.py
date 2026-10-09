@@ -37,7 +37,7 @@ def completion(path, body, missing_usage=False):
             raise RuntimeError('OpenClaw did not advertise its write tool')
         message['tool_calls'][0]['function'] = {
             'name': 'write',
-            'arguments': json.dumps({'path': '/sandbox/openclaw-proof.txt', 'content': MARKER + '\n'})}
+            'arguments': json.dumps({'path': '/home/node/.openclaw/workspace/openclaw-proof.txt', 'content': MARKER + '\n'})}
     return result
 
 

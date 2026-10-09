@@ -39,8 +39,8 @@ jobs:
           shellcheck --version
       - name: Install pinned OpenShell policy prover
         run: |
-          OPENSHELL_PROVER_VERSION=v0.1.2
-          OPENSHELL_PROVER_SHA256=e1c9db66ae459850cab43765d7ad569effe2ac0a338c902a1b895d0cc361fbb0
+          OPENSHELL_PROVER_VERSION=v0.1.3
+          OPENSHELL_PROVER_SHA256=49b0e47b3329289707d787ee4afd49a03df478ffde5a5afb115221abb0b84c01
           curl --fail --show-error --silent --location --retry 3 --retry-all-errors --connect-timeout 10 --max-time 120 \
             "https://github.com/NVIDIA/OpenShell/releases/download/${OPENSHELL_PROVER_VERSION}/openshell-prover-x86_64-unknown-linux-musl.tar.gz" \
             -o /tmp/openshell-prover.tar.gz
@@ -91,4 +91,24 @@ jobs:
         with:
           name: openclaw-client-contract
           path: evidence/mocked-provider/openclaw-native.json
+          retention-days: 7
+
+  opencode-client:
+    name: Pinned OpenCode model and tool contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: {persist-credentials: false}
+      - name: Install fixture dependencies
+        run: sudo apt-get update && sudo apt-get install -y python3-yaml
+      - name: Exercise streamed file and command tools through Praxis
+        env: {CONTAINER_ENGINE: docker}
+        run: python3 tests/openshell-praxis/opencode-native.py
+      - name: Upload sanitized evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: opencode-client-contract
+          path: evidence/mocked-provider/opencode-native.json
           retention-days: 7

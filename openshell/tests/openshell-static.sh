@@ -7,21 +7,26 @@ fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
 # shellcheck disable=SC1091
 source "${OS_DIR}/scripts/lib.sh"
 
-# 1a. images.env must define four @sha256-pinned odh control-plane images.
+# 1a. Coordinated upstream control-plane images must be pinned by digest.
 # (images.env already sourced by lib.sh)
-for var in ODH_GATEWAY_IMAGE ODH_SUPERVISOR_IMAGE ODH_SANDBOX_IMAGE ODH_CLI_IMAGE; do
+for var in ODH_GATEWAY_IMAGE ODH_SUPERVISOR_IMAGE ODH_SANDBOX_IMAGE; do
   val="${!var:-}"
   [[ -n "${val}" ]] || fail "${var} unset"
-  [[ "${val}" == quay.io/opendatahub/odh-openshell-*@sha256:* ]] \
-    || fail "${var} not a digest-pinned odh image: ${val}"
+  [[ "${val}" == ghcr.io/nvidia/openshell/*@sha256:* ]] \
+    || fail "${var} not a digest-pinned upstream image: ${val}"
 done
 
 # 1b. images.env must define three @sha256-pinned public aipcc harness images.
-for var in ODH_OPENCODE_IMAGE ODH_OPENCLAW_IMAGE ODH_CODEX_IMAGE; do
+for var in ODH_OPENCODE_IMAGE ODH_CODEX_IMAGE; do
   val="${!var:-}"
   [[ -n "${val}" ]] || fail "${var} unset"
   [[ "${val}" == quay.io/aipcc/base-images/agentic/*@sha256:* ]] \
     || fail "${var} not a digest-pinned aipcc image: ${val}"
+done
+[[ "${ODH_OPENCLAW_IMAGE}" == ghcr.io/openclaw/openclaw@sha256:* ]] || fail 'OpenClaw must use a pinned upstream image'
+[[ "${OPENSHELL_CLI_VERSION}" == v0.1.3 ]] || fail 'CLI release must match the control plane'
+for digest in "${OPENSHELL_CLI_SHA256_AMD64}" "${OPENSHELL_CLI_SHA256_ARM64}"; do
+  [[ "${digest}" =~ ^[a-f0-9]{64}$ ]] || fail 'CLI checksum missing or malformed'
 done
 
 # 2. All shell scripts under openshell/ pass shellcheck.

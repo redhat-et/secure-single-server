@@ -46,20 +46,19 @@ if [[ -n "${HARNESS_CONFIG_DIR}" ]]; then
   python3 "${H_DIR}/../../scripts/render-openclaw.py" \
     "${PROVIDER_SRC}" "${PROV}" "${PRAXIS_PORT}" "${OPENSHELL_MODEL_ID}" "${PRAXIS_API_PREFIX}"
   harness_create "${NAME}" "${ODH_OPENCLAW_IMAGE}" "${POL}" "" "${POLICY_ADVISOR}"
-  # The pinned supervisor's first provider-environment poll advances its policy
-  # generation even with no providers. Starting a long stream before this poll
-  # causes an intentional stale-generation disconnect and uncertain client cleanup.
+  # Wait for the v0.1.3 supervisor to acknowledge its initial policy revision
+  # before installing model configuration and allowing the first agent turn.
   initialized=no
   for (( attempt=0; attempt<30; attempt++ )); do
     settings_log="$(_os logs "${NAME}")"
-    if [[ "${settings_log}" == *provider_env_changed:true* ]]; then
+    if [[ "${settings_log}" == *"Acknowledged initial policy revision as loaded"* ]]; then
       initialized=yes
       break
     fi
     sleep 1
   done
-  [[ "${initialized}" == yes ]] || die 'OpenShell initial settings poll did not settle; sandbox created but model configuration not installed'
-  harness_ssh "${NAME}" 'umask 077; mkdir -p ~/.openclaw && cat > ~/.openclaw/openclaw.json' <"${PROV}"
+  [[ "${initialized}" == yes ]] || die 'OpenShell initial policy revision did not settle; sandbox created but model configuration not installed'
+  harness_ssh "${NAME}" 'umask 077; mkdir -p /home/node/.openclaw && cat > /home/node/.openclaw/openclaw.json' <"${PROV}"
   note "OpenClaw Praxis configuration installed; run with openshell/harnesses/openclaw/run.sh --name ${NAME} --message <task>"
   exit 0
 fi
