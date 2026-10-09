@@ -75,36 +75,87 @@ profile and harness limitations.
 
 ## 4. Choose model access
 
-Standalone model credentials are never forwarded through the SSH helper. If a
-reviewed deployment needs one, import an administrator-reviewed provider
-profile, register the credential from a hidden prompt in the service-owner
-environment, and attach it explicitly with `create.sh --provider NAME`:
+### OpenAI API key
+
+The following example uses OpenCode. Run in Bash on the server after OpenShell
+is ready. Create and review this non-secret profile; a fresh gateway has no
+pre-imported provider profiles:
+
+```bash
+cat > /var/tmp/openai-model.yaml <<'YAML'
+id: openai-model
+display_name: OpenAI model access
+category: inference
+credentials:
+  - name: api_key
+    env_vars: [OPENAI_API_KEY]
+    required: true
+    auth_style: bearer
+    header_name: authorization
+endpoints:
+  - {host: api.openai.com, port: 443, protocol: rest, access: read-write, enforcement: enforce}
+binaries: [/usr/local/bin/opencode, /usr/bin/node-26]
+YAML
+os_run openshell profile lint -f /var/tmp/openai-model.yaml
+os_run openshell profile import -f /var/tmp/openai-model.yaml
+```
+
+Register your actual OpenAI API key at the hidden prompt. The key is read inside
+the service-account process, so it survives the administrator-to-service-account
+boundary without appearing in command arguments:
 
 ```bash
 os_run bash -c '
-openshell profile lint -f /path/to/reviewed-provider-profile.yaml
-openshell profile import -f /path/to/reviewed-provider-profile.yaml
-read -r -s -p "Synthetic provider key: " PROVIDER_KEY; printf "\n"
-export PROVIDER_KEY
-openshell provider create --name test-provider --type openai \
-  --credential PROVIDER_KEY
-unset PROVIDER_KEY
+cd /
+set -eu
+set +x
+IFS= read -r -s -p "OpenAI API key: " OPENAI_API_KEY; printf "\n"
+export OPENAI_API_KEY
+openshell provider create --name openai-key --type openai-model \
+  --credential OPENAI_API_KEY
+unset OPENAI_API_KEY
 '
 ```
 
-Use synthetic credentials first. If you select the optional OpenCode Praxis
-integration, do not attach a direct provider: integrated mode rejects the
-binding and the separate [Praxis workflow](../openshell-praxis/README.md)
-documents its own qualification limits.
-
-When creating a standalone sandbox that uses the registered provider, append
-`--provider test-provider` to the selected `create.sh` command. Use a new name
-if the earlier sandbox already exists:
+Attach the provider when creating a new sandbox, then connect:
 
 ```bash
-os_run "$repo/openshell/harnesses/$harness/create.sh" \
-  --profile dev --name "$harness"-provider --provider test-provider
+os_run "$repo/openshell/harnesses/opencode/create.sh" --profile dev --name opencode-openai --provider openai-key
+os_run "$repo/openshell/harnesses/opencode/connect.sh" --name opencode-openai
 ```
+
+In OpenCode, use `/models` to select an OpenAI model available to your account.
+The attached provider supplies an opaque `OPENAI_API_KEY` placeholder; OpenShell
+substitutes the real key only for the profile's authorized endpoint. Do not paste
+the real key into OpenCode's `/connect` prompt or store it in harness config.
+Follow the [model verification steps](verification.md#1-prove-model-interaction).
+This recipe still needs real-inference qualification on your host.
+
+### Local OpenAI-compatible endpoint and key
+
+For an existing authenticated local endpoint, use the same import, hidden-prompt,
+and sandbox creation flow above with these substitutions:
+
+| Setting | Local endpoint example |
+| --- | --- |
+| Profile file and `id` | `/var/tmp/local-model.yaml`, `local-model` |
+| Profile endpoint | `host: inference.internal`, `port: 443` |
+| Provider creation | `--name local-key --type local-model --credential OPENAI_API_KEY` |
+| Prompt value | The key issued by your local inference server, not an OpenAI cloud key |
+| Sandbox | `--name opencode-local --provider local-key` |
+| Client base URL | `https://inference.internal/v1` |
+| Model | The exact model ID served by that endpoint |
+
+See the [complete local profile and OpenCode configuration](model-access.md#local-openai-compatible-service)
+for copyable examples. Use the endpoint's actual host and port in both the
+profile and client configuration. Changing only the base URL does not authorize
+credential delivery to a new host. For inference on the OpenShell host, use
+`host.openshell.internal`, rather than sandbox `localhost`.
+
+A server that enforces bearer authentication needs its real key. A server that
+does not authenticate requests needs a credentialless profile; an SDK may still
+require a non-empty placeholder such as `unused`. The placeholder does not grant
+access to an authenticated server.
 
 ## 5. Verify the deployment
 
@@ -112,7 +163,7 @@ Set `sandbox` to the name you created, then verify its runtime ceilings from
 the host:
 
 ```bash
-sandbox="${harness}-dev"  # or "${harness}-provider" for the provider example
+sandbox=opencode-openai  # use opencode-dev or opencode-local for those examples
 cd /
 container_id="$(
 os_run podman ps --filter name=openshell-default--"$sandbox" -q)"
