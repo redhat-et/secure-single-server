@@ -43,7 +43,7 @@ without executing it.
 
 Use the controlled policy test rather than an arbitrary public endpoint. On a
 manual deployment, run the service-owner command shown in
-[manual verification](manual.md#5-verify-the-deployment). For bootc, use the [policy qualification commands](bootc.md#verify-and-create-the-sandbox)
+[manual verification](manual.md#5-verify-the-deployment). For bootc, use the [policy qualification commands](bootc.md#verify-runtime-limits-and-policy)
 to stage the checkout and run the same test as the service owner.
 
 The suite proves both directions with a local fixture: the allowed request must

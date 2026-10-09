@@ -32,6 +32,16 @@ def run(*args, **kwargs):
     return subprocess.run(list(map(str, args)), text=True, capture_output=True, timeout=300, **kwargs)
 
 
+def assert_authentication_rejection(result, proof, records):
+    if result.returncode == 0 or proof.exists():
+        raise RuntimeError('Authentication failure was reported as success')
+    if not any(record.get('path') == '/v1/chat/completions'
+               and record.get('method') == 'POST'
+               and record.get('credential_ok') is False
+               and record.get('classification_clean') is True for record in records):
+        raise RuntimeError('No fresh upstream authentication rejection reached the model fixture')
+
+
 def main():
     images = dict(line.split('=', 1) for line in (ROOT / 'openshell/configs/images.env').read_text().splitlines()
                   if line.startswith('ODH_'))
@@ -120,14 +130,19 @@ def main():
                     if not all(r['credential_ok'] for r in records):
                         raise RuntimeError('Upstream credential contract failed')
                     # Invalid upstream credentials must cause failure, never a successful empty run.
+                    rejected_records = []
                     if not local:
                         fixture.openai_authorization = 'Bearer different-synthetic-key'
                         (sandbox / 'openclaw-proof.txt').unlink()
+                        with fixture.lock:
+                            record_count = len(fixture.records)
                         failed = run(*args)
-                        if failed.returncode == 0 or (sandbox / 'openclaw-proof.txt').exists():
-                            raise RuntimeError('Authentication failure was reported as success')
+                        with fixture.lock:
+                            rejected_records = list(fixture.records[record_count:])
+                        assert_authentication_rejection(failed, sandbox / 'openclaw-proof.txt', rejected_records)
                     evidence['cases'].append({'upstream': 'credentialless' if local else 'bearer-authenticated',
-                                              'route_prefix': prefix, 'status': 'passed', 'records': records})
+                                              'route_prefix': prefix, 'status': 'passed', 'records': records,
+                                              'authentication_rejection_records': rejected_records})
                     print('PASS OpenClaw streaming, real write tool, continuation, and credentials:', evidence['cases'][-1]['upstream'])
             finally:
                 fixture.close()

@@ -3,13 +3,48 @@
 import json
 import os
 from pathlib import Path
+import runpy
 import subprocess
 import tempfile
 import unittest
+import urllib.error
+import urllib.request
 
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+class AuthenticationEvidenceTest(unittest.TestCase):
+    def test_unrelated_failure_cannot_pass_authentication_check(self):
+        native = runpy.run_path(str(Path(__file__).with_name('openclaw-native.py')))
+        check = native['assert_authentication_rejection']
+        fixture = native['fixture_module'].provider.Provider(ports=(0, 0, 0))
+        fixture.start()
+        self.addCleanup(fixture.close)
+        with tempfile.TemporaryDirectory() as directory:
+            proof = Path(directory) / 'proof.txt'
+            failed = subprocess.CompletedProcess([], 125)
+            with self.assertRaisesRegex(RuntimeError, 'No fresh upstream authentication rejection'):
+                check(failed, proof, [])
+            body = json.dumps({'model': 'fixture-model', 'messages': []}).encode()
+            request = urllib.request.Request(
+                f'http://127.0.0.1:{fixture.ports[0]}/v1/chat/completions', data=body,
+                headers={'Content-Type': 'application/json', 'Authorization': 'Bearer wrong-synthetic-key'})
+            with self.assertRaises(urllib.error.HTTPError) as rejected:
+                urllib.request.urlopen(request, timeout=5)
+            self.assertEqual(rejected.exception.code, 403)
+            records = list(fixture.records)
+            check(failed, proof, records)
+            with self.assertRaisesRegex(RuntimeError, 'No fresh upstream authentication rejection'):
+                check(failed, proof, [dict(record, credential_ok=True) for record in records])
+            with self.assertRaisesRegex(RuntimeError, 'No fresh upstream authentication rejection'):
+                check(failed, proof, [dict(record, classification_clean=False) for record in records])
+            with self.assertRaisesRegex(RuntimeError, 'reported as success'):
+                check(subprocess.CompletedProcess([], 0), proof, records)
+            proof.write_text('unexpected success')
+            with self.assertRaisesRegex(RuntimeError, 'reported as success'):
+                check(failed, proof, records)
 
 
 class HarnessTest(unittest.TestCase):
