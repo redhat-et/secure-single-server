@@ -78,7 +78,7 @@ cd /
 sudo runuser -u openshell-svc -- env HOME=/var/lib/openshell-svc \
   XDG_RUNTIME_DIR=/run/user/"$uid" \
   DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/"$uid"/bus \
-  OPENSHELL_MODEL_ID="$model_id" \
+  OPENSHELL_BIN=/usr/bin/openshell OPENSHELL_MODEL_ID="$model_id" \
   /usr/share/secure-single-server/openshell/harnesses/openclaw/create.sh \
   --profile dev --name openclaw-dev \
   --config /usr/share/secure-single-server/configs/openshell-praxis/openclaw
@@ -106,8 +106,9 @@ Automated tests cover authenticated and credentialless synthetic upstreams,
 streamed tool execution, continuation, invalid upstream credentials, and
 OpenShell allow/deny enforcement. AWS also exercises the pinned workload and
 bootc container build. These [current upgrade checks](../../testing/upgrade-0.1.3.md)
-use a controlled model fixture; the [real-model results](../../testing/openclaw-praxis.md)
-are historical and have not been repeated on the upgraded pins.
+use a controlled model fixture. The upgraded pins also passed
+[real OpenAI model tasks on manual and booted bootc deployments](../../testing/upgrade-0.1.3-e2e.md).
+The earlier Qwen GPU results remain historical.
 A synthetic credential test does not qualify a paid OpenAI account or every
 OpenAI-compatible service. Browser login, gateway service deployment, retained
 sessions, and `--backend` remain outside this tested path.

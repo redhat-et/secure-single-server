@@ -13,6 +13,9 @@ the committed SHA-256, and then installed. Bootc copies that same verified binar
 from its isolated build context. Schema tests mount the verified CLI into a
 network-disabled container. Downloads fail closed on checksum mismatch.
 
+The subsequent [real-model deployment tests](upgrade-0.1.3-e2e.md) qualify
+manual installation and actual bootc OS boot/switch with both harnesses.
+
 ## Required migration
 
 Use the [upgrade runbook](../../openshell/docs/upgrade.md): export required work,

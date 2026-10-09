@@ -1,6 +1,6 @@
 # Single-server bootc deployment
 
-Use this route for the published OS image. For individual container installation,
+Use this route for a bootc OS image. For individual container installation,
 use the [manual guide](manual.md). Review the [qualification and policy limits](reference.md).
 For a short OpenCode/OpenAI walkthrough, use the [bootc quickstart](../bootc/README.md).
 
@@ -36,8 +36,14 @@ migrate existing sandboxes. Export and recreate them as needed.
 
 For a fresh VM or bare-metal host, use a standard bootc deployment workflow
 and supply the selected published image as the source. Do not create or
-substitute a locally built image. First boot pulls the pinned control-plane
+substitute an unreviewed image. First boot pulls the pinned control-plane
 and selected harness images.
+
+For unreleased changes, build the images from the reviewed revision using the
+[bootc build guide](../../../bootc/README.md), then install that exact image on a
+disposable host. Published `v0.1` tags do not automatically include changes in
+a pull request. Record the source revision and installed image digest during
+qualification.
 
 ### Experiment with the container image in Podman
 
@@ -149,7 +155,8 @@ The attached provider supplies an opaque `OPENAI_API_KEY` placeholder; OpenShell
 substitutes the real key only for the profile's authorized endpoint. Do not paste
 the real key into OpenCode's `/connect` prompt or store it in harness config.
 Follow the [model verification steps](verification.md#1-prove-model-interaction).
-This recipe still needs real-inference qualification on your host.
+Verify model access on your host; see the
+[real-model deployment qualification](../../testing/upgrade-0.1.3-e2e.md).
 
 ### Local OpenAI-compatible endpoint and key
 

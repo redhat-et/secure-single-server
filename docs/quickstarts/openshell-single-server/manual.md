@@ -66,8 +66,9 @@ Connect from the same owner environment:
 os_run "$repo/openshell/harnesses/$harness/connect.sh" --name "$harness"-dev
 ```
 
-OpenCode launches its CLI. OpenClaw opens a shell in the sandbox because its
-service command and authentication are not yet qualified.
+OpenCode launches its CLI. OpenClaw opens a shell for inspecting the sandbox.
+For OpenClaw model tasks, configure Praxis and use the
+[bounded model and tool workflow](../openshell-praxis/openclaw.md).
 
 Use `dev` for the initial deployment. Each sandbox defaults to two CPUs, 4 GiB
 of memory, and 2048 PIDs. See the [qualification reference](reference.md) for
@@ -129,7 +130,8 @@ The attached provider supplies an opaque `OPENAI_API_KEY` placeholder; OpenShell
 substitutes the real key only for the profile's authorized endpoint. Do not paste
 the real key into OpenCode's `/connect` prompt or store it in harness config.
 Follow the [model verification steps](verification.md#1-prove-model-interaction).
-This recipe still needs real-inference qualification on your host.
+Verify model access on your host; see the
+[real-model deployment qualification](../../testing/upgrade-0.1.3-e2e.md).
 
 ### Local OpenAI-compatible endpoint and key
 

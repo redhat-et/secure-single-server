@@ -49,6 +49,8 @@ gateway_install_config owner "$TEST_TMP/home" "$TEST_TMP" 'example/harness@sha25
             self.assertIn('[openshell.gateway.tls]', config)
             self.assertIn('client_ca_path = "/var/lib/openshell/tls/ca.crt"', config)
             self.assertIn('allow_unauthenticated_users = false', config)
+            # JWT supervisors cannot satisfy mandatory TLS client authentication.
+            self.assertIn('require_client_auth = false', config)
             self.assertIn('[openshell.gateway.mtls_auth]', config)
             self.assertNotIn('disable_tls', config)
             self.assertNotIn('grpc_endpoint', config)
