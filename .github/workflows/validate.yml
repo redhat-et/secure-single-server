@@ -109,13 +109,21 @@ jobs:
   openshell-regressions:
     name: OpenShell harness contracts and pinned schemas
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
       - name: Install policy parser
-        run: sudo apt-get update && sudo apt-get install -y python3-yaml nodejs
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-yaml
+          # Hosted runners already provide Node. Avoid downloading a second
+          # distribution copy before the actual regression checks can run.
+          if ! command -v node >/dev/null; then
+            sudo apt-get install -y --no-install-recommends nodejs
+          fi
+          node --version
       - name: Exercise harness entry points and denial regressions
         run: python3 tests/mocked-provider.py --suite openshell --engine docker
       - name: Report runtime coverage separately

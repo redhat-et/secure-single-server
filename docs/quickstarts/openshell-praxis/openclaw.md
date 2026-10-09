@@ -6,7 +6,9 @@ uses the `dev` profile and `openclaw agent exec`, not a browser or gateway servi
 
 Use a checkout containing this integration, or a bootc image built from it.
 Previously published `v0.1` images do not gain the new scripts automatically.
-See the [AWS test evidence](../../testing/openclaw-praxis.md) for pins and limits.
+See the [current upgrade qualification](../../testing/upgrade-0.1.3.md) for
+pins, AWS tests, and limits. The [earlier real-model evidence](../../testing/openclaw-praxis.md)
+uses the previous versions.
 
 ## Prepare model access
 
@@ -103,7 +105,9 @@ sandbox SSH. Do not enable `exec` until that cleanup contract is qualified.
 Automated tests cover authenticated and credentialless synthetic upstreams,
 streamed tool execution, continuation, invalid upstream credentials, and
 OpenShell allow/deny enforcement. AWS also exercises the pinned workload and
-bootc container build. See the evidence document for real-model results.
+bootc container build. These [current upgrade checks](../../testing/upgrade-0.1.3.md)
+use a controlled model fixture; the [real-model results](../../testing/openclaw-praxis.md)
+are historical and have not been repeated on the upgraded pins.
 A synthetic credential test does not qualify a paid OpenAI account or every
 OpenAI-compatible service. Browser login, gateway service deployment, retained
 sessions, and `--backend` remain outside this tested path.

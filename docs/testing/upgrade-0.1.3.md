@@ -76,5 +76,5 @@ final-response sequence.
 The [earlier qualification](openclaw-praxis.md) describes the previous versions
 and real Qwen GPU results. It is historical evidence, not a real-model result for
 this upgrade. Paid OpenAI, real GPU inference, browser/gateway authentication,
-retained sessions, automated command execution, and booted OS rollout are not
+retained sessions, OpenClaw automatic command execution, and booted OS rollout are not
 qualified by the synthetic upgrade tests.

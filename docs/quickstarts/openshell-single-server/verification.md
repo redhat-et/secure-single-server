@@ -16,25 +16,33 @@ For either harness, once its model access is configured, use this prompt:
 In one sentence, explain why a network allowlist improves AI-agent security.
 ```
 
-A useful response confirms the model path, not the policy. OpenClaw's pinned
-service command and authentication are not qualified; use the shell checks below
-to verify its sandbox environment.
+A useful response confirms the model path, not the policy. OpenCode can run
+model-directed file and command tools. For OpenClaw, use the
+[bounded Praxis runner](../openshell-praxis/openclaw.md), which permits only
+`read` and `write`; browser/gateway authentication is outside this tested path.
 
 ### 2. Prove tool execution and writable workspace
 
-For either harness with model access configured, use this prompt:
+For OpenCode with model access configured, use this prompt:
 
 ```text
 Create /sandbox/openshell-check.txt containing the text "policy applied". Read
 the file back and show its exact contents.
 ```
 
-For either harness, you can also run this directly after connecting:
+For OpenClaw, use the same prompt with
+`/home/node/.openclaw/workspace/openshell-check.txt` as the path and run it through
+[the bounded runner](../openshell-praxis/openclaw.md).
+
+After the model task, connect to OpenCode and independently read the file:
 
 ```sh
-printf '%s\n' 'policy applied' > /sandbox/openshell-check.txt
 cat /sandbox/openshell-check.txt
 ```
+
+For OpenClaw, substitute `/home/node/.openclaw/workspace/openshell-check.txt`
+in the shell command. If model access is not configured, a manual file write
+and read checks filesystem permissions only; it does not prove model tool use.
 
 The file must exist outside the model response. An agent can describe an action
 without executing it.

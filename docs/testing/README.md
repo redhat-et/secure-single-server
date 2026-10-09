@@ -39,8 +39,9 @@ References, as needed:
 See [OpenShell 0.1.3 upgrade qualification](upgrade-0.1.3.md) for current AWS
 OpenCode and OpenClaw tests, migration requirements, and coverage limits.
 
-See [OpenClaw Praxis qualification](openclaw-praxis.md) for the pinned
-client/gateway fixture, OpenShell policy checks, real-model acceptance, and CI.
+The [earlier OpenClaw Praxis qualification](openclaw-praxis.md) records the
+previous pins and real-Qwen acceptance. Those results are historical and do
+not qualify real inference on the upgraded pins.
 
 ## Local development checks
 

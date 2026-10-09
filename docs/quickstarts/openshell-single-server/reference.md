@@ -6,10 +6,15 @@
 
 | Harness | Qualified in the single-server OpenShell path | Explicitly not qualified |
 | --- | --- | --- |
-| OpenCode | Sandbox creation, CLI version, shell/file operations, policy allow/deny, runtime limits | Optional Praxis model routing and real inference; the narrower `review` profile |
-| OpenClaw | Sandbox lifecycle and policy controls; [bounded Praxis model/tool tests](../../testing/openclaw-praxis.md) | Browser/gateway authentication, retained sessions, `--backend`, and untested providers |
+| OpenCode | Sandbox lifecycle and policy controls; [Praxis fixture model, write and bash tools](../../testing/upgrade-0.1.3.md) | Paid-provider and real-GPU inference on the upgraded pins; the narrower `review` profile |
+| OpenClaw | Sandbox lifecycle and policy controls; [bounded Praxis fixture model and write tool](../../testing/upgrade-0.1.3.md) | Automatic `exec`, browser/gateway authentication, retained sessions, `--backend`, and untested providers |
 
 ## AWS verification
+
+The [0.1.3 upgrade qualification](../../testing/upgrade-0.1.3.md) records the
+current pins, both harnesses' controlled model/tool tests, and rebuilt bootc
+container checks. It does not qualify a booted OS rollout or real inference on
+the upgraded pins. The following published-image results predate that upgrade.
 
 On 2026-10-02, the manual path was exercised on a disposable RHEL 9 x86_64 EC2
 host in `us-east-1`. It created Ready OpenCode and OpenClaw sandboxes, passed
@@ -48,7 +53,7 @@ policy afterward and hope the harness uses it.
 
 | Control | What the profile declares | Default `dev` behavior |
 | --- | --- | --- |
-| Filesystem | Read-only and read-write path sets, plus optional workspace inclusion. | Inside the sandbox, `/usr`, `/lib`, `/lib64`, `/etc`, `/proc`, `/dev/urandom`, and `/opt` are read-only. `/sandbox`, `/home`, `/tmp`, and `/dev/null` are writable. |
+| Filesystem | Read-only and read-write path sets, plus optional workspace inclusion. | Inside the sandbox, `/usr`, `/lib`, `/lib64`, `/etc`, `/proc`, `/dev/urandom`, and `/opt` are read-only. OpenCode permits writes under `/sandbox`, `/home`, `/tmp`, and `/dev/null`. OpenClaw keeps `/app` read-only, disables automatic working-directory grants, and uses `/home/node/.openclaw/workspace` under writable `/home`; `/tmp` and `/dev/null` are also writable. |
 | Network | Named endpoint allowlists scoped to exact harness/tool binary paths. | OpenCode permits selected model, OpenCode registry, GitHub, and npm endpoints. OpenClaw permits selected model, GitHub, and npm endpoints. Other destinations are denied. |
 | Runtime | Rootless Podman execution with per-sandbox CPU, memory, and PID limits. | Two CPUs, 4 GiB of memory, and 2048 PIDs by default; these are per-sandbox limits, not a host-wide budget. |
 | Credentials | No provider key is forwarded by the SSH helper. | Standalone credentials must be explicitly registered and attached. Integrated model-routing mode rejects direct provider attachment. |
