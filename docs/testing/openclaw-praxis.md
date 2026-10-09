@@ -1,5 +1,10 @@
 # OpenClaw → OpenShell → Praxis qualification
 
+> **Historical results:** This page records the earlier OpenShell 0.1.2 and
+> OpenClaw pins shown below. Its real-GPU results have not been repeated on the
+> upgraded versions. See the [OpenShell 0.1.3 upgrade qualification](upgrade-0.1.3.md)
+> for current pins, controlled model/tool tests, and limits.
+
 Recorded on 2026-10-09 using this PR's source tree in AWS `us-east-1`.
 This qualifies bounded read/write `openclaw agent exec` tasks in the `dev` profile.
 The [deployment walkthrough](../quickstarts/openshell-praxis/openclaw.md)
@@ -10,10 +15,10 @@ describes credentials, model selection, and manual/bootc commands.
 - Disposable RHEL 9 x86_64 `m7i.2xlarge`: Podman 5.8.2, enforcing SELinux,
   rootless OpenShell owned by `openshell-svc`.
 - Separate private `g6.2xlarge`: one NVIDIA L4, NVIDIA 580 open driver,
-  pinned vLLM and Qwen3-8B from [images.env](../../configs/vllm/images.env).
+  pinned vLLM and Qwen3-8B from the [recorded images.env](https://github.com/redhat-et/secure-single-server/blob/886eed8edc5052a40650381185f6da51c14fdc31/configs/vllm/images.env).
   Inference port 8000 is restricted to the OpenShell host's security group.
-- OpenShell `v0.1.2-rhaiv.0`; all control-plane/workload digests are in
-  [OpenShell images.env](../../openshell/configs/images.env).
+- OpenShell `v0.1.2-rhaiv.0`; the recorded control-plane/workload digests are in
+  [OpenShell images.env at the qualification commit](https://github.com/redhat-et/secure-single-server/blob/886eed8edc5052a40650381185f6da51c14fdc31/openshell/configs/images.env).
 - OpenClaw workload digest:
   `sha256:de12000bc8c251e868519bb86ed975458bf3f2ff63c6ebc2eece4bc769f14b69`.
 - Praxis workload digest:

@@ -21,4 +21,4 @@ network_policies:
   npm_registry:
     name: npm-registry
     endpoints: [{host: registry.npmjs.org, port: 443}]
-    binaries: [{path: /usr/local/bin/node}, {path: /usr/bin/npm}]
+    binaries: [{path: /usr/local/bin/node}, {path: /usr/local/bin/npm}]

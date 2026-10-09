@@ -61,6 +61,17 @@ def main():
         if version.returncode or '2026.9.9' not in version.stdout:
             raise RuntimeError('Pinned workload does not report the qualified OpenClaw release')
         evidence['openclaw_version'] = version.stdout.strip()
+        policy = yaml.safe_load((ROOT / 'configs/openshell-praxis/openclaw/profiles/dev/policy.yaml')
+                                .read_text().replace('@@PRAXIS_PORT@@', '18080'))
+        evidence['npm_registry_binaries'] = {}
+        for binary in policy['network_policies']['npm_registry']['binaries']:
+            executable = binary['path']
+            checked = run(ENGINE, 'run', '--rm', '--network=none', '--read-only',
+                          '--cap-drop=all', '--security-opt=no-new-privileges',
+                          '--entrypoint', executable, claw_image, '--version')
+            if checked.returncode or not checked.stdout.strip():
+                raise RuntimeError('Pinned workload lacks the policy executable: ' + executable)
+            evidence['npm_registry_binaries'][executable] = checked.stdout.strip()
         for local, prefix in ((False, ""), (False, "/providers/team"), (True, "")):
             fixture_module.REQUIRE_THINKING_DISABLED = local
             fixture = fixture_module.provider.Provider(ports=(18000, 0, 0), model='fixture-model', local=local)
