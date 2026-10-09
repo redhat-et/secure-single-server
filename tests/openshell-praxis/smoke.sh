@@ -8,7 +8,8 @@ source "${ROOT}/openshell/scripts/harness-lib.sh"
 : "${OPENSHELL_MODEL_ID:?set the model exposed by the test Praxis/mock-provider fixture}"
 NAME="ospx-smoke-$$"
 cleanup() { harness_destroy "${NAME}"; }
-trap cleanup EXIT
+cleanup_exit_status=0
+trap 'cleanup_exit_status=$?; if ! cleanup && (( cleanup_exit_status == 0 )); then cleanup_exit_status=1; fi; exit "$cleanup_exit_status"' EXIT
 "${ROOT}/openshell/harnesses/opencode/create.sh" --name "${NAME}" --profile dev --config "${ROOT}/configs/openshell-praxis"
 harness_ssh "${NAME}" 'node --version' >/dev/null
 # Successful inference is mandatory; a 401 or failed SSH must fail qualification.

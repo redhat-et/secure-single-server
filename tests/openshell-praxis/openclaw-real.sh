@@ -10,8 +10,14 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "${ROOT}/openshell/scripts/harness-lib.sh"
 name="oc-real-$$"
 td="$(mktemp -d)"
-cleanup() { _os sandbox delete "${name}" >/dev/null 2>&1 || true; rm -rf "${td}"; }
-trap cleanup EXIT
+cleanup() {
+  local result=0
+  harness_destroy "${name}" || result=1
+  rm -rf "${td}"
+  return "${result}"
+}
+cleanup_exit_status=0
+trap 'cleanup_exit_status=$?; if ! cleanup && (( cleanup_exit_status == 0 )); then cleanup_exit_status=1; fi; exit "$cleanup_exit_status"' EXIT
 "${ROOT}/openshell/harnesses/openclaw/create.sh" --profile dev \
   --name "${name}" --config "${OPENCLAW_TEST_CONFIG}"
 "${ROOT}/openshell/harnesses/openclaw/run.sh" --name "${name}" --timeout 600 --message \

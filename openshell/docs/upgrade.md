@@ -49,3 +49,9 @@ against the committed SHA-256 before installation or copying into bootc.
 OpenClaw uses the upstream v2026.9.9 image. Its application directory `/app`
 is read-only; agent files live in `/home/node/.openclaw/workspace`. Follow the
 [upgrade qualification](../../docs/testing/upgrade-0.1.3.md) before promotion.
+
+Repository test cleanup uses `destroy-sandbox.py` to confirm absence through
+successful paginated listings. Failed deletion, failed listing, malformed output
+and incomplete cleanup fail the check; an already-absent sandbox is safe to
+remove again. The deadline defaults to 120 seconds and can be changed with
+`OPENSHELL_CLEANUP_TIMEOUT` when a disposable test needs more time.

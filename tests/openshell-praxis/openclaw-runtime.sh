@@ -19,15 +19,19 @@ os_run() {
     OPENSHELL_MODEL_ID=fixture-model PRAXIS_PORT=18080 "$@"
 }
 cleanup() {
-  os_run "${OPENSHELL_BIN:-/usr/local/bin/openshell}" sandbox delete "${name}" >/dev/null 2>&1 || true
+  local cleanup_result=0
+  os_run python3 "${ROOT}/openshell/scripts/destroy-sandbox.py" \
+    "${OPENSHELL_BIN:-/usr/local/bin/openshell}" "${name}" || cleanup_result=1
   podman rm -f "${praxis}" >/dev/null 2>&1 || true
   if [[ -n "${fixture_pid}" ]]; then kill "${fixture_pid}" 2>/dev/null || true; wait "${fixture_pid}" 2>/dev/null || true; fi
   rm -rf "${td}"
+  return "${cleanup_result}"
 }
 on_exit() {
   result=$?
   if (( result != 0 )); then os_run "${OPENSHELL_BIN:-/usr/local/bin/openshell}" logs "${name}" --since 5m 2>/dev/null | tail -40 || true; fi
-  cleanup
+  if ! cleanup && (( result == 0 )); then result=1; fi
+  exit "${result}"
 }
 trap on_exit EXIT
 chmod 0755 "${td}"

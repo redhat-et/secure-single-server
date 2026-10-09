@@ -8,12 +8,16 @@ source "${ROOT}/openshell/scripts/harness-lib.sh"
 td="$(mktemp -d)"
 DENY="policy-deny-$$"; ALLOW="policy-allow-$$"; server=""
 cleanup() {
-  harness_destroy "${DENY}"; harness_destroy "${ALLOW}"
+  local cleanup_result=0
+  harness_destroy "${DENY}" || cleanup_result=1
+  harness_destroy "${ALLOW}" || cleanup_result=1
   [[ -z "${server}" ]] || kill "${server}" 2>/dev/null || true
   for result in "${td}"/*.json; do [[ ! -f "${result}" ]] || cat "${result}"; done
   rm -rf "${td}"
+  return "${cleanup_result}"
 }
-trap cleanup EXIT
+cleanup_exit_status=0
+trap 'cleanup_exit_status=$?; if ! cleanup && (( cleanup_exit_status == 0 )); then cleanup_exit_status=1; fi; exit "$cleanup_exit_status"' EXIT
 server_bind=0.0.0.0
 python3 "${ROOT}/openshell/tests/controlled-http.py" "${td}/requests" "${server_bind}" & server=$!
 for ((i=0; i<20; i++)); do

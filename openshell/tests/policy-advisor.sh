@@ -16,12 +16,15 @@ td="$(mktemp -d)"
 : >"${td}/requests"
 server=""
 cleanup() {
-  harness_destroy "${OLD_NAME}"
-  harness_destroy "${RECREATE_NAME}"
+  local cleanup_result=0
+  harness_destroy "${OLD_NAME}" || cleanup_result=1
+  harness_destroy "${RECREATE_NAME}" || cleanup_result=1
   [[ -z "${server}" ]] || kill "${server}" 2>/dev/null || true
   rm -rf "${td}"
+  return "${cleanup_result}"
 }
-trap cleanup EXIT
+cleanup_exit_status=0
+trap 'cleanup_exit_status=$?; if ! cleanup && (( cleanup_exit_status == 0 )); then cleanup_exit_status=1; fi; exit "$cleanup_exit_status"' EXIT
 
 audit="${td}/approvals.jsonl"
 server_bind=0.0.0.0
@@ -149,7 +152,7 @@ if (response.status !== 200 || result.status !== "approved" || result.policy_rel
 JS
 probe_allowed
 
-harness_destroy "${OLD_NAME}"
+harness_destroy "${OLD_NAME}" || exit "$?"
 harness_create "${RECREATE_NAME}" "${ODH_OPENCODE_IMAGE}" "${td}/deny.yaml" "" yes
 NAME="${RECREATE_NAME}"
 harness_ssh "${NAME}" 'cat >/tmp/probe.mjs' <"${ROOT}/openshell/tests/probe.mjs"
