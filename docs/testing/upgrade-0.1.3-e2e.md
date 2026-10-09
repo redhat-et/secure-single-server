@@ -59,6 +59,9 @@ variant switching; it does not certify distribution of an unreleased registry ta
 OpenShell 0.1.3 accepts certificate-free TLS handshakes for sandbox JWT clients.
 Management RPCs still require identity: an isolated client with no operator
 certificate or token was rejected with `missing authorization header`.
+The public TOML adapter rejects the internal `require_client_auth` field;
+leave it out of the deployment configuration. A fresh follow-up AWS installation
+caught an attempted explicit setting, which was removed before merge.
 `bootc/test-host` now checks that rejection, alongside a CA-verified TLS positive
 control and an authenticated operator sandbox listing, rather than expecting
 all certificate-free TLS handshakes to fail.

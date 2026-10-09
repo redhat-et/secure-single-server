@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Check shared gateway behavior without changing host services or ownership."""
 import os
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -49,8 +50,11 @@ gateway_install_config owner "$TEST_TMP/home" "$TEST_TMP" 'example/harness@sha25
             self.assertIn('[openshell.gateway.tls]', config)
             self.assertIn('client_ca_path = "/var/lib/openshell/tls/ca.crt"', config)
             self.assertIn('allow_unauthenticated_users = false', config)
-            # JWT supervisors cannot satisfy mandatory TLS client authentication.
-            self.assertIn('require_client_auth = false', config)
+            # Public v0.1.3 GatewayTlsFileConfig rejects internal TLS fields.
+            tls = re.search(r'\[openshell.gateway.tls\]\n(.*?)(?=\n\[|\Z)', config, re.S).group(1)
+            fields = set(re.findall(r'^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=', tls, re.M))
+            self.assertLessEqual(fields, {'cert_path', 'key_path', 'client_ca_path',
+                                         'external_cert_path', 'external_key_path', 'external_server_names'})
             self.assertIn('[openshell.gateway.mtls_auth]', config)
             self.assertNotIn('disable_tls', config)
             self.assertNotIn('grpc_endpoint', config)

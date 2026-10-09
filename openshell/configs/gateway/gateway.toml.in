@@ -16,8 +16,7 @@ allow_unauthenticated_users = false
 cert_path      = "/var/lib/openshell/tls/server/tls.crt"
 key_path       = "/var/lib/openshell/tls/server/tls.key"
 client_ca_path = "/var/lib/openshell/tls/ca.crt"
-# TLS also serves sandbox JWT clients; management RPCs still require identity.
-require_client_auth = false
+# Certificate-free TLS supports sandbox JWTs; management RPCs require identity.
 
 [openshell.gateway.mtls_auth]
 enabled = true
