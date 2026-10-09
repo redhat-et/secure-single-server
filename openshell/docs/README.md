@@ -14,7 +14,8 @@ This repository consumes pinned OpenShell control-plane and preinstalled harness
 images. The current deployment target is a dedicated, trusted single-operator
 RHEL 9 x86_64 host with rootless Podman. Bootc builds one OS image per harness.
 
-- [OpenCode and OpenClaw single-server manual and bootc guide](../../docs/quickstarts/openshell-single-server/README.md)
+- [Manual OpenShell and harness deployment](../../docs/quickstarts/openshell-single-server/manual.md)
+- [Bootc OpenShell and harness deployment](../../docs/quickstarts/openshell-single-server/bootc.md)
 - [Praxis integration and status](../../docs/quickstarts/openshell-praxis/README.md)
 - [Bootable host deployment](../../bootc/README.md)
 - [Threat model](threat-model.md)

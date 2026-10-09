@@ -12,9 +12,8 @@ repository; the guides below are separated by the question they answer.
    does not protect, and which evidence is accepted.
 2. **Deploy a sandboxed harness.** Use
    [OpenShell](https://github.com/NVIDIA/OpenShell/tree/v0.1.2/docs) through the
-   [single-server guide](quickstarts/openshell-single-server/README.md) for
-   [Red Hat bootc](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/index)
-   to deploy [OpenCode](https://github.com/anomalyco/opencode) or
+   [manual container guide](quickstarts/openshell-single-server/manual.md) or
+   [bootc deployment guide](quickstarts/openshell-single-server/bootc.md) to deploy [OpenCode](https://github.com/anomalyco/opencode) or
    [OpenClaw](https://github.com/openclaw/openclaw) on one trusted RHEL host.
 3. **Add model routing.** Use
    [Praxis](https://github.com/praxis/praxis) through the
@@ -36,7 +35,8 @@ repository; the guides below are separated by the question they answer.
 | If you need to… | Use |
 | --- | --- |
 | Explain or review the complete system | [Architecture walkthrough](quickstarts/architecture-walkthrough/README.md) |
-| Deploy or evaluate OpenShell quickly | [Single-server bootc quickstart](quickstarts/openshell-single-server/README.md#bootc-quickstart) |
+| Install OpenShell and harness containers separately | [Manual single-server deployment](quickstarts/openshell-single-server/manual.md) |
+| Deploy or evaluate OpenShell quickly | [Single-server bootc quickstart](quickstarts/openshell-single-server/bootc.md) |
 | Combine OpenShell with Praxis | [OpenShell + Praxis guide](quickstarts/openshell-praxis/README.md) |
 | Serve users from accounts on one RHEL host | [All-in-one gateway](quickstarts/all-in-one/README.md) |
 | Connect harnesses on remote client machines | [Remote HTTPS/JWT gateway](quickstarts/remote-gateway/README.md) |
@@ -76,4 +76,4 @@ this deployment does not qualify.
 
 Start with the [architecture walkthrough](quickstarts/architecture-walkthrough/README.md).
 If you already understand the system and only need a disposable evaluation,
-use the [bootc quickstart](quickstarts/openshell-single-server/README.md#bootc-quickstart).
+use the [bootc quickstart](quickstarts/openshell-single-server/bootc.md).

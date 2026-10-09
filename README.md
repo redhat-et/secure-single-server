@@ -63,7 +63,7 @@ sudo sss-bootc harness connect --name "$sandbox"
 ```
 
 To deploy the individual containers on a fresh VM or bare-metal host, follow the
-[manual single-server guide](docs/quickstarts/openshell-single-server/README.md#manual-rhel-deployment)
+[manual single-server guide](docs/quickstarts/openshell-single-server/manual.md)
 to install OpenShell and create an OpenCode or OpenClaw harness sandbox. To add
 Praxis for model routing and provider secrets, follow the
 [Praxis installation walkthrough](docs/quickstarts/openshell-praxis/install.md),
@@ -73,7 +73,7 @@ including its prerequisite gateway setup and optional local inference.
 
 - [Architecture walkthrough](docs/quickstarts/architecture-walkthrough/README.md):
   why each layer exists and what its evidence does not prove.
-- [Manual single-server guide](docs/quickstarts/openshell-single-server/README.md#manual-rhel-deployment):
+- [Manual single-server guide](docs/quickstarts/openshell-single-server/manual.md):
   OpenShell installation, harness setup, verification, and policy tests.
 - [OpenShell trust model](openshell/docs/threat-model.md): the execution
   boundary and assumptions behind the current single-operator deployment.

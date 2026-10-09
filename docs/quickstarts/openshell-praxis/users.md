@@ -16,13 +16,13 @@ copy the operator's keys to user accounts.
 | OpenCode + Praxis dev | Experimental; qualify each host, provider and tool task |
 | OpenCode review | CLI data-directory permission limitation; outside supported recipes |
 
-For OpenCode experiments, run as the OpenShell service account with the explicit
-HOME/user-bus environment from the
-[OpenShell single-server guide](../openshell-single-server/README.md#manual-rhel-deployment):
+For OpenCode experiments, run as the OpenShell service account using the `os_run` helper from the
+[OpenShell single-server guide](../openshell-single-server/manual.md):
 
 ```bash
-export OPENSHELL_MODEL_ID=administrator-approved-model
-openshell/harnesses/opencode/create.sh --profile dev --config configs/openshell-praxis
+os_run env OPENSHELL_MODEL_ID=administrator-approved-model \
+  "$repo/openshell/harnesses/opencode/create.sh" \
+  --profile dev --config "$repo/configs/openshell-praxis"
 ```
 
 For mutable RHEL Qwen, export `OPENSHELL_MODEL_ID=qwen3-8b` and
