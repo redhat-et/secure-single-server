@@ -4,7 +4,7 @@ After [AWS deployment](aws.md#4-select-one-vm-for-testing), select one VM with
 `aws_test_verify NAME`. Keep the workstation terminal open: commands below use
 `RHEL_HOST`, `RHEL_SCENARIO` and `SSH_KEY`. They work for all four CPU/GPU variants.
 
-The runner installs Praxis and pinned Codex, OpenCode and Claude Code CLIs.
+The runner installs Praxis and pinned OpenCode and Claude Code CLIs.
 It tests mocked Qwen/vLLM, OpenAI and Anthropic using synthetic credentials.
 Services are installed by the administrator; harnesses run as the ordinary
 `praxis-smoke` account. No real provider key is needed.

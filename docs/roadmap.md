@@ -1,5 +1,8 @@
 # Scope and roadmap
 
+> **Where this fits:** The planning stop. Use it to distinguish current
+> acceptance from future goals.
+
 The goal is a single-server AI agent environment on administrator-managed RHEL,
 combining controlled execution, model access, and shared inference usage.
 Users run useful coding tasks with approved models; administrators retain
@@ -18,12 +21,12 @@ can be run today. Upstream issue status alone does not qualify a deployment.
 
 | Phase | Intended user or operator outcome | Repository position today |
 | --- | --- | --- |
-| 1. Shared gateway and durable quotas | Run Claude Code, Codex or OpenCode on RHEL without provider keys. Apply ordered model-specific and catch-all token rules; preserve allowances through restarts with private Valkey. | All-in-one profiles and harness recipes exist. Shipped quotas are shared catch-all allowances per API chain; model rules and full native RHEL/real-provider acceptance remain incomplete. Memory profiles are development-only. |
+| 1. Shared gateway and durable quotas | Run Claude Code, OpenCode or OpenClaw on RHEL without provider keys. Apply ordered model-specific and catch-all token rules; preserve allowances through restarts with private Valkey. | All-in-one profiles and harness recipes exist. Shipped quotas are shared catch-all allowances per API chain; model rules and full native RHEL/real-provider acceptance remain incomplete. Memory profiles are development-only. |
 | 2. Routing and continuity | Choose approved models automatically, fail over safely, and switch when a model allowance is exhausted. | Switchyard has an experimental Weak/Strong Chat Completions profile. Cross-API behavior, judge accounting, selected-model quotas and failover need further work. |
 | 3. Inference guardrails | Screen requests without changing harnesses, preserving screening across every route. | NeMo/Lakera deployment and end-to-end allow/block/modify acceptance are roadmap work. |
 | 4. Self-managed inference | Use a private vLLM model through the same gateway controls. | The optional bootc deployment serves Qwen3-8B on CPU or a single NVIDIA L4. OpenCode → Praxis → vLLM passed real inference, tool, isolation and lifecycle checks on AWS; see the [local validation](../bootc/VLLM-VALIDATION.md). Other harness adapters and hardware remain unqualified. |
 | 5. Individual access and quotas | Authenticate callers and enforce user, model and organisation/team allowances together. | Remote HTTPS with administrator-issued JWTs exists. Personal/hierarchical quotas, identity-provider integration and renewal/revocation workflows are not qualified by that profile. |
-| 6. Retained sandboxed work | Start a harness, disconnect, reconnect or hand off work, with defined workspace retention and access/resource controls. | OpenShell creation and Codex/OpenCode CLI execution have AWS evidence. Retained processes, reboot recovery, collaboration, individual authorization and aggregate resource/storage enforcement remain qualification targets. |
+| 6. Retained sandboxed work | Start a harness, disconnect, reconnect or hand off work, with defined workspace retention and access/resource controls. | OpenShell creation and OpenCode/OpenClaw CLI execution have AWS evidence. Retained processes, reboot recovery, collaboration, individual authorization and aggregate resource/storage enforcement remain qualification targets. |
 | 7. Usage visibility | Monitor consumption across gateway servers. | External usage export and its delivery contract are roadmap work. |
 | Later: monetary budgets | Cap paid inference while keeping explicitly exempt models available. | Token quotas do not enforce USD spending or provide billing/chargeback. |
 
@@ -93,3 +96,8 @@ harness, provider/model, API, image and native architecture used.
 Use the [testing guide](testing/README.md), [quota semantics](quickstarts/common/token-quotas.md),
 [OpenShell integration matrix](quickstarts/openshell-praxis/users.md) and
 [AWS bootc validation](../bootc/VALIDATION.md) for current evidence and gaps.
+
+## Next step
+
+Return to the [documentation map](README.md) to choose the next route, then use
+the [testing guide](testing/README.md) to qualify it.

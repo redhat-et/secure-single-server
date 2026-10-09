@@ -1,5 +1,8 @@
 # Token quotas
 
+> **Where this fits:** The usage-control deep dive. Read it before promising
+> per-user budgets or spend caps.
+
 Run as the server administrator, separately on each gateway.
 
 ## Check installed limits
@@ -187,3 +190,8 @@ scp -p -o IdentitiesOnly=yes -o ForwardAgent=no -i "$SSH_KEY" \
 
 This updates scripts without changing running services. They use Python/PyYAML
 and keep the admin listener private.
+
+## Next step
+
+Validate quotas with the [testing guide](../../testing/README.md) and compare
+supported combinations in the [compatibility matrix](../../testing/compatibility.md).

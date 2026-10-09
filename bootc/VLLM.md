@@ -12,7 +12,7 @@ for compatibility but is deprecated for new deployments.
 
 The configured request path is **OpenCode → Praxis → vLLM**. Local vLLM
 serving and the host Praxis route can be checked independently. The sandbox
-path uses the trusted host mapping in OpenShell v0.1.2-rhaiv.0. Codex and OpenClaw
+path uses the trusted host mapping in OpenShell v0.1.2-rhaiv.0. OpenClaw
 local adapters are not enabled.
 
 ## Host requirements
@@ -27,9 +27,8 @@ local adapters are not enabled.
 - GPU: exactly one NVIDIA L4, a compatible NVIDIA host driver, and
   `nvidia-ctk` installed in the bootc OS image. The reconciler regenerates CDI
   at boot. `vllm-gpu` includes the NVIDIA 580 open driver and Container
-  Toolkit. The build compiles the module for the kernel inside the image and
-  fails if that kernel cannot be supported. Rebuild after kernel updates.
-  Secure Boot with a custom signing key is not configured.
+  Toolkit, compiled for the kernel in the published image. Secure Boot with a
+  custom signing key is not configured.
 - Persistent disk on the vLLM server: allow space for roughly 16 GB of model
   weights, workload images, and caches. Budget at least 100 GiB for CPU or
   200 GiB for GPU demonstrations and check free space first.
@@ -59,11 +58,10 @@ VLLM_ENDPOINT="$(printf '%s' "${VLLM_INFO:-}" | jq -er '.VllmEndpoint')" \
 printf 'Private vLLM endpoint: %s\n' "${VLLM_ENDPOINT:-unknown}"
 ```
 
-On the dedicated server, boot `vllm-cpu` on a CPU instance or `vllm-gpu` on
-the L4 instance. Alternatively, use the mutable RHEL vLLM installer with
-`--remote PRIVATE_IP` so port 8000 binds only to its private AWS address. On the
-booted single server, configure Praxis without changing the OpenShell harness
-policy:
+On the dedicated server, deploy `vllm-cpu:v0.1` on a CPU instance or
+`vllm-gpu:v0.1` on the L4 instance. Do not substitute the mutable RHEL vLLM
+installer or a locally built image. On the booted single server, configure
+Praxis without changing the OpenShell harness policy:
 
 ```console
 sudo sss-bootc inference remote-vllm "$VLLM_ENDPOINT"
@@ -76,62 +74,24 @@ Praxis continues listening only on `127.0.0.1:8080`; the sandbox still reaches
 If the remote server stops, Praxis returns an upstream error rather than
 falling back to a cloud provider.
 
-## Build and boot a dedicated vLLM image
+## Deploy a dedicated vLLM image
 
-Build and boot the updated OS using the [bootc instructions](README.md).
-The dedicated `vllm-cpu` and `vllm-gpu` targets build directly from RHEL bootc
-and exclude Praxis and OpenShell. The CPU target omits NVIDIA components; the
-GPU target includes the NVIDIA 580 open driver and Container Toolkit:
-
-```console
-sudo env RHEL_BOOTC_IMAGE="$RHEL_BOOTC_IMAGE" AWS_RHUI_REGION=us-east-1 \
-  bootc/build vllm-cpu localhost/secure-single-server
-
-sudo env RHEL_BOOTC_IMAGE="$RHEL_BOOTC_IMAGE" AWS_RHUI_REGION=us-east-1 \
-  bootc/build vllm-gpu localhost/secure-single-server
-```
-
-### Install or switch a dedicated AWS host
-
-For a disposable existing RHEL host that does not yet run bootc, copy the image
-to that host and replace its root. The command is intentionally destructive:
-use it only on the dedicated vLLM instance, not on a builder or single-server
-VM. Cloud-init in the image retains the `cloud-user` account and its public key
-from the source RHEL instance.
+Use the published `v0.1` image that matches the server hardware. The dedicated
+`vllm-cpu` and `vllm-gpu` images exclude Praxis and OpenShell. The CPU image
+omits NVIDIA components; the GPU image includes the NVIDIA 580 open driver and
+Container Toolkit:
 
 ```console
-sudo podman load -i /var/tmp/vllm-cpu.tar
-sudo podman run --rm --privileged \
-  -v /dev:/dev \
-  -v /var/lib/containers:/var/lib/containers \
-  -v /:/target \
-  --pid=host \
-  --security-opt label=type:unconfined_t \
-  localhost/secure-single-server:vllm-cpu \
-  bootc install to-existing-root --acknowledge-destructive
+sudo bootc switch quay.io/redhat-et/secure-single-server-vllm-gpu:v0.1
+sudo bootc status
 sudo systemctl reboot
 ```
 
-On a host that is already bootc-managed, load the newer OCI archive and stage
-it in local container storage instead:
+Use `secure-single-server-vllm-cpu:v0.1` on a CPU server. For a fresh single
+server or bare-metal host, use a standard bootc deployment workflow with the
+published reference; do not create or substitute a locally built image.
 
-```console
-sudo podman load -i /var/tmp/vllm-cpu.tar
-sudo bootc switch --transport containers-storage \
-  localhost/secure-single-server:vllm-cpu
-sudo systemctl reboot
-```
-
-When moving an OCI archive from the builder, save it in the OCI archive format
-and verify its checksum on both hosts before loading it:
-
-```console
-sudo podman save --format oci-archive \
-  -o /var/tmp/vllm-cpu.tar localhost/secure-single-server:vllm-cpu
-sha256sum /var/tmp/vllm-cpu.tar
-```
-
-Conversion changes the host's SSH host keys. Compare the new fingerprint
+Deployment changes the host's SSH host keys. Compare the new fingerprint
 through a trusted AWS or console channel before accepting it and reconnecting
 as `cloud-user@BOOTC_HOST`. Do not bypass host-key verification in production.
 
@@ -178,34 +138,24 @@ persists in `/etc/secure-single-server/vllm-mode`; caches live under
 or preflight does not block Praxis/OpenShell startup. Failed reconciliation
 retries every 30 seconds. Inspect failures with the journal commands above.
 
-## Reproducibility and validation
+## Image pins and validation
 
 [Image and model pins](../configs/vllm/images.env) belong to the OS deployment.
 The CPU image is vLLM `v0.19.0-x86_64`; the GPU image is `v0.19.0`.
-Both use the same immutable Hugging Face model revision. Changes require an
-OS rebuild. OS rollback restores shipped pins but does not undo the selected
-mode or cached data. Cached images avoid registry pulls; offline model loading
-is not yet qualified because Hugging Face may still check metadata.
+Both use the same pinned Hugging Face model revision. This guide intentionally
+refers to the published OS images by their `v0.1` tags.
 
 GPU mode disables SELinux container labeling for this container to allow CDI
 access, following the reference lab. SELinux remains enforcing on the host.
 The service is rootless, runs as container UID 1001, drops capabilities, and
 uses private shared memory. The L4 runtime check exercises driver/CDI access with these restrictions. CPU mode keeps normal container labeling.
 
-Local checks (the inference configuration test requires PyYAML):
-
-```console
-python3 bootc/tests/vllm.py
-python3 bootc/tests/inference.py
-python3 bootc/tests/build.py
-shellcheck -x bootc/scripts/*
-```
-
-See [CI coverage](CI.md) for automated checks.
+See [image publication](README.md#image-publication) and the automated checks
+that run without model weights or provider credentials.
 See the runtime report for boot, inference, sandbox and lifecycle results.
-Registry-failure recovery, offline operation, OS rollback, sustained load and
-additional hardware remain separate qualification work. Static rendering
-tests alone do not establish model readiness or policy enforcement.
+Registry-failure recovery, offline operation, sustained load, and additional
+hardware remain separate qualification work. Static rendering tests alone do
+not establish model readiness or policy enforcement.
 
 References: [vLLM CPU installation](https://docs.vllm.ai/en/v0.19.0/getting_started/installation/cpu/),
 [Qwen3-8B model card](https://huggingface.co/Qwen/Qwen3-8B),

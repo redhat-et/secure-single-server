@@ -8,8 +8,8 @@ It configures the selected CLI; Praxis is the server handling inference.
 ## Unified native configuration
 
 For the two unified all-in-one listeners, follow [user setup](../all-in-one/users.md#3-configure-and-run-the-native-harnesses).
-Run `praxis-harness-config` as the ordinary user, then `codex --profile praxis`,
-`claude-code` or `opencode`. The refresh helper reads the gateway's configured
+Run `praxis-harness-config` as the ordinary user, then `claude-code` or
+`opencode`. The refresh helper reads the gateway's configured
 catalogs; no alternate config home or per-launch provider URL is needed.
 Its source is `scripts/common/harness_config.py`, installed as
 `/usr/local/bin/praxis-harness-config` by the account helper.
@@ -27,7 +27,6 @@ installed as `/usr/local/bin/praxis-harness` by `scripts/common/harness-user`.
 
 | CLI menu | Where the list comes from | Switching limits |
 | --- | --- | --- |
-| Codex `/model` | Bundled catalog or a configured `model_catalog_json` | Entries must work at the selected provider's Responses URL; changing the provider connection needs a new launch |
 | OpenCode `/models` | Configured `provider.NAME.models` entries | Multiple configured provider/model pairs can coexist in one session |
 | Claude Code `/model` | Configured picker entries; optional native gateway discovery | One Messages base per launch; discovery filters out IDs without `claude`/`anthropic`, so configure Qwen explicitly |
 
@@ -36,11 +35,11 @@ access, or combine gateway catalogs. Give each harness the exact served IDs and
 appropriate context limits. The helper currently supplies one selected local
 model; persistent files are the better choice for a maintained multi-model menu.
 
-| Provider | Codex | OpenCode | Claude Code |
-| --- | --- | --- | --- |
-| vLLM | Responses, `:8080/vllm/v1` | Chat Completions, `:8080/vllm/v1` | Messages, `:8081/vllm` base |
-| OpenAI | Responses, `:8080/v1` | Chat Completions, `:8080/v1` | Not configured |
-| Anthropic | Not configured | Messages, `:8081/v1` | Messages, `:8081` base |
+| Provider | OpenCode | Claude Code |
+| --- | --- | --- |
+| vLLM | Chat Completions, `:8080/vllm/v1` | Messages, `:8081/vllm` base |
+| OpenAI | Chat Completions, `:8080/v1` | Not configured |
+| Anthropic | Messages, `:8081/v1` | Messages, `:8081` base |
 
 These are loopback origins on an all-in-one host. Claude appends `/v1/messages`
 to its base. Remote mode replaces the origin with the HTTPS gateway for every
@@ -49,68 +48,10 @@ Local clients use `local-placeholder`; remote clients use a caller JWT. Upstream
 provider keys stay with Praxis.
 
 The examples below target **27B after the server is updated to 32,768 tokens**.
-For 8B, use `qwen3-8b`, context 16,384, output 4,096 and Codex compaction 12,288.
+For 8B, use `qwen3-8b`, context 16,384 and output 4,096.
 Thinking consumes output tokens. See [preset limits](vllm.md#requirements).
 Merge file settings deliberately with existing configuration. Native files do not
 inherit future launcher fixes; verify menu selection and a tool query after editing.
-
-## Codex
-
-<details>
-<summary>Expand: per-launch flags, TOML alternative and model menu</summary>
-
-```console
-praxis-harness codex --provider vllm --model qwen3.8-27b-int4
-```
-
-The launcher selects a custom `praxis` provider with the Responses wire API,
-passes `--model`, disables web search, and selects the `workspace-write`
-sandbox. It sets context to 32,768 and auto-compaction to 24,576, and enables
-raw reasoning display. The 8,192-token difference is headroom, not an enforced
-generation cap. Normal interactive approvals remain active.
-For Qwen, the generated catalog contains the selected model with matching
-context limits, medium reasoning and a concise coding instruction template.
-
-To maintain these settings in `~/.codex/config.toml` instead:
-
-```toml
-model = "qwen3.8-27b-int4"
-model_provider = "praxis"
-model_context_window = 32768
-model_auto_compact_token_limit = 24576
-model_reasoning_effort = "medium"
-show_raw_agent_reasoning = true
-web_search = "disabled"
-sandbox_mode = "workspace-write"
-
-[model_providers.praxis]
-name = "Praxis"
-base_url = "http://127.0.0.1:8080/vllm/v1"
-env_key = "PRAXIS_PLACEHOLDER_KEY"
-wire_api = "responses"
-```
-
-Then launch directly:
-
-```console
-PRAXIS_PLACEHOLDER_KEY=local-placeholder codex
-```
-
-The helper's `-c` overrides select these settings for that launch without
-rewriting the TOML file. Neither `--model` nor the TOML `model` key adds an
-entry to `/model`. The helper now passes `model_catalog_json` for local Qwen.
-Inspect its generated path with:
-
-```console
-praxis-harness codex --provider vllm --model qwen3.8-27b-int4 --print-config
-```
-
-For the file alternative, add `model_catalog_json = "/absolute/path/to/catalog.json"`
-using that generated catalog or a maintained copy. It is read at startup.
-Keep caller credentials out of the catalog.
-[Codex configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference).
-
-</details>
 
 ## OpenCode
 
@@ -246,14 +187,13 @@ then configure its route in the native CLI files above. For provider `team`:
 
 | Client | Local base URL |
 | --- | --- |
-| Codex / OpenCode OpenAI-compatible | `http://127.0.0.1:8080/providers/team/v1` |
+| OpenCode OpenAI-compatible | `http://127.0.0.1:8080/providers/team/v1` |
 | Claude Code | `http://127.0.0.1:8081/providers/team` |
 | OpenCode Anthropic | `http://127.0.0.1:8081/providers/team/v1` |
 
 For a quick single-model launch without file edits:
 
 ```console
-praxis-harness codex --provider openai --route-prefix /providers/team --model MODEL_ID
 praxis-harness opencode --provider openai --route-prefix /providers/team --model MODEL_ID
 praxis-harness claude-code --provider anthropic --route-prefix /providers/team --model MODEL_ID
 ```
@@ -264,8 +204,7 @@ reasoning and permission settings; do not assume the local-vLLM preset matches i
 
 To maintain several OpenCode providers, add separately named entries under
 `provider`, each with its URL and `models` map. Use distinct custom IDs such as `praxis-local`,
-`praxis-openai` and `praxis-team` (built-in IDs can merge extra catalog entries); `/models` can then switch among their entries. For Codex,
-maintain a catalog per Responses connection and select that connection at launch.
+`praxis-openai` and `praxis-team` (built-in IDs can merge extra catalog entries); `/models` can then switch among their entries.
 
 For Claude, add non-Claude models explicitly to its settings file:
 
@@ -299,8 +238,8 @@ provide that cleanup; check for conflicting provider/authentication settings.
 credential replaced by `[caller]`; it starts no CLI. It is an inspection aid,
 not a complete runnable configuration export.
 
-`--prompt` changes execution mode: Codex uses ephemeral JSON `exec`, OpenCode
-uses JSON `run` with bounded build steps and tool permissions, and Claude uses
+`--prompt` changes execution mode: OpenCode uses JSON `run` with bounded build
+steps and tool permissions, and Claude uses
 streamed JSON print mode with a turn limit and restricted tools. These smoke
 settings are distinct from normal interactive approvals. See
 [manual acceptance](../../testing/harnesses.md).

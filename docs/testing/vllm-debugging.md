@@ -19,7 +19,7 @@ GPU. These smoke results do not establish general coding reliability.
 The same captured request reproduces this on GPU through the new Praxis image
 and directly against vLLM 0.30: all three tool calls change `id`/`call_id` between
 `response.output_item.done` and `response.completed`. Arguments match, and the
-Codex task passes, but clients that correlate by ID may fail.
+A Responses-client task passes, but clients that correlate by ID may fail.
 
 [vLLM #44676](https://github.com/vllm-project/vllm/issues/44676) reports this ID
 drift as a secondary finding; its main thinking-budget bug uses another model.

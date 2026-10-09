@@ -1,5 +1,7 @@
 # vLLM administration on RHEL
 
+> **Where this fits:** The private-inference branch of the model-routing stop.
+
 Install private Qwen inference on CPU or one NVIDIA L4, with cloud providers optional.
 The preferred topology places vLLM on a separate server and gives Praxis a
 private `RFC1918_IP:PORT` upstream. The older co-located container-network mode
@@ -26,13 +28,12 @@ restarts only vLLM. Existing Praxis routes and cloud providers are retained.
 
 Both keep thinking enabled and one concurrent inference request.
 
-| Mutable RHEL preset | Served context | OpenCode / Claude output, including thinking | Codex auto-compaction threshold |
-| --- | --- | --- | --- |
-| `qwen3-8b` | 16,384 | 4,096 | 12,288 |
-| `qwen3.8-27b-int4` | 32,768 | 8,192 | 24,576 |
+| Mutable RHEL preset | Served context | OpenCode / Claude output, including thinking |
+| --- | --- | --- |
+| `qwen3-8b` | 16,384 | 4,096 |
+| `qwen3.8-27b-int4` | 32,768 | 8,192 |
 
-Context includes input and output. Codex's compaction headroom is not a separate
-generation cap; Claude and OpenCode use their own compaction logic with the
+Context includes input and output. Claude and OpenCode use their own compaction logic with the
 configured context/output limits. Claude uses `medium` effort for Qwen3.8
 because that model rejects `high`, and the launcher disables misleading 1M
 context variants for local Qwen. CPU tasks can take minutes.
@@ -254,3 +255,8 @@ sudo scripts/vllm/remove
 
 Removal preserves downloaded images and model cache. To uninstall the entire
 installation, remove vLLM before running `sudo scripts/common/uninstall`.
+
+## Next step
+
+Read [provider setup](providers.md) for optional cloud upstreams, then validate
+the complete path with the [testing guide](../../testing/README.md).

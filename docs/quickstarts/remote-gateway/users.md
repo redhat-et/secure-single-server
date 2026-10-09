@@ -49,8 +49,7 @@ fi
 
 For private-CA deployments, these are the documented trust settings for
 [Claude Code](https://code.claude.com/docs/en/network-config),
-[OpenCode](https://opencode.ai/docs/network/) and
-[Codex](https://learn.chatgpt.com/docs/auth). Never set an insecure-TLS flag.
+[OpenCode](https://opencode.ai/docs/network/). Never set an insecure-TLS flag.
 The JWT is a secret usable by its bearer until expiry/key rotation. The
 harness process and its tools can read it; keep it out of projects and logs.
 
@@ -85,7 +84,6 @@ subprocess.run(["npm", "install", "--global", "--prefix", str(pathlib.Path.home(
                 *[f"{name}@{version}" for name, version in versions.items()]], check=True)
 PYCLIENT
 export PATH="$HOME/.local/bin:$PATH"
-codex --version
 claude --version
 opencode --version
 mkdir -p ~/projects/praxis-example
@@ -115,7 +113,7 @@ the larger 27B budgets need fresh qualification. CPU inference can take minutes.
 
 This is the same [launcher and per-harness configuration](../common/harness-configuration.md)
 used on all-in-one hosts, with your gateway URL, caller JWT and CA added.
-Codex gets command-line configuration, OpenCode gets `OPENCODE_CONFIG_CONTENT`,
+OpenCode gets `OPENCODE_CONFIG_CONTENT`,
 and Claude gets environment variables and flags. The helper starts the CLI;
 Praxis remains the proxy on the server.
 
@@ -134,10 +132,6 @@ Model discovery and switching are separate checks from configuring a route.
 "${HARNESS[@]}" claude-code --provider vllm --model "$VLLM_MODEL" "${GATEWAY[@]}"
 ```
 
-```console
-"${HARNESS[@]}" codex --provider vllm --model "$VLLM_MODEL" "${GATEWAY[@]}"
-```
-
 ### OpenAI
 
 The administrator [enables OpenAI](../common/providers.md#openai) and gives
@@ -146,10 +140,6 @@ you an approved model ID. Read it, then choose either client:
 ```console
 printf 'Approved OpenAI model ID: '
 IFS= read -r OPENAI_MODEL
-```
-
-```console
-"${HARNESS[@]}" codex --provider openai --model "$OPENAI_MODEL" "${GATEWAY[@]}"
 ```
 
 ```console
@@ -198,6 +188,6 @@ unset CALLER_JWT PRAXIS_CALLER_JWT GATEWAY
 ## Model menus
 
 The launcher selects one approved provider/model per session. OpenCode uses
-`/models`; Claude and Codex use `/model`. These menus do not constitute an
+`/models`; Claude uses `/model`. These menus do not constitute an
 automatically aggregated Praxis catalog. Keep the explicit model selection
 unless the administrator has qualified another entry for this gateway.

@@ -161,7 +161,7 @@ other target.
 Create an ordinary login with [account setup](accounts.md), then use the
 [user workflow](users.md) for direct endpoints or the Switchyard Chat listener.
 Point a Chat Completions client at `http://127.0.0.1:8082/v1` to use
-Switchyard. Responses clients such as Codex remain on port `8080`.
+Switchyard. Responses clients remain on port `8080`.
 
 ## Change from another profile
 

@@ -11,7 +11,6 @@ copy the operator's keys to user accounts.
 
 | Combination | Status |
 | --- | --- |
-| Codex + Praxis | Unsupported; `--config` fails before creating anything |
 | OpenClaw + Praxis | Unsupported; `--config` fails before creating anything |
 | Claude Code + Praxis | Sandbox image and recipe are missing |
 | OpenCode + Praxis dev | Experimental; qualify each host, provider and tool task |

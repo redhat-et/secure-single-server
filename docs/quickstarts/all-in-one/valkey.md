@@ -81,7 +81,7 @@ sudo scripts/all-in-one/install --prepare
 
 ## 3. Create provider secrets
 
-OpenAI is used by Codex and OpenCode; Claude Code also requires an Anthropic
+OpenAI is used by OpenCode; Claude Code also requires an Anthropic
 key. Use dedicated provider credentials for this gateway. Keep keys out of command
 history, files, chat, and harness accounts. Use a private, unrecorded
 administrator terminal; `sudo` I/O recording must not capture secret input.

@@ -39,16 +39,12 @@ the current image; model-selector checks are separate.
 
 | Harness | Check | Mock | Real CPU | Real GPU |
 | --- | --- | --- | --- | --- |
-| Codex | Tool query | Passed | Passed | Passed |
-| Codex | `/model` | Not run | Failed [1] | Failed [1] |
 | Claude Code | Tool query | Passed | Passed | Passed |
-| Claude Code | `/model` | Not run | Passed [2] | Passed [2] |
+| Claude Code | `/model` | Not run | Passed [1] | Passed [1] |
 | OpenCode | Tool query | Passed | Passed | Passed |
-| OpenCode | `/models` | Not run | Passed [2] | Passed [2] |
+| OpenCode | `/models` | Not run | Passed [1] | Passed [1] |
 
-1. Codex shows its built-in OpenAI catalog; Qwen is absent. Explicit
-   `--model qwen3-8b` works. The new generated catalog needs a RHEL rerun; see [feature testing](gateway-features.md#codex).
-2. Claude shows configured Qwen aliases; OpenCode shows configured
+1. Claude shows configured Qwen aliases; OpenCode shows configured
    `praxis/qwen3-8b`. These are configured entries, not automatic discovery.
 
 All six native API probes (Chat, Responses and Messages, each JSON/SSE) and
@@ -60,27 +56,22 @@ See the [current bug and fix candidate](vllm-debugging.md#responses-tool-ids-cha
 
 CPU results use 16,384 context / 4,096 output tokens.
 The GPU now runs the 32,768 / 8,192 preset. New native unified-config tasks
-passed for all three CLIs, including generated files and independent tests
-(Codex 40s, Claude Code 42s, OpenCode 56s). Short-history switching results and
+passed for both supported direct CLIs, including generated files and independent tests
+(Claude Code 42s, OpenCode 56s). Short-history switching results and
 the required Responses adapter are in [feature testing](gateway-features.md#model-switching-and-reasoning).
 Interactive menu captures and long-history compaction remain pending.
 The CPU remains at 16,384 / 4,096.
 
 | Harness | Check | Real CPU | Real GPU |
 | --- | --- | --- | --- |
-| Codex | Tool query | Passed | Passed |
-| Codex | `/model` | Failed [1] | Not run [1] |
-| Claude Code | Tool query | Passed [2] | Passed [2] |
-| Claude Code | `/model` | Passed [3] | Not run [3] |
+| Claude Code | Tool query | Passed [1] | Passed [1] |
+| Claude Code | `/model` | Passed [2] | Not run [2] |
 | OpenCode | Tool query | Passed | Passed |
-| OpenCode | `/models` | Passed [3] | Not run [3] |
+| OpenCode | `/models` | Passed [2] | Not run [2] |
 
-1. CPU retains the older launcher result: Qwen absent from the menu, explicit
-   model selection works. The GPU generated catalog passes `model/list`; a fresh
-   interactive picker check has not been captured.
-2. The launcher sets Claude effort to `medium`. Its default `high` is rejected
+1. The launcher sets Claude effort to `medium`. Its default `high` is rejected
    by this model's template; thinking remains enabled.
-3. CPU retains its configured-entry result. GPU menus were regenerated from the
+2. CPU retains its configured-entry result. GPU menus were regenerated from the
    unified catalog; fresh interactive captures remain pending.
    The captured Claude menu displayed a `[1m]` alias despite a 16,384-token
    server. The updated launcher disables 1M variants; fresh menu captures and
@@ -96,8 +87,6 @@ reboot recovery and sandbox tasks have not been repeated with 27B.
 
 | Harness | Check | Mock | Real OpenAI |
 | --- | --- | --- | --- |
-| Codex | Tool query | Passed | Not run |
-| Codex | `/model` | Not run | Not run |
 | Claude Code | Tool query | Not run [1] | Not run [1] |
 | Claude Code | `/model` | Not run [1] | Not run [1] |
 | OpenCode | Tool query | Passed | Not run |
@@ -110,15 +99,10 @@ reboot recovery and sandbox tasks have not been repeated with 27B.
 
 | Harness | Check | Mock | Real Anthropic |
 | --- | --- | --- | --- |
-| Codex | Tool query | Not run [1] | Not run [1] |
-| Codex | `/model` | Not run [1] | Not run [1] |
 | Claude Code | Tool query | Passed | Not run |
 | Claude Code | `/model` | Not run | Not run |
 | OpenCode | Tool query | Passed | Not run |
 | OpenCode | `/models` | Not run | Not run |
-
-1. Codex → Anthropic needs API translation/integration; the current launcher
-   uses Responses for Codex. This is a qualification target.
 
 No real cloud account or external-provider-only VM is qualified. Cloud models
 have no local CPU/GPU distinction. API translation is not enabled or tested.
@@ -133,16 +117,13 @@ on-gateway CLI checks and separate public API probes do not qualify these rows.
 The [external-client runner](external-clients.md) is available for fresh
 qualification. Its local regression tests do not change any RHEL result below.
 Local Podman testing with the real Praxis gateway and synthetic models passes
-HTTPS/JWT authentication and seven harness/provider combinations. Claude → OpenAI
-and Codex → Anthropic remain explicit blocked matrix entries pending API
-translation integration. RHEL testing is pending.
+HTTPS/JWT authentication and supported harness/provider combinations. Claude → OpenAI
+remains an explicit blocked matrix entry pending API translation integration. RHEL testing is pending.
 
 **Qwen3-8B / vLLM**
 
 | Harness | Check | Mock | Real CPU | Real GPU |
 | --- | --- | --- | --- | --- |
-| Codex | Tool query | Not run | Not run | Not run |
-| Codex | `/model` | Not run | Not run | Not run |
 | Claude Code | Tool query | Not run | Not run | Not run |
 | Claude Code | `/model` | Not run | Not run | Not run |
 | OpenCode | Tool query | Not run | Not run | Not run |
@@ -152,8 +133,6 @@ translation integration. RHEL testing is pending.
 
 | Harness | Check | Mock | Real OpenAI |
 | --- | --- | --- | --- |
-| Codex | Tool query | Not run | Not run |
-| Codex | `/model` | Not run | Not run |
 | Claude Code | Tool query | Not run [1] | Not run [1] |
 | Claude Code | `/model` | Not run [1] | Not run [1] |
 | OpenCode | Tool query | Not run | Not run |
@@ -165,14 +144,10 @@ translation integration. RHEL testing is pending.
 
 | Harness | Check | Mock | Real Anthropic |
 | --- | --- | --- | --- |
-| Codex | Tool query | Not run [1] | Not run [1] |
-| Codex | `/model` | Not run [1] | Not run [1] |
 | Claude Code | Tool query | Not run | Not run |
 | Claude Code | `/model` | Not run | Not run |
 | OpenCode | Tool query | Not run | Not run |
 | OpenCode | `/models` | Not run | Not run |
-
-1. Codex → Anthropic needs API translation/integration before qualification.
 
 ## OpenShell
 
@@ -187,8 +162,6 @@ local-model results below are for Qwen3-8B only.
 
 | Harness | Check | Mock | Real CPU | Real GPU |
 | --- | --- | --- | --- | --- |
-| Codex | Tool query | Blocked [1] | Blocked [1] | Blocked [1] |
-| Codex | `/model` | Blocked [1] | Blocked [1] | Blocked [1] |
 | Claude Code | Tool query | Blocked [2] | Blocked [2] | Blocked [2] |
 | Claude Code | `/model` | Blocked [2] | Blocked [2] | Blocked [2] |
 | OpenCode | Tool query | Not run | Failed [3] | Passed |
@@ -196,7 +169,7 @@ local-model results below are for Qwen3-8B only.
 | OpenClaw | Tool query | Blocked [1] | Blocked [1] | Blocked [1] |
 | OpenClaw | Model selector | Blocked [1] | Blocked [1] | Blocked [1] |
 
-1. Codex and OpenClaw recipes lack Praxis adapters and reject `--config`.
+1. OpenClaw recipes lack Praxis adapters and reject `--config`.
 2. Claude needs a pinned sandbox image and recipe.
 3. CPU OpenCode creates files but its generated Node tests fail independently.
    CLI exit zero is insufficient. GPU passes all three generated Node tests.
@@ -208,8 +181,6 @@ local-model results below are for Qwen3-8B only.
 
 | Harness | Check | Mock | Real OpenAI |
 | --- | --- | --- | --- |
-| Codex | Tool query | Blocked [1] | Blocked [1] |
-| Codex | `/model` | Blocked [1] | Blocked [1] |
 | Claude Code | Tool query | Not run [2] | Not run [2] |
 | Claude Code | `/model` | Not run [2] | Not run [2] |
 | OpenCode | Tool query | Not run | Not run |
@@ -217,7 +188,7 @@ local-model results below are for Qwen3-8B only.
 | OpenClaw | Tool query | Blocked [1] | Blocked [1] |
 | OpenClaw | Model selector | Blocked [1] | Blocked [1] |
 
-1. Codex and OpenClaw need Praxis adapters.
+1. OpenClaw needs Praxis adapters.
 2. Claude → OpenAI is an untested target requiring a sandbox image/recipe and
    API translation/integration.
 
@@ -225,19 +196,15 @@ local-model results below are for Qwen3-8B only.
 
 | Harness | Check | Mock | Real Anthropic |
 | --- | --- | --- | --- |
-| Codex | Tool query | Not run [1] | Not run [1] |
-| Codex | `/model` | Not run [1] | Not run [1] |
-| Claude Code | Tool query | Blocked [2] | Blocked [2] |
-| Claude Code | `/model` | Blocked [2] | Blocked [2] |
-| OpenCode | Tool query | Blocked [3] | Blocked [3] |
-| OpenCode | `/models` | Blocked [3] | Blocked [3] |
-| OpenClaw | Tool query | Blocked [3] | Blocked [3] |
-| OpenClaw | Model selector | Blocked [3] | Blocked [3] |
+| Claude Code | Tool query | Blocked [1] | Blocked [1] |
+| Claude Code | `/model` | Blocked [1] | Blocked [1] |
+| OpenCode | Tool query | Blocked [2] | Blocked [2] |
+| OpenCode | `/models` | Blocked [2] | Blocked [2] |
+| OpenClaw | Tool query | Blocked [2] | Blocked [2] |
+| OpenClaw | Model selector | Blocked [2] | Blocked [2] |
 
-1. Codex → Anthropic is an untested target requiring a Praxis adapter and
-   API translation/integration.
-2. Claude needs a pinned sandbox image and recipe.
-3. Anthropic Messages adapters are missing; OpenClaw also lacks a Praxis adapter.
+1. Claude needs a pinned sandbox image and recipe.
+2. Anthropic Messages adapters are missing; OpenClaw also lacks a Praxis adapter.
 
 **Remote-gateway: sandbox clients**
 
@@ -246,7 +213,6 @@ real Qwen CPU/GPU, OpenAI and Anthropic routes.
 
 | Harness | Tool query | Model selector |
 | --- | --- | --- |
-| Codex | Blocked [1] | Blocked [1] |
 | Claude Code | Blocked [1] | Blocked [1] |
 | OpenCode | Blocked [1] | Blocked [1] |
 | OpenClaw | Blocked [1] | Blocked [1] |
@@ -310,7 +276,7 @@ translation remains untested.
   [preset](../../configs/vllm/qwen3.8-27b-int4.env). Text-only, native pinned
   template, `qwen3_xml` tool parser and `qwen3` reasoning parser.
   The existing bootc path still uses its separate Qwen3-8B configuration.
-- Direct CLIs: Codex 0.157.1, Claude Code 2.1.283, OpenCode 1.18.32
+- Direct CLIs: Claude Code 2.1.283, OpenCode 1.18.32
   ([pins](../../configs/common/harness-versions.json)).
 - OpenShell 0.1.2-rhaiv.0; sandbox OpenCode 1.18.31 and Node.js 26.9.0
   ([image pins](../../openshell/configs/images.env)).
@@ -329,11 +295,8 @@ additions. They do not populate native CLI, menu or RHEL lifecycle cells.
 | Model precision / server context | BF16 / 16,384 tokens | BF16 / 16,384 tokens |
 | Concurrent inference requests | 1; additional requests queue | 1; additional requests queue |
 | OpenCode / Claude output budget | 4096 tokens, including thinking | 4096 tokens, including thinking |
-| Codex context / auto-compaction threshold | 16,384 / 12,288 tokens | 16,384 / 12,288 tokens |
-| Codex output budget | Remaining context; no separate output cap in the pinned CLI | Same |
 | Automated real CLI deadline | 60 minutes per harness | 30 minutes per harness |
 | Observed generation rate | About 3 tokens/s | About 15 tokens/s |
-| Codex tool query | 9.1 minutes | 1.9 minutes |
 | Claude Code tool query | 11.0 minutes | 2.2 minutes |
 | OpenCode tool query | 6.4 minutes | 1.5 minutes |
 
@@ -353,12 +316,11 @@ prefill batch is limited to 2048 tokens.
 | Host `buff/cache` after tasks | 27 GiB | 22 GiB |
 | Swap configured | None | None |
 | GPU memory after tasks (not peak) | Not applicable | 20,968 MiB of 23,034 MiB |
-| Codex tool query | 4.0 minutes | 1.6 minutes |
 | Claude Code tool query, medium effort | 10.2 minutes | 2.6 minutes |
 | OpenCode tool query | 4.8 minutes | 1.1 minutes |
 
 The updated preset serves 32,768 context tokens, with 8,192 OpenCode/Claude
-output tokens and a 24,576-token Codex auto-compaction threshold. Short GPU
+output tokens. Short GPU
 native tasks passed as noted above. Updated CPU tasks, peak memory, fresh menu
 captures and long-session compaction at these settings remain **Not run**.
 Thinking remains enabled; concurrency remains one. The recorded startup cache

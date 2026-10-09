@@ -1,5 +1,8 @@
 # OpenShell single-server harness deployment
 
+> **Where this fits:** Step 2 of the recommended route. This guide deploys the
+> execution boundary before model routing is added.
+
 This guide deploys **OpenCode or OpenClaw** on one trusted RHEL 9 x86_64 server
 or bare-metal host with OpenShell as the agent security boundary. It is written
 for an administrator who wants the harness available remotely, while keeping its
@@ -26,15 +29,9 @@ the controlled allow/deny policy test, verified two-CPU, 4 GiB, 2048-PID
 limits, confirmed SELinux Enforcing and lingering, and showed ports 8090/8091
 bound only to loopback.
 
-The bootc path was then qualified in the same region from the exact published
-Quay digests, not from a locally rebuilt image:
-
-| Variant | `v0.1` digest at validation |
-| --- | --- |
-| OpenCode | `sha256:4effd535f8c7111f540ecc4f015a2a17b2b1c6d5c8fdd582e9d162a6778cb734` |
-| OpenClaw | `sha256:f2dbdfcc449a2753202b0438c2dd29e68641a07aea0647bc7184920c500580e6` |
-
-Both published variants booted the recorded digest, started the reconciliation
+The bootc path was then qualified in the same region from the published Quay
+`v0.1` images, not from a locally rebuilt image. Both published variants
+started the reconciliation
 service, rendered the pinned `sandbox_runtime_image`, created Ready sandboxes,
 passed file-write and controlled allow/deny tests, and reported the same
 runtime, SELinux, lingering, and loopback-only results as the manual path.
@@ -45,25 +42,10 @@ evidence.
 
 ## Why OpenShell
 
-OpenCode and OpenClaw provide the agent experience: prompts, model calls, and
-tools. OpenShell supplies the operational boundary around that experience:
-
-- Tools run in a sandbox under a locked service account and rootless Podman,
-  not with an unrestricted interactive host login.
-- Filesystem rules distinguish read-only host paths from writable workspace
-  paths, reducing accidental or prompt-driven changes outside the sandbox.
-- Network rules are per-binary allowlists rather than broad host egress.
-- Each sandbox has default Podman runtime ceilings of two CPUs, 4 GiB of RAM,
-  and 2048 PIDs.
-- Policy decisions are visible in OpenShell logs and acceptance tests, so a
-  denial can be distinguished from an unrelated connection failure.
-- The bootc image packages the pinned OpenShell control-plane and selected
-  harness image references, plus policy files, as one reviewed, rollback-capable
-  host deployment.
-
-This is an important improvement over running a harness directly on a server:
-the agent can remain useful without simultaneously receiving unrestricted
-access to the host account, host filesystem, and arbitrary network destinations.
+OpenShell surrounds the harness with a locked service account, rootless
+Podman, filesystem and network policy, runtime ceilings, and auditable
+allow/deny decisions. The bootc image packages the pinned control plane,
+harness, and policies into one repeatable deployment.
 
 The current deployment is for a **trusted single operator**. It is not
 multi-tenant authorization, and it does not inspect prompts or guarantee that
@@ -299,38 +281,14 @@ quay.io/redhat-et/secure-single-server-opencode:v0.1
 quay.io/redhat-et/secure-single-server-openclaw:v0.1
 ```
 
-At validation time, those tags resolved to the digests recorded in
-[AWS verification](#aws-verification). Resolve them again before an auditable
-deployment because registry tags are mutable.
-The image contains the optional Praxis service, but it does not become a model
+This demonstration intentionally uses the mutable `v0.1` tags directly. The
+image contains the optional Praxis service, but it does not become a model
 route until its separate secrets and activation workflow are configured; the
 OpenShell sandbox checks do not depend on that service.
 
-For an auditable deployment, resolve the mutable `v0.1` tag to its digest and
-boot that digest. Run `skopeo inspect` on the host or another trusted system
-with `skopeo` installed, record the digest separately from the tag, and run
-`bootc switch` on the target host:
-
-```bash
-digest="$(skopeo inspect --format '{{.Digest}}' \
-  docker://quay.io/redhat-et/secure-single-server-opencode:v0.1)"
-printf 'Deploying digest: %s\n' "$digest"
-sudo bootc switch "quay.io/redhat-et/secure-single-server-opencode@$digest"
-```
-
-Use an image that includes the `sandbox_runtime_image` fix. Before trusting an
-older `v0.1` artifact, verify that its rendered gateway configuration contains
-the digest-pinned `sandbox_runtime_image` setting; images built before that fix
-may pull the wrong sandbox layer and fail during sandbox creation.
-
-```bash
-sudo grep '^sandbox_runtime_image' \
-  /var/lib/openshell-svc/.config/openshell/gateway.toml
-```
-
 ### Apply the image to an existing bootc host
 
-On a booted RHEL image-mode host, stage the selected image and reboot:
+On a booted RHEL image-mode host, deploy the selected image and reboot:
 
 ```console
 sudo bootc switch quay.io/redhat-et/secure-single-server-opencode:v0.1
@@ -344,19 +302,15 @@ migrate existing sandboxes. Export and recreate them as needed.
 
 ### Apply the image to a fresh single server or bare-metal host
 
-For a fresh VM, follow Red Hat's official instructions for
-[creating bootc-compatible disk images with bootc image
-builder](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/creating-bootc-compatible-base-disk-images-with-bootc-image-builder_using-image-mode-for-rhel-to-build-deploy-and-manage-operating-systems).
-Use the existing image as the builder input. The resulting disk image contains
-the selected OpenShell and harness deployment; no application container is
-embedded in the OS image. First boot pulls the digest-pinned control-plane and
-selected harness images. For bare metal, use the same official process to
-create the appropriate deployment image.
+For a fresh VM or bare-metal host, use a standard bootc deployment workflow
+and supply the selected published image as the source. Do not create or
+substitute a locally built image. First boot pulls the pinned control-plane
+and selected harness images.
 
 ### Experiment with the container image in Podman
 
 A bootc image is also a standard OCI container image. For lightweight
-userspace experimentation, pull the resolved digest and start an interactive
+userspace experimentation, pull the published tag and start an interactive
 shell with Podman. Replace the OpenCode reference with the OpenClaw variant
 when needed:
 
@@ -402,9 +356,7 @@ qualified.
 
 The bootc service uses locked, separate rootless accounts and enables lingering.
 OpenShell listens only on loopback ports 8090/8091. Keep SELinux Enforcing and
-do not expose the management port beyond the host. If OpenShell changes in a
-new image, export work, delete pre-upgrade sandboxes, and recreate them as
-described in the [upgrade runbook](../../../openshell/docs/upgrade.md).
+do not expose the management port beyond the host.
 Reach the host remotely through your normal administrator SSH path, for example
 `ssh -t ADMIN_USER@RHEL_HOST`, and then run `sudo sss-bootc harness connect`.
 Do not publish OpenShell's management port to make remote access work.
@@ -523,9 +475,10 @@ Require nonzero passing tests and independently rerun the command after the
 harness exits. This checks tool execution, file creation, and command completion
 inside the sandbox.
 
-## Continue
+## Next step
 
-- [OpenShell threat model](../../../openshell/docs/threat-model.md)
-- [Policy qualification](../../../openshell/docs/policy-walkthrough.md)
-- [Bootc deployment details](../../../bootc/README.md)
-- [OpenShell + Praxis integration](../openshell-praxis/README.md)
+- Add model routing with the
+  [OpenShell + Praxis guide](../openshell-praxis/README.md).
+- Before extending the deployment, read the
+  [threat model](../../../openshell/docs/threat-model.md) and
+  [policy qualification contract](../../../openshell/docs/policy-walkthrough.md).

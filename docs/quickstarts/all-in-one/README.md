@@ -1,5 +1,9 @@
 # All-in-one RHEL AI gateway
 
+> **Where this fits:** An alternate route. Use this when users have separate
+> accounts on one trusted RHEL host and OpenShell containment is not the
+> primary boundary.
+
 One administrator-managed Praxis gateway serves users who have separate
 accounts on the same private RHEL 9 server. Users can use the configured
 model providers, but cannot read provider credentials or change gateway
@@ -93,7 +97,7 @@ requires uninstalling the current profile first.
 
 ## User workflow
 
-Each user signs in with a separate OS account and runs Claude Code, Codex,
+Each user signs in with a separate OS account and runs Claude Code
 or OpenCode on the RHEL server. The harness sends a non-secret placeholder to
 a loopback listener; Praxis removes it and injects the protected provider
 credential upstream.
@@ -198,3 +202,9 @@ The installer places root-owned Quadlet files in the search path for the exact
 Systemd starts the service at boot, orders the optional Valkey dependency, and
 restarts failed containers. Only Praxis inference ports are published, always
 on `127.0.0.1`; admin port `9901` and Valkey port `6379` remain private.
+
+## Next step
+
+- Configure providers, local inference, and quotas through the
+  [common configuration index](../common/README.md).
+- Move off-host clients to the [remote HTTPS/JWT gateway](../remote-gateway/README.md).

@@ -1,5 +1,8 @@
 # Harness sandboxing with OpenShell
 
+> **Where this fits:** The execution-boundary deep dive. Start with the
+> architecture walkthrough if you are new to the complete system.
+
 OpenShell adds a policy-controlled execution environment around a harness and
 its tools. Profiles describe filesystem, network, runtime, and service-account
 boundaries, while bootc packages a reviewed host deployment.
@@ -12,7 +15,6 @@ images. The current deployment target is a dedicated, trusted single-operator
 RHEL 9 x86_64 host with rootless Podman. Bootc builds one OS image per harness.
 
 - [OpenCode and OpenClaw single-server manual and bootc guide](../../docs/quickstarts/openshell-single-server/README.md)
-- [Codex experimental recipe](quickstarts/codex.md)
 - [Praxis integration and status](../../docs/quickstarts/openshell-praxis/README.md)
 - [Bootable host deployment](../../bootc/README.md)
 - [Threat model](threat-model.md)
@@ -26,3 +28,8 @@ SSH helpers do not forward them.
 
 For CI, native runtime checks and architecture coverage, see the
 [testing guide](../../docs/testing/README.md#openshell-and-bootc).
+
+## Next step
+
+Read the [policy qualification contract](policy-walkthrough.md), then deploy a
+harness with the [single-server guide](../../docs/quickstarts/openshell-single-server/README.md).

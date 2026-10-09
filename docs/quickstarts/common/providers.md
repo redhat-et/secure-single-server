@@ -1,5 +1,7 @@
 # Manage providers in an existing Praxis gateway
 
+> **Where this fits:** The cloud-provider branch of the model-routing stop.
+
 Run as the administrator, from the matching deployment checkout. These commands
 preserve other providers and listener authentication. Provider changes restart
 Praxis; finish active tasks first. Valkey quotas persist across restarts.
@@ -39,8 +41,8 @@ sudo scripts/common/quota-set --provider anthropic --capacity 2000000 --apply
 ## Another compatible provider
 
 Choose a unique lowercase name and replace the example URL. The upstream must
-speak the native API used by the harness: Responses for Codex, Messages for
-Claude Code, or the selected SDK's API for OpenCode. The unified OpenCode
+speak the native API used by the harness: Messages for Claude Code, or the
+selected SDK's API for OpenCode. The unified OpenCode
 configuration uses Responses for GPT and local Qwen. There is no API translation.
 
 ```console
@@ -260,3 +262,8 @@ are rejected as configuration drift. Upgrades retain custom providers and the
 shared-vLLM setting and applied unified catalog. Failed activation restores configuration from
 `/etc/praxis/rollback/`. A failed quota migration never overwrites a shared ledger;
 inspect its reported recovery state before retrying.
+
+## Next step
+
+Review [token quota semantics](token-quotas.md), then validate the resulting
+path with the [testing guide](../../testing/README.md).

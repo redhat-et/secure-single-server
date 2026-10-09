@@ -1,5 +1,8 @@
 # Testing
 
+> **Where this fits:** The evidence stop. Return here after every deployment or
+> configuration change.
+
 ## AWS RHEL workflow
 
 For a fresh VM and manual use, follow the [official installation sequence](aws.md#6-install-services-and-test)
@@ -88,6 +91,13 @@ and a disposable runner labeled `self-hosted/Linux/X64/rhel9/openshell-disposabl
 A skipped job provides no runtime evidence. For combined Praxis inference, use
 [the optional OpenShell smoke step](rhel-smoke.md#optional-openshell).
 
-Follow the [bootc guide](../../bootc/README.md) for image builds and booted host
-checks. Bootc and OpenShell lifecycle tests do not qualify all provider/harness
-combinations.
+Follow the [bootc guide](../../bootc/README.md) for published-image deployment
+and booted-host checks. Bootc and OpenShell lifecycle tests do not qualify all
+provider/harness combinations.
+
+## Next step
+
+Review the [compatibility matrix](compatibility.md),
+[bootc validation record](../../bootc/VALIDATION.md), and
+[vLLM validation record](../../bootc/VLLM-VALIDATION.md) before promoting a
+combination.
