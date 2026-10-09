@@ -37,6 +37,7 @@ repository; the guides below are separated by the question they answer.
 | Explain or review the complete system | [Architecture walkthrough](quickstarts/architecture-walkthrough/README.md) |
 | Install OpenShell and harness containers separately | [Manual single-server deployment](quickstarts/openshell-single-server/manual.md) |
 | Deploy or evaluate OpenShell quickly | [Single-server bootc quickstart](quickstarts/openshell-single-server/bootc.md) |
+| Inspect the bootc image or make a model call with Podman | [Podman quickstart](quickstarts/podman/README.md) |
 | Combine OpenShell with Praxis | [OpenShell + Praxis guide](quickstarts/openshell-praxis/README.md) |
 | Serve users from accounts on one RHEL host | [All-in-one gateway](quickstarts/all-in-one/README.md) |
 | Connect harnesses on remote client machines | [Remote HTTPS/JWT gateway](quickstarts/remote-gateway/README.md) |
