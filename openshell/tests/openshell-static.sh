@@ -138,6 +138,7 @@ python3 "${OS_DIR}/tests/regressions.py"
 python3 "${OS_DIR}/tests/cleanup.py"
 python3 "${OS_DIR}/tests/templates.py"
 python3 "${OS_DIR}/tests/pr-queue.py"
+python3 "${OS_DIR}/tests/streamlit-security.py"
 python3 "${OS_DIR}/tests/gateway.py"
 python3 "${OS_DIR}/tests/policy-boundary.py"
 printf 'openshell-static: OK\n'
