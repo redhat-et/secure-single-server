@@ -91,8 +91,8 @@ if st.button("Summarize with model", type="primary"):
                 api_key=OPENAI_API_KEY,
                 model=OPENAI_MODEL,
             )
-    except Exception as error:
-        st.error(f"Model call failed: {error}")
+    except Exception:
+        st.error("Model call failed. Check the endpoint, credentials, and app logs.")
         st.session_state.summary = ""
 
 if st.session_state.summary:
@@ -114,45 +114,103 @@ st.markdown(
 )
 st.code(DIAGNOSTIC_COMMAND, language="bash")
 if st.button("Run write diagnostic"):
-    result = subprocess.run(
-        DIAGNOSTIC_COMMAND,
-        shell=True,
-        capture_output=True,
-        text=True,
-        timeout=10,
-        env={**os.environ, "DEMO_MARKER": DEMO_MARKER},
-    )
-    if result.returncode == 0:
-        st.success("Diagnostic completed: the app wrote the demo marker to its own directory.")
-        st.session_state.diagnostic = "succeeded"
+    try:
+        result = subprocess.run(
+            ["/bin/sh", "-c", DIAGNOSTIC_COMMAND],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env={**os.environ, "DEMO_MARKER": DEMO_MARKER, "LC_ALL": "C"},
+        )
+    except (OSError, subprocess.SubprocessError):
+        st.error("Diagnostic could not be completed; check the application logs.")
+        st.session_state.diagnostic = "failed"
     else:
-        st.error("OpenShell blocked the diagnostic write to the application directory.")
-        st.session_state.diagnostic = "blocked"
-    if result.stderr:
-        st.caption(result.stderr.strip())
+        if result.returncode == 0:
+            st.success("Diagnostic completed: the app wrote the demo marker to its own directory.")
+            st.session_state.diagnostic = "succeeded"
+        elif DEMO_MODE != "unsafe" and (
+            "Permission denied" in result.stderr or "EACCES" in result.stderr
+        ):
+            st.error("OpenShell blocked the diagnostic write to the application directory.")
+            st.session_state.diagnostic = "blocked"
+        else:
+            st.error("Diagnostic failed without permission-denied evidence; check the application logs.")
+            st.session_state.diagnostic = "failed"
 
 if st.session_state.diagnostic:
     st.metric("Write diagnostic result", st.session_state.diagnostic)
 
 st.code(FILE_READ_COMMAND, language="bash")
 if st.button("Run file-read diagnostic"):
-    result = subprocess.run(
-        ["cat", str(DECOY_SECRET_PATH)],
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
-    if result.returncode == 0:
-        st.success(
-            "Diagnostic completed: the app read the synthetic marker outside its application directory."
+    try:
+        result = subprocess.run(
+            ["cat", str(DECOY_SECRET_PATH)],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env={**os.environ, "LC_ALL": "C"},
         )
-        st.caption(result.stdout.strip())
-        st.session_state.file_diagnostic = "succeeded"
+    except (OSError, subprocess.SubprocessError):
+        st.error("Diagnostic could not be completed; check the application logs.")
+        st.session_state.file_diagnostic = "failed"
     else:
-        st.error("OpenShell blocked the synthetic file read.")
-        st.session_state.file_diagnostic = "blocked"
-    if result.stderr:
-        st.caption(result.stderr.strip())
+        if result.returncode == 0:
+            st.success(
+                "Diagnostic completed: the app read the synthetic marker outside its application directory."
+            )
+            st.session_state.file_diagnostic = "succeeded"
+        elif DEMO_MODE != "unsafe" and (
+            "Permission denied" in result.stderr or "EACCES" in result.stderr
+        ):
+            st.error("OpenShell blocked the synthetic file read.")
+            st.session_state.file_diagnostic = "blocked"
+        else:
+            st.error("Diagnostic failed without permission-denied evidence; check the application logs.")
+            st.session_state.file_diagnostic = "failed"
 
 if st.session_state.file_diagnostic:
     st.metric("File-read diagnostic result", st.session_state.file_diagnostic)
+
+st.header("Ask follow-up questions")
+st.markdown(
+    """
+    The chat uses the same model-only path in both versions. It does not run
+    commands or expand filesystem access; the diagnostics above are the only
+    local actions.
+    """
+)
+if "chat_messages" not in st.session_state:
+    st.session_state.chat_messages = []
+
+for message in st.session_state.chat_messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+chat_prompt = st.chat_input("Ask the model about this ticket")
+if chat_prompt:
+    with st.chat_message("user"):
+        st.markdown(chat_prompt)
+    try:
+        with st.chat_message("assistant"):
+            with st.spinner("Model is responding…"):
+                chat_response = call_model(
+                    ticket,
+                    base_url=MODEL_BASE_URL,
+                    api_key=OPENAI_API_KEY,
+                    model=OPENAI_MODEL,
+                    messages=[
+                        *st.session_state.chat_messages,
+                        {"role": "user", "content": chat_prompt},
+                    ],
+                )
+            st.markdown(chat_response)
+        st.session_state.chat_messages.extend(
+            [
+                {"role": "user", "content": chat_prompt},
+                {"role": "assistant", "content": chat_response},
+            ]
+        )
+    except Exception:
+        with st.chat_message("assistant"):
+            st.error("Chat request failed. Check the endpoint, credentials, and app logs.")

@@ -10,8 +10,10 @@ credentials:
 endpoints:
   - host: inference.internal
     port: 443
+    path: /v1/chat/completions
     protocol: rest
-    access: read-write
     enforcement: enforce
+    rules:
+      - allow: {method: POST, path: /v1/chat/completions}
 binaries:
-  - /usr/local/bin/python3.*
+  - /usr/local/bin/python3

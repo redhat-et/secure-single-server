@@ -21,4 +21,5 @@ process:
   run_as_user: "1500"
   run_as_group: "1500"
 
+# Model egress is supplied by the attached provider; this adds no direct routes.
 network_policies: {}

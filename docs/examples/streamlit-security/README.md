@@ -3,7 +3,8 @@
 Run the same Streamlit support-copilot twice. First it runs in an ordinary
 container with the real model key in the application process. Then it runs in
 OpenShell with an attached provider, a read-only application directory, and a
-hard-required Landlock policy.
+hard-required Landlock policy. The provider profile authorizes the credential
+only for `POST /v1/chat/completions`.
 
 ```text
 ordinary container
@@ -40,10 +41,10 @@ For the unsafe version, keep this tunnel open:
 ssh -N -L 8501:127.0.0.1:8501 user@open-shell-host
 ```
 
-This demo requires a model credential and a native endpoint. Choose OpenAI or
-an OpenAI-compatible service. In the OpenShell run, the app receives only an
-opaque credential placeholder; OpenShell substitutes the real key after policy
-checks pass.
+Use a dedicated model API key and endpoint for the demo. The ordinary run
+exposes the key to app code, so use HTTPS. In OpenShell, the app receives an
+opaque placeholder and the provider supplies the key only for an authorized
+request.
 
 ### OpenAI
 
@@ -92,17 +93,22 @@ export OPENAI_MODEL=your-model-id
 From the repository root:
 
 ```console
-export OPENAI_API_KEY=sk-your-key
+read -r -s -p "OpenAI API key: " OPENAI_API_KEY; printf '\n'
+export OPENAI_API_KEY
 export MODEL_BASE_URL=https://api.openai.com/v1
 export OPENAI_MODEL=gpt-5.5
 
 openshell/demos/streamlit-security/run-unsafe.sh
+unset OPENAI_API_KEY
 ```
 
 Open `http://localhost:8501`. Choose **Summarize with model**, then choose both
 diagnostics. The model call succeeds, the app writes a fake marker to
 `/opt/openshell-demo/leaked-marker`, and it reads the synthetic marker at
 `/opt/openshell-demo-secret`.
+
+Both versions include the same follow-up chat. It sends questions to the model;
+the diagnostics remain the only local actions.
 
 ## Run the OpenShell version
 
@@ -165,12 +171,7 @@ openshell sandbox delete streamlit-demo
 
 ## What this does not prove
 
-This is a focused browser demonstration, not a complete isolation proof. It
-shows credential substitution and two filesystem denials for one application.
-It does not test every syscall, network path, container escape, or supply-chain
-boundary.
-
-Do not replace the synthetic read target with `/etc/passwd`, `/etc/shadow`, or
-another real host file. `/etc/passwd` can expose account information, and
-`/etc/shadow` contains password hashes. A demonstration should never display or
-exfiltrate real host data.
+This focused demo shows credential substitution and two filesystem boundaries
+for one application; it does not test every syscall, network route, container
+escape, or supply-chain boundary. Keep the read target synthetic; do not point
+the diagnostic at real host files.

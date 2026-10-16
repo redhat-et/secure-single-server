@@ -2,7 +2,7 @@
 set -euo pipefail
 
 DEMO_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-IMAGE="${STREAMLIT_DEMO_IMAGE:-openshell-streamlit-demo:unsafe}"
+IMAGE="openshell-streamlit-demo:unsafe"
 
 : "${OPENAI_API_KEY:?export OPENAI_API_KEY before running the unsafe demo}"
 : "${MODEL_BASE_URL:?export MODEL_BASE_URL, for example https://api.openai.com/v1}"
@@ -10,7 +10,7 @@ IMAGE="${STREAMLIT_DEMO_IMAGE:-openshell-streamlit-demo:unsafe}"
 
 cd "${DEMO_DIR}"
 podman build -t "${IMAGE}" .
-podman run --rm -p 8501:8501 \
+podman run --rm -p 127.0.0.1:8501:8501 \
   --env DEMO_MODE=unsafe \
   --env OPENAI_API_KEY \
   --env MODEL_BASE_URL \
