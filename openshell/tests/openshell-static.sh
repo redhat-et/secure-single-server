@@ -32,24 +32,29 @@ done
 [[ "${OPENSHELL_PROVER_VERSION}" == v0.1.4 ]] || fail 'prover release must match the control plane'
 [[ "${OPENSHELL_PROVER_SHA256_AMD64}" =~ ^[a-f0-9]{64}$ ]] \
   || fail 'prover checksum missing or malformed'
-python3 - "${OS_DIR}/configs/releases/v0.1.4.json" <<'PY' || fail 'pins do not match the reviewed v0.1.4 release manifest'
+python3 - "${OS_DIR}/configs/releases/v0.1.4.json" \
+  "${ODH_GATEWAY_IMAGE}" "${ODH_SUPERVISOR_IMAGE}" "${ODH_SANDBOX_IMAGE}" \
+  "${OPENSHELL_CLI_SHA256_AMD64}" "${OPENSHELL_CLI_SHA256_ARM64}" \
+  "${OPENSHELL_PROVER_SHA256_AMD64}" <<'PY' || fail 'pins do not match the reviewed v0.1.4 release manifest'
 import json
-import os
 import sys
 
 with open(sys.argv[1]) as manifest_file:
     manifest = json.load(manifest_file)
 if manifest.get("prover_architectures") != ["amd64"]:
     raise SystemExit("the reviewed prover manifest must be AMD64-only")
+# Compare the reviewed manifest against the values sourced from images.env.
+# They are passed as arguments because sourced-but-unexported variables are
+# invisible to os.environ in this subprocess.
 expected = {
-    "ODH_GATEWAY_IMAGE": manifest["images"]["gateway"],
-    "ODH_SUPERVISOR_IMAGE": manifest["images"]["supervisor"],
-    "ODH_SANDBOX_IMAGE": manifest["images"]["sandbox"],
-    "OPENSHELL_CLI_SHA256_AMD64": manifest["cli_sha256"]["amd64"],
-    "OPENSHELL_CLI_SHA256_ARM64": manifest["cli_sha256"]["arm64"],
-    "OPENSHELL_PROVER_SHA256_AMD64": manifest["prover_sha256"]["amd64"],
+    "ODH_GATEWAY_IMAGE": (manifest["images"]["gateway"], sys.argv[2]),
+    "ODH_SUPERVISOR_IMAGE": (manifest["images"]["supervisor"], sys.argv[3]),
+    "ODH_SANDBOX_IMAGE": (manifest["images"]["sandbox"], sys.argv[4]),
+    "OPENSHELL_CLI_SHA256_AMD64": (manifest["cli_sha256"]["amd64"], sys.argv[5]),
+    "OPENSHELL_CLI_SHA256_ARM64": (manifest["cli_sha256"]["arm64"], sys.argv[6]),
+    "OPENSHELL_PROVER_SHA256_AMD64": (manifest["prover_sha256"]["amd64"], sys.argv[7]),
 }
-mismatched = [name for name, value in expected.items() if os.environ.get(name) != value]
+mismatched = [name for name, (want, got) in expected.items() if got != want]
 if mismatched:
     raise SystemExit("mismatched pins: " + ", ".join(mismatched))
 PY
