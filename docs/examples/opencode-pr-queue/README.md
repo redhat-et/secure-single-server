@@ -30,6 +30,22 @@ to publish code.
 This example is for one trusted operator and a public repository. It is not
 multi-user authorization or proof that generated code is safe.
 
+Known limits found in validation:
+
+- The sandbox has no Git identity. A model that commits must set one in the
+  clone (`git config user.name`/`user.email`); otherwise the commit fails and
+  only the working tree changes.
+- `base`, `title`, `tests` and `risks` in `metadata.json` come from the model.
+  Check them against `changes.patch`; a `success` status does not prove the
+  fields are complete.
+- Multi-turn local Qwen needs the Responses history adapter; without it the
+  return turn is rejected. Use an approved cloud model for a full tool loop, or
+  follow the [history adapter](../../testing/gateway-features.md#model-switching-and-reasoning)
+  setup.
+- The OpenShell service account must be able to read the checkout. On a manual
+  or AWS host, use a service-readable path such as `/opt/secure-single-server`
+  rather than another user's home directory.
+
 ## Try it
 
 ### 1. Check prerequisites
