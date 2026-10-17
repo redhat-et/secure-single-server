@@ -7,7 +7,7 @@ comment, close an issue, or change repository settings.
 For each task:
 
 1. Read the task file and use the repository and issue or prompt it identifies.
-2. Fetch issue metadata at most once when the task is issue-based.
+2. Use the issue metadata supplied in the task file; do not fetch it again.
 3. Clone or fetch the public repository with Git over HTTPS into the task
    artifact directory's `repository/` subdirectory.
 4. Create one focused local branch and make the smallest defensible change.
@@ -28,7 +28,7 @@ For each task:
      risks, and anything the reviewer must verify manually.
    These three files must be direct children of the task artifact directory,
    not files inside the cloned repository.
-7. If cloning, fetching metadata, or completing the task fails, still write
+7. If cloning or completing the task fails, still write
    `metadata.json` and `report.md` at the artifact-directory root, mark the
    status as failed, and explain the failure. Do not create an empty success
    patch.

@@ -16,7 +16,7 @@ Usage (run as root except help):
   sss-bootc activate OPENAI_SECRET ANTHROPIC_SECRET
   sss-bootc openshell ARGS...                    CLI as openshell-svc
   sss-bootc harness template sync               Synchronize workload catalog
-  sss-bootc harness create|connect|queue|collect|run ARGS...
+  sss-bootc harness create|connect|queue|collect|watch|run ARGS...
                                                   Selected harness scripts
 Activation uses the memory quota profile. No provider credentials enter the OS image.
 EOF
@@ -110,21 +110,24 @@ EOF
       exit 0
     fi
     case "${action}" in
-      create|connect|queue|collect|run) ;;
-      *) die 'expected create, connect, queue, collect or run' ;;
+      create|connect|queue|collect|watch|run) ;;
+      *) die 'expected create, connect, queue, collect, watch or run' ;;
     esac
     if [[ "${action}" == run && "${harness}" != openclaw ]]; then
       die 'harness run supports OpenClaw only'
     fi
-    if [[ "${action}" == queue || "${action}" == collect ]] && [[ "${harness}" != opencode ]]; then
+    if [[ "${action}" == queue || "${action}" == collect || "${action}" == watch ]] &&
+       [[ "${harness}" != opencode ]]; then
       die "harness ${action} supports OpenCode only"
     fi
     shift 2
     backend="$(inference_backend)"
     case "${action}" in
-      queue|collect) script="${ROOT}/openshell/harnesses/${harness}/pr-queue/${action}.sh" ;;
+      queue|collect|watch) script="${ROOT}/openshell/harnesses/${harness}/pr-queue/${action}.sh" ;;
       *) script="${ROOT}/openshell/harnesses/${harness}/${action}.sh" ;;
     esac
+    [[ -f "${script}" && -x "${script}" ]] ||
+      die "harness ${action} script is missing or not executable: ${script}"
     if [[ "${action}" == create ]]; then
       as_openshell env OPENSHELL_BOOTC_BACKEND="${backend}" \
         "${script}" "$@"

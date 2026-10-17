@@ -25,10 +25,34 @@ for var in ODH_OPENCODE_IMAGE ODH_CODEX_IMAGE; do
 done
 [[ "${ODH_OPENCLAW_IMAGE}" =~ ^ghcr\.io/openclaw/openclaw@sha256:[a-f0-9]{64}$ ]] \
   || fail 'OpenClaw must use a valid digest-pinned upstream image'
-[[ "${OPENSHELL_CLI_VERSION}" == v0.1.3 ]] || fail 'CLI release must match the control plane'
+[[ "${OPENSHELL_CLI_VERSION}" == v0.1.4 ]] || fail 'CLI release must match the control plane'
 for digest in "${OPENSHELL_CLI_SHA256_AMD64}" "${OPENSHELL_CLI_SHA256_ARM64}"; do
   [[ "${digest}" =~ ^[a-f0-9]{64}$ ]] || fail 'CLI checksum missing or malformed'
 done
+[[ "${OPENSHELL_PROVER_VERSION}" == v0.1.4 ]] || fail 'prover release must match the control plane'
+[[ "${OPENSHELL_PROVER_SHA256_AMD64}" =~ ^[a-f0-9]{64}$ ]] \
+  || fail 'prover checksum missing or malformed'
+python3 - "${OS_DIR}/configs/releases/v0.1.4.json" <<'PY' || fail 'pins do not match the reviewed v0.1.4 release manifest'
+import json
+import os
+import sys
+
+with open(sys.argv[1]) as manifest_file:
+    manifest = json.load(manifest_file)
+if manifest.get("prover_architectures") != ["amd64"]:
+    raise SystemExit("the reviewed prover manifest must be AMD64-only")
+expected = {
+    "ODH_GATEWAY_IMAGE": manifest["images"]["gateway"],
+    "ODH_SUPERVISOR_IMAGE": manifest["images"]["supervisor"],
+    "ODH_SANDBOX_IMAGE": manifest["images"]["sandbox"],
+    "OPENSHELL_CLI_SHA256_AMD64": manifest["cli_sha256"]["amd64"],
+    "OPENSHELL_CLI_SHA256_ARM64": manifest["cli_sha256"]["arm64"],
+    "OPENSHELL_PROVER_SHA256_AMD64": manifest["prover_sha256"]["amd64"],
+}
+mismatched = [name for name, value in expected.items() if os.environ.get(name) != value]
+if mismatched:
+    raise SystemExit("mismatched pins: " + ", ".join(mismatched))
+PY
 
 # 2. All shell scripts under openshell/ pass shellcheck.
 command -v shellcheck >/dev/null 2>&1 || fail "shellcheck is required"
@@ -49,6 +73,8 @@ gt="${OS_DIR}/configs/gateway/gateway.toml.in"
 grep -q 'compute_driver *= *"podman"' "${gt}" || fail "gateway.toml not podman driver"
 grep -q '\[openshell.gateway.gateway_jwt\]' "${gt}" || fail "gateway.toml missing JWT auth block"
 grep -q '\[openshell.gateway.tls\]' "${gt}" || fail "gateway.toml missing TLS block"
+grep -q 'operator_enabled *= *false' "${gt}" \
+  || fail "gateway operator credential retrieval must remain disabled"
 grep -q 'cert_path *= *"/var/lib/openshell/tls/server/tls.crt"' "${gt}" || fail "gateway TLS cert path missing"
 grep -q 'key_path *= *"/var/lib/openshell/tls/server/tls.key"' "${gt}" || fail "gateway TLS key path missing"
 grep -q 'client_ca_path *= *"/var/lib/openshell/tls/ca.crt"' "${gt}" || fail "gateway client CA path missing"
