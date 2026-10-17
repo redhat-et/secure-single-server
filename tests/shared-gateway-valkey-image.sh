@@ -71,8 +71,8 @@ fi
   "${isolation_args[@]}" \
   --network "${network}" \
   --mount "type=volume,source=${volume},target=/data" \
-  --mount "type=bind,source=${config_dir}/valkey.conf,target=/usr/local/etc/valkey/valkey.conf,readonly,Z" \
-  --mount "type=bind,source=${secret_dir}/users.acl,target=/run/secrets/users.acl,readonly,Z" \
+  --volume "${config_dir}/valkey.conf:/usr/local/etc/valkey/valkey.conf:ro,Z" \
+  --volume "${secret_dir}/users.acl:/run/secrets/users.acl:ro,Z" \
   "${IMAGE}" valkey-server /usr/local/etc/valkey/valkey.conf >/dev/null
 
 client() {
