@@ -67,7 +67,10 @@ def service(*args, check=True, **kwargs):
 def restart():
     service("systemctl", "--user", "daemon-reload")
     service("systemctl", "--user", "restart", "praxis.service")
-    for _ in range(90):
+    # Loading a changed catalog and secrets can take minutes on a small or busy
+    # host, so allow the same window as the unit's start timeout instead of
+    # aborting a valid change after 90 seconds.
+    for _ in range(300):
         # The quadlet recreates the container during the restart, so podman can
         # briefly report that it does not exist. Treat that as "not healthy yet"
         # instead of aborting an otherwise valid provider change.
