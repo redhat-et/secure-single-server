@@ -13,6 +13,8 @@ RestartSec=30s
 TimeoutStartSec=30min
 TimeoutStopSec=30s
 UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target

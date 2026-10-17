@@ -13,6 +13,14 @@ RestartSec=30s
 TimeoutStartSec=30min
 TimeoutStopSec=30s
 UMask=0077
+# Retained deliberately. The container's user namespace is created by the
+# praxis-svc user manager, whose units are not descendants of this service, so
+# NoNewPrivileges never reaches the setuid/capability newuidmap helper. The
+# reconciler's own `runuser -u praxis-svc podman` calls only inspect and pull
+# images, and rootless keep-id containers were verified to run under
+# NoNewPrivileges with Podman 5.7.1. See docs/testing/bootc-hardening.md.
+NoNewPrivileges=true
+PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target

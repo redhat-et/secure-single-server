@@ -151,6 +151,17 @@ if rg -n '^Volume=/etc/praxis/.*:Z$' configs/common/quadlet; then
   exit 1
 fi
 
+# Container-backed tests bind-mount checkout and temporary paths, which are
+# user_home_t/user_tmp_t on an SELinux-enforcing host. Rootless Podman cannot
+# read those labels, so every read-only test mount must request a relabel
+# (:ro,z or ,readonly,Z) — the same container_file_t label the installer applies
+# to /etc/praxis files with semanage and restorecon. Without it the tests only
+# pass on the non-SELinux CI runners.
+if rg -n --pcre2 '(:ro|readonly)(?![,]?[zZ])["'\'']' tests --glob '*.py' --glob '*.sh' --glob '!tests/shared-gateway-static.sh'; then
+  printf 'test bind mount is missing an SELinux relabel option (use ,readonly,Z)\n' >&2
+  exit 1
+fi
+
 for file in configs/common/quadlet/*.container.in; do
   rg -q '^Pull=never$' "${file}"
   rg -q '^ReadOnly=true$' "${file}"

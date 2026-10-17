@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """Regression checks for local routing and harness isolation configuration."""
 import json
+import os
+import shlex
 from pathlib import Path
 import subprocess
+import tempfile
 import unittest
 
 import yaml
@@ -119,58 +122,145 @@ case "${1:-help}" in
 """ + block + """
 esac
 """
-        created = subprocess.run(['bash', '-c', script, 'admin', 'harness', 'create',
-                                  '--profile', 'dev', '--name', 'claw-dev'], text=True, capture_output=True)
-        self.assertEqual(created.returncode, 0, created.stderr)
-        self.assertIn('/fixture/openshell/harnesses/openclaw/create.sh', created.stdout)
-        self.assertIn('OPENSHELL_BOOTC_BACKEND=remote-vllm', created.stdout)
-        invalid = subprocess.run(['bash', '-c', script, 'admin', 'harness', 'create',
-                                  '--provider', 'direct'], text=True, capture_output=True)
-        # Argument rejection now belongs to the shared catalog-based creator.
-        self.assertIn('--provider', invalid.stdout)
-        synced = subprocess.run(['bash', '-c', script, 'admin', 'harness', 'template', 'sync'],
-                                text=True, capture_output=True)
-        self.assertEqual(synced.returncode,0,synced.stderr)
-        self.assertIn('/fixture/openshell/scripts/template.sh',synced.stdout)
-        typo = subprocess.run(['bash', '-c', script, 'admin', 'harness', 'template', 'delete'],
-                              text=True,capture_output=True)
-        self.assertNotEqual(typo.returncode,0)
-        launched = subprocess.run(['bash', '-c', script, 'admin', 'harness', 'run',
-                                   '--name', 'claw-dev', '--message', 'hello'], text=True, capture_output=True)
-        self.assertEqual(launched.returncode, 0, launched.stderr)
-        self.assertIn('/fixture/openshell/harnesses/openclaw/run.sh', launched.stdout)
-        self.assertNotIn('--config', launched.stdout)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for relative_path in ('openshell/harnesses/openclaw/create.sh',
+                                  'openshell/harnesses/openclaw/run.sh'):
+                script_path = root / relative_path
+                script_path.parent.mkdir(parents=True, exist_ok=True)
+                script_path.write_text('#!/usr/bin/env bash\nexit 0\n')
+                script_path.chmod(0o755)
+            fixture_script = script.replace(
+                'ROOT=/fixture', f'ROOT={shlex.quote(str(root))}')
+            created = subprocess.run(
+                ['bash', '-c', fixture_script, 'admin', 'harness', 'create',
+                 '--profile', 'dev', '--name', 'claw-dev'], text=True, capture_output=True)
+            self.assertEqual(created.returncode, 0, created.stderr)
+            self.assertIn(str(root / 'openshell/harnesses/openclaw/create.sh'),
+                          created.stdout)
+            self.assertIn('OPENSHELL_BOOTC_BACKEND=remote-vllm', created.stdout)
+            invalid = subprocess.run(
+                ['bash', '-c', fixture_script, 'admin', 'harness', 'create',
+                 '--provider', 'direct'], text=True, capture_output=True)
+            # Argument rejection now belongs to the shared catalog-based creator.
+            self.assertIn('--provider', invalid.stdout)
+            typo = subprocess.run(
+                ['bash', '-c', fixture_script, 'admin', 'harness', 'template', 'delete'],
+                text=True, capture_output=True)
+            self.assertNotEqual(typo.returncode, 0)
+            template_script = root / 'openshell/scripts/template.sh'
+            template_script.parent.mkdir(parents=True, exist_ok=True)
+            template_script.write_text('#!/usr/bin/env bash\nexit 0\n')
+            template_script.chmod(0o755)
+            synced = subprocess.run(
+                ['bash', '-c', fixture_script, 'admin', 'harness', 'template', 'sync'],
+                text=True, capture_output=True)
+            self.assertEqual(synced.returncode, 0, synced.stderr)
+            self.assertIn(str(template_script), synced.stdout)
+            launched = subprocess.run(
+                ['bash', '-c', fixture_script, 'admin', 'harness', 'run',
+                 '--name', 'claw-dev', '--message', 'hello'], text=True,
+                capture_output=True)
+            self.assertEqual(launched.returncode, 0, launched.stderr)
+            self.assertIn(str(root / 'openshell/harnesses/openclaw/run.sh'),
+                          launched.stdout)
+            self.assertNotIn('--config', launched.stdout)
 
     def test_opencode_wrapper_exposes_pr_queue_and_collection(self):
         source = (ROOT / 'bootc/scripts/admin').read_text()
         block = source[source.index('\n  harness)\n'):source.index('\n  *) die', source.index('\n  harness)\n'))]
-        script = """
+        base_script = """
 set -euo pipefail
 ROOT=/fixture
 require_root() { :; }
 selected_harness() { echo opencode; }
 inference_backend() { echo cloud; }
-as_openshell() { printf '%s\\n' "$@"; }
+as_openshell() {
+  printf '%s\\n' "$@"
+  case "$1" in
+    *watch.sh) "$@" ;;
+  esac
+}
 die() { printf '%s\\n' "$*" >&2; exit 1; }
 case "${1:-help}" in
 """ + block + """
 esac
 """
-        created = subprocess.run(['bash', '-c', script, 'admin', 'harness', 'create',
-                                  '--profile', 'pr-queue', '--name', 'opencode-pr-queue'],
-                                 text=True, capture_output=True)
-        self.assertEqual(created.returncode, 0, created.stderr)
-        self.assertIn('/fixture/openshell/harnesses/opencode/create.sh', created.stdout)
-        self.assertIn('OPENSHELL_BOOTC_BACKEND=cloud', created.stdout)
-        queued = subprocess.run(['bash', '-c', script, 'admin', 'harness', 'queue',
-                                 '--name', 'opencode-pr-queue', '--repo', 'owner/repo',
-                                 '--issue', '123'], text=True, capture_output=True)
-        self.assertEqual(queued.returncode, 0, queued.stderr)
-        self.assertIn('/fixture/openshell/harnesses/opencode/pr-queue/queue.sh', queued.stdout)
-        collected = subprocess.run(['bash', '-c', script, 'admin', 'harness', 'collect',
-                                    '--name', 'opencode-pr-queue'], text=True, capture_output=True)
-        self.assertEqual(collected.returncode, 0, collected.stderr)
-        self.assertIn('/fixture/openshell/harnesses/opencode/pr-queue/collect.sh', collected.stdout)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for relative_path in (
+                    'openshell/harnesses/opencode/create.sh',
+                    'openshell/harnesses/opencode/pr-queue/queue.sh',
+                    'openshell/harnesses/opencode/pr-queue/collect.sh',
+                    'openshell/harnesses/opencode/pr-queue/watch.sh'):
+                script_path = root / relative_path
+                script_path.parent.mkdir(parents=True, exist_ok=True)
+                script_path.write_text('#!/usr/bin/env bash\nexit 0\n')
+                script_path.chmod(0o755)
+            watch_arguments = root / 'watch-arguments'
+            watch_stub = (
+                root / 'openshell' / 'harnesses' / 'opencode' / 'pr-queue' / 'watch.sh')
+            watch_stub.write_text(
+                '#!/usr/bin/env bash\n'
+                'printf \'%s\\n\' "$@" >>"$FAKE_WATCH_ARGUMENTS"\n'
+                'exit 0\n')
+            script = base_script.replace(
+                'ROOT=/fixture', f'ROOT={shlex.quote(str(root))}')
+            created = subprocess.run(
+                ['bash', '-c', script, 'admin', 'harness', 'create',
+                 '--profile', 'pr-queue', '--name', 'opencode-pr-queue'],
+                text=True, capture_output=True)
+            self.assertEqual(created.returncode, 0, created.stderr)
+            self.assertIn(
+                str(root / 'openshell/harnesses/opencode/create.sh'), created.stdout)
+            self.assertIn('OPENSHELL_BOOTC_BACKEND=cloud', created.stdout)
+            queued = subprocess.run(
+                ['bash', '-c', script, 'admin', 'harness', 'queue',
+                 '--name', 'opencode-pr-queue', '--repo', 'owner/repo',
+                 '--issue', '123'], text=True, capture_output=True)
+            self.assertEqual(queued.returncode, 0, queued.stderr)
+            self.assertIn(
+                str(root / 'openshell/harnesses/opencode/pr-queue/queue.sh'),
+                queued.stdout)
+            collected = subprocess.run(
+                ['bash', '-c', script, 'admin', 'harness', 'collect',
+                 '--name', 'opencode-pr-queue'], text=True, capture_output=True)
+            self.assertEqual(collected.returncode, 0, collected.stderr)
+            self.assertIn(
+                str(root / 'openshell/harnesses/opencode/pr-queue/collect.sh'),
+                collected.stdout)
+            watched = subprocess.run(['bash', '-c', script, 'admin', 'harness', 'watch',
+                                      '--name', 'opencode-pr-queue', '--repo', 'owner/repo',
+                                      '--state', str(Path(directory) / 'watch-state.json')],
+                                     text=True, capture_output=True,
+                                     env={**os.environ,
+                                          'FAKE_WATCH_ARGUMENTS': str(watch_arguments)})
+            self.assertEqual(watched.returncode, 0, watched.stderr)
+            self.assertIn(
+                str(root / 'openshell/harnesses/opencode/pr-queue/watch.sh'),
+                watched.stdout)
+            recorded_arguments = watch_arguments.read_text().splitlines()
+            self.assertEqual(recorded_arguments, [
+                '--name', 'opencode-pr-queue', '--repo', 'owner/repo', '--state',
+                str(Path(directory) / 'watch-state.json')])
+
+            watch_stub.write_text('#!/usr/bin/env bash\nexit 42\n')
+            failed_watch = subprocess.run(
+                ['bash', '-c', script, 'admin', 'harness', 'watch',
+                 '--name', 'opencode-pr-queue', '--repo', 'owner/repo',
+                 '--state', str(Path(directory) / 'watch-state.json')],
+                text=True, capture_output=True)
+            self.assertEqual(failed_watch.returncode, 42, failed_watch.stderr)
+
+            missing_root = root / 'missing-harness'
+            missing_script = base_script.replace(
+                'ROOT=/fixture', f'ROOT={shlex.quote(str(missing_root))}')
+            missing = subprocess.run(
+                ['bash', '-c', missing_script, 'admin', 'harness', 'watch',
+                 '--name', 'opencode-pr-queue'], text=True, capture_output=True)
+            self.assertNotEqual(missing.returncode, 0, missing.stdout)
+            self.assertIn(
+                'harness watch script is missing or not executable', missing.stderr)
 
     def test_inference_checks_survive_python_optimization(self):
         source = (ROOT / 'bootc/scripts/inference-check').read_text()
