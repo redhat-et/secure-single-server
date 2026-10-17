@@ -187,14 +187,18 @@ if body is None:
 labels = issue.get("labels")
 html_url = issue.get("html_url")
 repository_url = issue.get("repository_url")
-expected_repository_url = f"https://api.github.com/repos/{requested_repository}"
-expected_html_url = f"https://github.com/{requested_repository}/issues/{requested_issue}"
+# GitHub resolves OWNER/REPO case-insensitively but reports the canonical
+# spelling, so compare the reported URLs without regard to case.
+canonical_repository = requested_repository.lower()
+expected_repository_url = f"https://api.github.com/repos/{canonical_repository}"
+expected_html_url = f"https://github.com/{canonical_repository}/issues/{requested_issue}"
 if (not isinstance(number, int) or isinstance(number, bool) or
         not requested_issue.isdigit() or number != int(requested_issue) or state != "open" or
         not isinstance(title, str) or not title or
         not isinstance(body, str) or len(body) > 65536 or
-        repository_url != expected_repository_url or
-        html_url != expected_html_url or
+        not isinstance(repository_url, str) or
+        repository_url.lower() != expected_repository_url or
+        not isinstance(html_url, str) or html_url.lower() != expected_html_url or
         not isinstance(labels, list) or
         any(not isinstance(label, dict) or not isinstance(label.get("name"), str)
             for label in labels)):

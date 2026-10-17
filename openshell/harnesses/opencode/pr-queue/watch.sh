@@ -178,15 +178,21 @@ for issue in issues:
     html_url = issue.get("html_url")
     labels_value = issue.get("labels")
     pull_request = issue.get("pull_request")
+    # GitHub resolves OWNER/REPO case-insensitively but reports the canonical
+    # spelling, so compare the reported URLs without regard to case.
+    canonical_repository = repository.lower()
+    expected_repository_url = f"https://api.github.com/repos/{canonical_repository}"
+    expected_html_url = (
+        f"https://github.com/{canonical_repository}/pull/{number}"
+        if isinstance(pull_request, dict) else
+        f"https://github.com/{canonical_repository}/issues/{number}"
+    )
     if (state not in ("open", "closed") or
             not isinstance(number, int) or isinstance(number, bool) or number <= 0 or
             not isinstance(issue_id, int) or isinstance(issue_id, bool) or issue_id <= 0 or
-            repository_url != f"https://api.github.com/repos/{repository}" or
-            html_url != (
-                f"https://github.com/{repository}/pull/{number}"
-                if isinstance(pull_request, dict) else
-                f"https://github.com/{repository}/issues/{number}"
-            ) or
+            not isinstance(repository_url, str) or
+            repository_url.lower() != expected_repository_url or
+            not isinstance(html_url, str) or html_url.lower() != expected_html_url or
             not isinstance(labels_value, list) or
             any(not isinstance(item, dict) or not isinstance(item.get("name"), str)
                 for item in labels_value) or
@@ -328,7 +334,9 @@ try:
         }
 
     if (not isinstance(state, dict) or state.get("version") not in (1, 2) or
-            state.get("repository") != repository or state.get("label") != label):
+            not isinstance(state.get("repository"), str) or
+            state["repository"].lower() != repository.lower() or
+            state.get("label") != label):
         raise SystemExit(f"watch state does not match this repository and label: {state_path}")
     if state.get("version") == 1 and "in_progress_issues" in state:
         raise SystemExit(f"invalid legacy in_progress_issues value in watch state: {state_path}")
@@ -549,32 +557,42 @@ PY
 }
 
 process_issue() {  # <issue-number>
-  local issue="$1" status_result reservation lease_token lease_expiry queue_deadline completion_file completion_token completion_result
+  local issue="$1" status_result reservation lease_token lease_expiry queue_deadline completion_file completion_token completion_result marker_present
   [[ "${issue}" =~ ^[1-9][0-9]{0,8}$ ]] || die "invalid GitHub issue number: ${issue}"
 
   if ! status_result="$(state_operation status "${issue}" 0 "")"; then
     die "could not inspect watcher state for issue #${issue}"
   fi
+  completion_file="${STATE}.issue-${issue}.complete"
+  completion_token=""
+  marker_present=0
+  if ((!DRY_RUN)) && [[ -e "${completion_file}" ]]; then
+    [[ -f "${completion_file}" && ! -L "${completion_file}" ]] \
+      || die "invalid completion marker for issue #${issue}: ${completion_file}"
+    marker_present=1
+    # The watcher creates this marker empty before the queue turn starts, and the
+    # turn writes its lease token only after success. An empty or unreadable
+    # marker therefore means the turn is still pending, while a readable token
+    # proves that the turn succeeded.
+    completion_token="$(
+      python3 "${H_DIR}/completion-marker.py" read "${completion_file}" 2>/dev/null || true)"
+  fi
   if [[ "${status_result}" == attempted ]]; then
-    if ((!DRY_RUN)) && [[ -e "${STATE}.issue-${issue}.complete" ]]; then
-      python3 "${H_DIR}/completion-marker.py" remove \
-        "${STATE}.issue-${issue}.complete"
+    if ((marker_present)); then
+      python3 "${H_DIR}/completion-marker.py" remove "${completion_file}" \
+        || die "could not remove the stale completion marker for issue #${issue}: ${completion_file}"
     fi
     note "Issue #${issue} was already attempted; skipping"
     return 0
   fi
   if [[ "${status_result}" == in-progress ]]; then
-    if ((!DRY_RUN)) && [[ -e "${STATE}.issue-${issue}.complete" ]]; then
-      completion_file="${STATE}.issue-${issue}.complete"
-      [[ -f "${completion_file}" && ! -L "${completion_file}" ]] \
-        || die "invalid completion marker for issue #${issue}: ${completion_file}"
-      completion_token="$(
-        python3 "${H_DIR}/completion-marker.py" read "${completion_file}")"
+    if [[ -n "${completion_token}" ]]; then
       if ! completion_result="$(state_operation complete "${issue}" 0 "${completion_token}")"; then
         die "could not reconcile completion marker for issue #${issue}: ${completion_file}"
       fi
       if [[ "${completion_result}" == completed ]]; then
-        python3 "${H_DIR}/completion-marker.py" remove "${completion_file}"
+        python3 "${H_DIR}/completion-marker.py" remove "${completion_file}" \
+          || die "could not remove the reconciled completion marker for issue #${issue}: ${completion_file}"
         note "Recovered completion state for issue #${issue}"
         return 0
       fi
@@ -604,20 +622,27 @@ process_issue() {  # <issue-number>
     die "preflight failed for issue #${issue}"
   fi
 
-  completion_file="${STATE}.issue-${issue}.complete"
-  python3 "${H_DIR}/completion-marker.py" validate "${completion_file}"
-  if [[ -e "${completion_file}" ]]; then
-    completion_token="$(
-      python3 "${H_DIR}/completion-marker.py" read "${completion_file}")"
+  python3 "${H_DIR}/completion-marker.py" validate "${completion_file}" \
+    || die "invalid completion marker for issue #${issue}: ${completion_file}"
+  if ((marker_present)) && [[ -n "${completion_token}" ]]; then
     if ! completion_result="$(state_operation complete "${issue}" 0 "${completion_token}")"; then
       die "could not reconcile completion marker for issue #${issue}: ${completion_file}"
     fi
     if [[ "${completion_result}" == completed ]]; then
-      python3 "${H_DIR}/completion-marker.py" remove "${completion_file}"
+      python3 "${H_DIR}/completion-marker.py" remove "${completion_file}" \
+        || die "could not remove the reconciled completion marker for issue #${issue}: ${completion_file}"
       note "Recovered completion state for issue #${issue}"
       return 0
     fi
-    die "completion marker for issue #${issue} no longer matches its lease: ${completion_file}"
+  fi
+  if ((marker_present)); then
+    # No live lease holds this marker, so the turn was interrupted or its lease
+    # expired. Discard the stale marker so the issue is not blocked on every
+    # later poll; the turn is queued again below.
+    python3 "${H_DIR}/completion-marker.py" remove "${completion_file}" \
+      || die "could not discard the stale completion marker for issue #${issue}: ${completion_file}"
+    note "Discarded a stale completion marker for issue #${issue}"
+    completion_token=""
   fi
 
   reservation="$(state_operation reserve "${issue}" "$((TIMEOUT + 600))" "")" \
@@ -637,7 +662,7 @@ process_issue() {  # <issue-number>
   [[ "${lease_token}" =~ ^[a-f0-9]{32}$ && "${lease_expiry}" =~ ^[1-9][0-9]{9,10}$ ]] \
     || die "invalid watcher reservation for issue #${issue}"
   queue_deadline=$((lease_expiry - 300))
-  ((ISSUES_QUEUED_THIS_POLL++))
+  ISSUES_QUEUED_THIS_POLL=$((ISSUES_QUEUED_THIS_POLL + 1))
 
   local -a queue_arguments=(
     --name "${NAME}"
@@ -651,7 +676,8 @@ process_issue() {  # <issue-number>
     queue_arguments+=(--message "${MESSAGE}")
   fi
   [[ ! -e "${completion_file}" ]] || die "completion marker already exists for issue #${issue}"
-  python3 "${H_DIR}/completion-marker.py" create "${completion_file}"
+  python3 "${H_DIR}/completion-marker.py" create "${completion_file}" \
+    || die "could not create the completion marker for issue #${issue}: ${completion_file}"
 
   if ! run_queue_turn "${queue_deadline}" "${H_DIR}/queue.sh" "${queue_arguments[@]}"; then
     note "OpenCode queue turn failed for issue #${issue}"
@@ -680,7 +706,8 @@ process_issue() {  # <issue-number>
     die "issue #${issue} lease expired while processing; completion marker retained: ${completion_file}"
   fi
   if [[ "${completion_result}" == completed ]]; then
-    python3 "${H_DIR}/completion-marker.py" remove "${completion_file}"
+    python3 "${H_DIR}/completion-marker.py" remove "${completion_file}" \
+      || die "could not remove the completion marker for issue #${issue}: ${completion_file}"
   elif [[ "${completion_result}" == already-attempted ]]; then
     die "issue #${issue} is already marked attempted; completion marker retained: ${completion_file}"
   else

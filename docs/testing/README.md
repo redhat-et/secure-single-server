@@ -111,8 +111,10 @@ A skipped job provides no runtime evidence. For combined Praxis inference, use
 [the optional OpenShell smoke step](rhel-smoke.md#optional-openshell).
 
 Follow the [bootc guide](../../bootc/README.md) for published-image deployment
-and booted-host checks. Bootc and OpenShell lifecycle tests do not qualify all
-provider/harness combinations.
+and booted-host checks. [Bootc service hardening](bootc-hardening.md) explains
+the reconciler sandbox flags, why `NoNewPrivileges` does not break rootless
+Podman, and what still needs confirmation on a booted host. Bootc and OpenShell
+lifecycle tests do not qualify all provider/harness combinations.
 
 ## Next step
 

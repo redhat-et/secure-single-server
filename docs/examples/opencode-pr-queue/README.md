@@ -174,6 +174,10 @@ state=/var/tmp/opencode-pr-queue-owner-repo-bot-state.json
 Run one watcher when possible. If duplicate watchers start accidentally, they
 must share this state file so issue leases prevent duplicate active turns.
 
+`--repo` is compared without regard to case, so an operator may pass any
+spelling of `OWNER/REPOSITORY` while GitHub still reports its canonical
+`owner/repository` casing in the API responses.
+
 Preview the current intake without spending model tokens:
 
 ```console
@@ -243,11 +247,16 @@ do not delete or replace it while a watcher is running.
 
 OpenCode must produce non-empty `changes.patch`, `report.md`, and successful
 metadata before the queue writes a per-issue completion token through a
-no-follow, owner-and-mode-checked helper. The watcher accepts that token,
-records the issue as attempted, and removes the marker. If the watcher cannot
-update state after OpenCode succeeds, it stops with both the lease and
-completion marker retained; a restart reconciles the marker while the lease is
-still valid. Inspect the artifacts before manually repairing state.
+no-follow, owner-and-mode-checked helper. The watcher creates that marker empty
+immediately after reserving the issue, so an empty marker means the turn is
+still pending: a duplicate watcher that sees one skips the issue instead of
+stopping. Once the queue writes the token the watcher records the issue as
+attempted and removes the marker. If the watcher cannot update state after
+OpenCode succeeds, it stops with both the lease and completion marker retained;
+a restart reconciles the marker while the lease is still valid. If the lease
+expires first, the next poll discards the stale marker and queues the issue
+again instead of blocking it permanently. Inspect the artifacts before manually
+repairing state.
 
 The watcher reads GitHub pages of 100 matching issues, rejects duplicate issue
 IDs within one poll, and follows page numbers through the `--max-pages` limit.

@@ -49,7 +49,8 @@ class PrQueueTests(unittest.TestCase):
             "set -euo pipefail\n"
             "printf '%s\\n' \"$@\" >>\"$FAKE_CURL_ARGUMENTS\"\n"
             "emit_json() { cat; printf '\\nHTTP_STATUS=200\\nCONTENT_TYPE=application/json\\n'; }\n"
-            "[[ \" $* \" == *' https://api.github.com/repos/owner/repo/issues '* ]] || exit 2\n"
+            "lowercase_arguments=\"${*,,}\"\n"
+            "[[ \" $lowercase_arguments \" == *' https://api.github.com/repos/owner/repo/issues '* ]] || exit 2\n"
             "query=(); page=''\n"
             "while (($#)); do\n"
             "  case \"$1\" in\n"
@@ -716,6 +717,90 @@ esac
             state = json.loads(artifacts["state"].read_text())
             self.assertEqual(state["attempted_issues"], [123])
             self.assertEqual(state["in_progress_issues"], {})
+
+    def test_watch_skips_an_in_progress_issue_with_a_pending_marker(self):
+        with_directory, run, artifacts = self.run_watch_with_fake_dependencies()
+        with with_directory:
+            lease_token = "c" * 32
+            artifacts["state"].write_text(json.dumps({
+                "version": 2,
+                "repository": "owner/repo",
+                "label": "bot",
+                "attempted_issues": [],
+                "in_progress_issues": {
+                    "123": {
+                        "lease_owner": lease_token,
+                        "lease_expires_at": time.time() + 60,
+                    }
+                },
+            }))
+            artifacts["state"].chmod(0o600)
+            completion_marker = Path(f"{artifacts['state']}.issue-123.complete")
+            completion_marker.touch()
+            completion_marker.chmod(0o600)
+            result = run([])
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("Issue #123 is being processed by another watcher", result.stdout)
+            self.assertTrue(completion_marker.exists())
+            self.assertFalse(artifacts["queue_calls"].exists())
+            state = json.loads(artifacts["state"].read_text())
+            self.assertEqual(state["attempted_issues"], [])
+            self.assertIn("123", state["in_progress_issues"])
+
+    def test_watch_discards_a_stale_empty_marker(self):
+        with_directory, run, artifacts = self.run_watch_with_fake_dependencies()
+        with with_directory:
+            artifacts["state"].write_text(json.dumps({
+                "version": 2,
+                "repository": "owner/repo",
+                "label": "bot",
+                "attempted_issues": [],
+                "in_progress_issues": {},
+            }))
+            artifacts["state"].chmod(0o600)
+            completion_marker = Path(f"{artifacts['state']}.issue-123.complete")
+            completion_marker.touch()
+            completion_marker.chmod(0o600)
+            result = run([])
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn(
+                "Discarded a stale completion marker for issue #123", result.stdout)
+            self.assertIn("Completed PR-candidate turn for issue #123", result.stdout)
+            self.assertFalse(completion_marker.exists())
+
+    def test_watch_discards_a_stale_completion_marker(self):
+        with_directory, run, artifacts = self.run_watch_with_fake_dependencies()
+        with with_directory:
+            artifacts["state"].write_text(json.dumps({
+                "version": 2,
+                "repository": "owner/repo",
+                "label": "bot",
+                "attempted_issues": [],
+                "in_progress_issues": {
+                    "123": {
+                        "lease_owner": "d" * 32,
+                        "lease_expires_at": time.time() - 1,
+                    }
+                },
+            }))
+            artifacts["state"].chmod(0o600)
+            completion_marker = Path(f"{artifacts['state']}.issue-123.complete")
+            completion_marker.write_text("d" * 32 + "\n")
+            completion_marker.chmod(0o600)
+            result = run([])
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn(
+                "Discarded a stale completion marker for issue #123", result.stdout)
+            self.assertIn("Completed PR-candidate turn for issue #123", result.stdout)
+            self.assertFalse(completion_marker.exists())
+
+    def test_watch_accepts_a_non_canonical_repository_spelling(self):
+        with_directory, run, artifacts = self.run_watch_with_fake_dependencies()
+        with with_directory:
+            result = run(["--repo", "OWNER/REPO"])
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("Completed PR-candidate turn for issue #123", result.stdout)
+            self.assertEqual(artifacts["queue_calls"].read_text().count("--issue"), 1)
 
     def test_watch_rejects_a_symlinked_completion_marker(self):
         with_directory, run, artifacts = self.run_watch_with_fake_dependencies()
