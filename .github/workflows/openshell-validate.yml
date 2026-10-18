@@ -20,7 +20,7 @@ jobs:
     name: OpenShell static (RHEL 9 / UBI9)
     runs-on: ubuntu-24.04
     container:
-      image: registry.access.redhat.com/ubi9/ubi:latest
+      image: registry.access.redhat.com/ubi9/ubi@sha256:16e9e43d99e181463513cc84a514859b1abb9460f1c4d9e208da4b4e51cd5cc3
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4

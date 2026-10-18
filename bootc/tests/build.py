@@ -169,6 +169,8 @@ with tarfile.open(sys.argv[sys.argv.index('-o') + 1], 'w:gz') as archive:
                 self.assertIn(expected_digest, source)
                 self.assertIn('sha256sum -c -', source)
                 self.assertNotIn('epel-release-latest-9', source)
+                if relative == 'scripts/vllm/prepare-gpu':
+                    self.assertIn('[[ -d "/lib/modules/$(uname -r)/build" ]]', source)
 
     def test_rejects_ambiguous_vllm_target(self):
         result = self.run_build('vllm', 'localhost/vllm-test')

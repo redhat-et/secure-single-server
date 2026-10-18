@@ -7,10 +7,13 @@ source "${H_DIR}/../../scripts/harness-lib.sh"
 NAME="codex-dev"
 if [[ $# -gt 0 ]]; then
   if [[ "$1" == "--name" ]]; then
-    [[ $# -ge 2 ]] || die 'usage: connect.sh [--name NAME] [COMMAND...]'
+    [[ $# -ge 2 ]] || die 'usage: connect.sh [--name NAME] [--] [COMMAND...]'
     NAME="$2"
     shift 2
   fi
+fi
+if [[ "${1:-}" == "--" ]]; then
+  shift
 fi
 if [[ $# -eq 0 ]]; then
   harness_connect_tty "${NAME}" codex
