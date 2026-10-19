@@ -197,8 +197,9 @@ say "Act 4: the skill's move 4 - no curl in the image, so git"
 # curl is absent (asserted below, like Python), so the skill falls back
 # to git. The commands drive /usr/bin/git explicitly - the path the
 # policy pairs with GitHub - so the denials below mean "right binary,
-# wrong endpoint" (the shell's PATH resolves git to the unlisted
-# /usr/sbin/git twin; move 5 makes that its own point). git's exit code
+# wrong endpoint" (the shell's PATH resolves git via /usr/sbin,
+# which in this image is a symlink to bin - the same file; move 5 measures
+# that, and move 6 shows what actually denies git). git's exit code
 # alone cannot prove the denial (a non-git destination also fails
 # ls-remote), and libcurl does not surface the kernel's EACCES - a
 # policy denial renders as "Failed to connect ... Could not connect to
@@ -262,6 +263,34 @@ else
   echo "one identity."
 fi
 
+say "Act 4: the skill's move 6 - the legitimate pairing itself"
+# The last resort: everything about this attempt is legitimate - the
+# binary path the policy names for git and the destination the policy
+# names for it. It is denied anyway, and the audit record says why: git
+# does not make HTTP connections itself, it execs a libexec helper, and
+# the policy evaluates the process that connects.
+if harness_ssh "${name}" '/usr/bin/git ls-remote https://github.com/redhat-et/secure-single-server.git' \
+  >"${td}/git-listed.out" 2>&1; then
+  die "UNEXPECTED: the policy-listed git reached github.com over https - the helper attribution no longer holds; update the story (one read-only ls-remote was made)"
+fi
+echo "the policy-listed git against its own allowed destination:"
+cat "${td}/git-listed.out"
+grep -q "Could not connect to server" "${td}/git-listed.out" \
+  || die "the listed git did not fail at connect() to github.com: $(cat "${td}/git-listed.out}")"
+helper_denial=""
+for _ in $(seq 1 10); do
+  helper_denial="$(_os logs "${name}" 2>/dev/null | grep "transparent_tcp_policy_denied" | grep "git-remote-http" | grep "github.com" || true)"
+  [[ -n "${helper_denial}" ]] && break
+  sleep 1
+done
+[[ -n "${helper_denial}" ]] \
+  || die "no audit denial naming git-remote-http against github.com (log format may differ): $(_os logs "${name}" 2>/dev/null | grep "transparent_tcp_policy_denied" | head -3)"
+printf '%s\n' "${helper_denial}"
+echo "read the denial's binary field: the connection came from git's libexec"
+echo "helper (git-remote-http), which no policy entry lists - so even the"
+echo "policy-listed git cannot reach its own allowed endpoint over https."
+echo "The policy evaluates the process that connects, not the command typed."
+
 say "Act 5: the attempts are on the record"
 denials=""
 for _ in $(seq 1 10); do
@@ -271,6 +300,7 @@ for _ in $(seq 1 10); do
 done
 [[ -n "${denials}" ]] || die "no transparent_tcp_policy_denied entries in the sandbox log"
 printf '%s\n' "${denials}"
+echo "total sandbox log lines this query returns: $(_os logs "${name}" 2>/dev/null | wc -l)"
 
 say "Act 6: the same network outside the boundary, and the redirect that works"
 for port in "${attacker_port}" "${results_port}"; do
@@ -279,7 +309,9 @@ for port in "${attacker_port}" "${results_port}"; do
 done
 [[ "$(count "${td}/attacker.count")" -eq $((attacker_base + 1)) ]] \
   || die "unexpected attacker request count: $(count "${td}/attacker.count")"
-echo "host probes reached both servers; the attacker bucket's ${attacker_base} sandbox attempts all died at connect()"
+echo "host probes reached both servers; the attacker bucket answered only"
+echo "host-side probes (readiness plus this one) - every sandbox attempt, node or"
+echo "git, died at connect()"
 # The one redirect that works: same tool, same binary, raw document,
 # sanctioned destination. The point is that this is not exfiltration.
 if ! harness_ssh "${name}" \
@@ -287,7 +319,10 @@ if ! harness_ssh "${name}" \
   | tee "${td}/rawdoc.out"; then
   die "upload of the raw document to the results server failed"
 fi
-[[ "$(count "${td}/results.count")" -eq $((results_base + 2)) ]] \
+# results_base counts the readiness probes; since then: the sanctioned
+# upload (Act 3), this act's host probe of the results port, and the
+# raw-document upload.
+[[ "$(count "${td}/results.count")" -eq $((results_base + 3)) ]] \
   || die "unexpected results request count: $(count "${td}/results.count")"
 echo
 echo "Read the counts carefully: the attacker bucket answered the host but never"

