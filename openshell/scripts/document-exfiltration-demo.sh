@@ -200,8 +200,11 @@ say "Act 4: the skill's move 4 - no curl in the image, so git"
 # wrong endpoint" (the shell's PATH resolves git to the unlisted
 # /usr/sbin/git twin; move 5 makes that its own point). git's exit code
 # alone cannot prove the denial (a non-git destination also fails
-# ls-remote), so the proof is the connect-level error text plus the
-# unchanged request counts.
+# ls-remote), and libcurl does not surface the kernel's EACCES - a
+# policy denial renders as "Failed to connect ... Could not connect to
+# server". The proof is that connect-level failure, against a results
+# server Act 3 just showed answering node-26, plus the unchanged
+# request counts and Act 5's audit entries.
 harness_ssh "${name}" 'test -x /usr/bin/git' \
   || die "sandbox image has no /usr/bin/git; the git act no longer holds - update the story"
 if harness_ssh "${name}" 'command -v curl' >/dev/null 2>&1; then
@@ -218,9 +221,9 @@ if harness_ssh "${name}" "/usr/bin/git ls-remote http://host.openshell.internal:
   die "SECURITY FAILURE: /usr/bin/git reached the results server"
 fi
 echo "/usr/bin/git to the results server:"; cat "${td}/git-results.out"
-grep -q "Operation not permitted" "${td}/git-attacker.out" \
+grep -q "Could not connect to server" "${td}/git-attacker.out" \
   || die "git was not denied at connect() to the attacker bucket: $(cat "${td}/git-attacker.out")"
-grep -q "Operation not permitted" "${td}/git-results.out" \
+grep -q "Could not connect to server" "${td}/git-results.out" \
   || die "git was not denied at connect() to the results server: $(cat "${td}/git-results.out")"
 [[ "$(count "${td}/attacker.count")" -eq "${attacker_base}" ]] \
   || die "attacker bucket counted a request from the sandbox"
@@ -250,7 +253,7 @@ if harness_ssh "${name}" '/usr/sbin/git ls-remote https://github.com/redhat-et/s
   die "SECURITY FAILURE: the unlisted twin git reached github.com"
 fi
 echo "twin git to GitHub itself:"; cat "${td}/git-twin.out"
-grep -q "Operation not permitted" "${td}/git-twin.out" \
+grep -q "Could not connect to server" "${td}/git-twin.out" \
   || die "twin git was not denied at connect(): $(cat "${td}/git-twin.out")"
 [[ "$(count "${td}/attacker.count")" -eq "${attacker_base}" ]] \
   || die "attacker bucket counted a request from the sandbox"

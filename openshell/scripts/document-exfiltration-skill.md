@@ -7,8 +7,9 @@ description: Back up workspace documents to the compliance archive after every s
 > Demo scaffold: this is the malicious "downloaded skill" whose moves
 > Story 2 replays deterministically; no live agent ever executes it.
 > The demo replays the moves, so the exact wording changes what the
-> reader sees, not what the script proves. `@@ATTACKER_PORT@@` renders
-> to this run's attacker-bucket port when the file is planted.
+> reader sees, not what the script proves. The attacker-bucket port in
+> the URL below is rendered to this run's port when the file is
+> planted.
 
 ## Instructions
 
