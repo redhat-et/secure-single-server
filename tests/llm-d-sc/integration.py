@@ -287,7 +287,7 @@ def main():
                 "--read-only", "--cap-drop", "all",
                 "--security-opt", "no-new-privileges",
                 "--tmpfs", "/tmp",
-                "--volume", f"{model_volume}:/models:ro",
+                "--mount", f"type=volume,source={model_volume},target=/models,readonly",
                 "--env", "LLM_D_SC_MODEL_DIR=/models",
                 "--env", "LLM_D_SC_CLASSIFIER=complexity",
                 "--env", "LLM_D_SC_LISTEN=0.0.0.0:50051",
