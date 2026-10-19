@@ -324,7 +324,7 @@ def main():
             result["status"] = "passed"
             print(json.dumps(result, indent=2))
             return 0
-        except BaseException as error:
+        except Exception as error:
             result["status"] = "failed"
             result["error"] = str(error)
             diagnostics(praxis, classifier, cpu_backend, gpu_backend)
