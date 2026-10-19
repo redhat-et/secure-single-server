@@ -130,6 +130,8 @@ checkout when trying newer examples.
   boundary and assumptions behind the current single-operator deployment.
 - [Praxis integration](docs/quickstarts/openshell-praxis/README.md): model
   routing, quota semantics, and the experimental harness paths.
+- [llm-d-sc semantic routing](docs/quickstarts/llm-d-sc/README.md):
+  experimental content-aware CPU/GPU routing without OpenShift or Compose.
 - [Private vLLM inference](bootc/VLLM.md): the separate CPU or GPU server used
   by the strongest validated local-model path.
 - [Published bootc images](bootc/README.md): available OpenCode and OpenClaw

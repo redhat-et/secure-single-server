@@ -1,0 +1,68 @@
+# Experimental semantic-routing profile for the single-server harness.
+# The upstream filter-enabled Praxis image is temporary; see issue #74.
+
+insecure_options:
+  # The classifier and OpenAI-compatible backends live on a private Podman
+  # network. Keep this deployment isolated and review the SSRF tradeoff before
+  # exposing the listener beyond host loopback.
+  allow_private_upstreams: true
+
+admin:
+  address: "127.0.0.1:9901"
+
+telemetry:
+  sampling_rate: 1.0
+
+listeners:
+  - name: ai-gateway
+    address: "0.0.0.0:8080"
+    filter_chains:
+      - inference-routing
+
+filter_chains:
+  - name: inference-routing
+    filters:
+      - filter: request_id
+      - filter: access_log
+      - filter: static_response
+        conditions:
+          - when:
+              path: "/v1/models"
+              methods: ["GET"]
+        status: 200
+        headers:
+          - name: Content-Type
+            value: application/json
+        body: >-
+          {"object":"list","data":[{"id":"Semantic-Qwen","object":"model","created":0,"owned_by":"praxis"}]}
+
+      # llm_d_sc selects the cluster. Do not add the generic router filter to
+      # this chain: two cluster selectors are a Praxis configuration error.
+      - filter: llm_d_sc
+        endpoint: "llm-d-sc:50051"
+        default_cluster: vllm-cpu
+        routes:
+          - label: SIMPLE
+            cluster: vllm-cpu
+          - label: MEDIUM
+            cluster: vllm-cpu
+          - label: COMPLEX
+            cluster: vllm-gpu
+          - label: REASONING
+            cluster: vllm-gpu
+        timeout_ms: 500
+        connect_timeout_ms: 1000
+        min_score: 0.0
+        max_prompt_chars: 4096
+        max_body_bytes: 1048576
+        on_unavailable: default_cluster
+        on_resource_exhausted: default_cluster
+        status_on_reject: 503
+        emit_headers: true
+
+      - filter: load_balancer
+        clusters:
+          - name: vllm-cpu
+            endpoints: ["vllm-cpu:8000"]
+          - name: vllm-gpu
+            endpoints: ["vllm-gpu:8000"]

@@ -39,6 +39,7 @@ repository; the guides below are separated by the question they answer.
 | Deploy or evaluate OpenShell quickly | [Single-server bootc quickstart](quickstarts/bootc/README.md) |
 | Inspect the bootc image or make a model call with Podman | [Podman quickstart](quickstarts/podman/README.md) |
 | Combine OpenShell with Praxis | [OpenShell + Praxis guide](quickstarts/openshell-praxis/README.md) |
+| Try content-aware CPU/GPU routing | [llm-d-sc quickstart](quickstarts/llm-d-sc/README.md) |
 | Serve users from accounts on one RHEL host | [All-in-one gateway](quickstarts/all-in-one/README.md) |
 | Connect harnesses on remote client machines | [Remote HTTPS/JWT gateway](quickstarts/remote-gateway/README.md) |
 | Try a post-deployment workflow | [Example scenarios](examples/README.md) |
@@ -55,6 +56,7 @@ repository; the guides below are separated by the question they answer.
 | OpenShell gateway | Policy-controlled execution boundary and sandbox lifecycle for every harness | [OpenShell docs](../openshell/docs/README.md), [threat model](../openshell/docs/threat-model.md) |
 | Harness sandboxes | Coding agents packaged as digest-pinned images with four profiles: [OpenCode](../openshell/harnesses/opencode/README.md), [OpenClaw](../openshell/harnesses/openclaw/README.md) | [Single-server guide](quickstarts/openshell-single-server/README.md) |
 | Praxis | Provider credential custody, model routing, and shared token quotas | [OpenShell + Praxis guide](quickstarts/openshell-praxis/README.md), [token quotas](quickstarts/common/token-quotas.md) |
+| llm-d-sc | Experimental semantic prompt classification for CPU/GPU routing | [llm-d-sc quickstart](quickstarts/llm-d-sc/README.md) |
 | vLLM | Private local model inference on a separate CPU or GPU server | [Private vLLM workflow](quickstarts/common/vllm.md) |
 | Valkey | Durable quota ledger for the managed gateway | [All-in-one Valkey profile](quickstarts/all-in-one/valkey.md) |
 | bootc images | Repeatable RHEL 9 OS deployment carrying the selected harness | [bootc images](../bootc/README.md) |
@@ -84,6 +86,8 @@ harness README lists its profiles and entry points.
   and [sandbox overview](https://github.com/NVIDIA/OpenShell/blob/v0.1.4/docs/how-it-works/sandboxes/overview.mdx)
 - [Praxis framework](https://github.com/praxis/praxis)
 - [Praxis experimental gateway](https://github.com/praxis-proxy/experimental)
+- [llm-d-sc semantic classifier](https://github.com/llm-d-incubation/llm-d-semantic-classifier)
+  and [Praxis filter](https://github.com/cnuland/llm-d-sc-praxis-filter)
 - [Red Hat bootc](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/index)
 - [vLLM documentation](https://docs.vllm.ai/en/latest/) and
   [CPU installation](https://docs.vllm.ai/en/v0.19.0/getting_started/installation/cpu/)
