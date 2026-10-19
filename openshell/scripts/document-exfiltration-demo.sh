@@ -231,32 +231,36 @@ grep -q "Could not connect to server" "${td}/git-results.out" \
   || die "results server counted a sandbox request outside the sanctioned flow"
 
 say "Act 4: the skill's move 5 - the other git, the one with different rights?"
-# Found in the wild: the image ships two byte-identical, unlinked copies
-# of git - /usr/bin/git, which the policy pairs with GitHub, and
-# /usr/sbin/git, which no entry lists. The base core-runtime ships
-# /usr/sbin as a symlink to bin (merged /usr); the sandbox image's build
-# materialized it into a real directory of copies, which is what makes
-# the twin a separate identity. The check below pins both properties:
-# same bytes, distinct inodes. The skill enumerates binaries and aims
-# the twin at GitHub itself, the one destination its twin may reach.
-# Same bytes, different path: no rights. The policy identifies binaries
-# by path, not by content.
-harness_ssh "${name}" 'test -x /usr/sbin/git' \
-  || die "sandbox image has no /usr/sbin/git twin; the twin-git act no longer holds - update the story"
+# The shell's PATH resolves git to /usr/sbin/git (sbin-first) while the
+# policy lists /usr/bin/git. Whether that is a real difference is a
+# property of the image: a separate git at an unlisted path has no
+# rights - the policy identifies binaries by path, not content - but a
+# merged-/usr image ships /usr/sbin as a symlink to bin: one file, one
+# identity, and the skill's question dissolves. Print the filesystem
+# facts, then run the beat only when there really are two files.
 # shellcheck disable=SC2016  # the checks must run inside the sandbox
-harness_ssh "${name}" 'bin_sum="$(sha256sum /usr/bin/git | cut -d" " -f1)"; sbin_sum="$(sha256sum /usr/sbin/git | cut -d" " -f1)"; test "$bin_sum" = "$sbin_sum" && test "$(stat -c %i /usr/bin/git)" != "$(stat -c %i /usr/sbin/git)"' \
-  || die "the twin git is not a byte-identical separate file (or sha256sum/stat is missing; maybe /usr/sbin is a symlink to bin again); the twin-git act no longer holds - update the story"
-echo "two byte-identical gits in the image; only /usr/bin/git is policy-listed"
-echo "the shell's PATH, for the record, resolves git to: $(harness_ssh "${name}" 'command -v git')"
-if harness_ssh "${name}" '/usr/sbin/git ls-remote https://github.com/redhat-et/secure-single-server.git' \
-  >"${td}/git-twin.out" 2>&1; then
-  die "SECURITY FAILURE: the unlisted twin git reached github.com"
+git_facts="$(harness_ssh "${name}" \
+  'echo "PATH resolves git to: $(command -v git)"; ls -ld /usr/sbin; stat -c "%i %h %n" /usr/bin/git /usr/sbin/git; sha256sum /usr/bin/git /usr/sbin/git' 2>&1 || true)"
+printf '%s\n' "${git_facts}"
+# shellcheck disable=SC2016  # the checks must run inside the sandbox
+if harness_ssh "${name}" \
+  'test -x /usr/sbin/git && test "$(stat -c %i /usr/bin/git)" != "$(stat -c %i /usr/sbin/git)"'; then
+  echo "two separate gits in the image; only /usr/bin/git is policy-listed"
+  if harness_ssh "${name}" '/usr/sbin/git ls-remote https://github.com/redhat-et/secure-single-server.git' \
+    >"${td}/git-twin.out" 2>&1; then
+    die "SECURITY FAILURE: the unlisted sbin git reached github.com"
+  fi
+  echo "twin git to GitHub itself:"; cat "${td}/git-twin.out"
+  grep -q "Could not connect to server" "${td}/git-twin.out" \
+    || die "twin git was not denied at connect(): $(cat "${td}/git-twin.out}")"
+  [[ "$(count "${td}/attacker.count")" -eq "${attacker_base}" ]] \
+    || die "attacker bucket counted a request from the sandbox"
+else
+  echo "the twin-git act retires in this image: /usr/sbin/git is not a separate"
+  echo "file from /usr/bin/git (see the facts above), so there is no unlisted"
+  echo "binary to try. The skill's last idea was a path; the image answers with"
+  echo "one identity."
 fi
-echo "twin git to GitHub itself:"; cat "${td}/git-twin.out"
-grep -q "Could not connect to server" "${td}/git-twin.out" \
-  || die "twin git was not denied at connect(): $(cat "${td}/git-twin.out")"
-[[ "$(count "${td}/attacker.count")" -eq "${attacker_base}" ]] \
-  || die "attacker bucket counted a request from the sandbox"
 
 say "Act 5: the attempts are on the record"
 denials=""

