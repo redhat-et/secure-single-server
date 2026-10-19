@@ -288,7 +288,7 @@ repo checkout as the OpenShell owner account that manages sandboxes.
 ./openshell/scripts/document-exfiltration-demo.sh
 ```
 
-The script creates one sandbox (`doc-exfil-demo-*`), plants synthetic
+The script creates one sandbox (`doc-exfil-*`), plants synthetic
 documents, the upload tool, and the malicious skill file
 (`openshell/scripts/document-exfiltration-skill.md`), replays the
 ladder, and destroys the sandbox on exit. Environment knobs:

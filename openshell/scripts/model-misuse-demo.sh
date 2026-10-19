@@ -23,7 +23,8 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck disable=SC1091
 source "${ROOT}/openshell/scripts/harness-lib.sh"
 
-name="model-misuse-demo-$$"
+# OpenShell rejects sandbox names longer than 19 characters.
+name="model-demo-$$"
 praxis_port="${PRAXIS_PORT:-8080}"
 wrong_model="${WRONG_MODEL:-gpt-6-sol}"
 fixture_port="${FIXTURE_PORT:-18090}"
