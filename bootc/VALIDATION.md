@@ -48,7 +48,8 @@ registry.redhat.io/rhel9/rhel-bootc@sha256:cfe6b13fa436d39088cc525254f5de9f4e0c7
 ```
 
 Praxis, OpenShell and harness inputs use the existing repository pins in
-`scripts/common/lib.sh` and `openshell/configs/images.env`. The native OpenShell
+[`scripts/common/lib.sh`](../scripts/common/lib.sh) and
+[`openshell/configs/images.env`](../openshell/configs/images.env). The native OpenShell
 CLI reports `0.0.116-rhaiv.14`; the sandboxed OpenCode CLI reports `1.18.31`.
 
 ## Built artifacts
@@ -73,7 +74,7 @@ metadata. Workload containers are fetched separately after boot.
   one skipped, one `/var` layout warning. The warning concerns cloud-init and
   dhclient directories, ldconfig cache and inherited build information; no
   application state or credentials are embedded.
-- All tested images passed `bootc/test-images`, including native CLI execution, enabled
+- All tested images passed [`bootc/test-images`](test-images), including native CLI execution, enabled
   startup service, absence of RHUI keys and machine secrets, and harness
   argument-validation regression checks.
 - Five local build/harness regression tests passed, along with ShellCheck,
@@ -82,7 +83,7 @@ metadata. Workload containers are fetched separately after boot.
   to-existing-root`. Bootc reported the selected image; the OS filesystem was
   read-only and SELinux remained enforcing.
 - Switching to the final OpenCode image required two new layers (38.4 kB).
-  After reboot, `bootc/test-host opencode` passed, the packaged creation script
+  After reboot, [`bootc/test-host`](test-host) `opencode` passed, the packaged creation script
   created a `Ready` dev sandbox, and `opencode --version` succeeded over its
   SSH proxy. OpenCode's review sandbox reached `Ready`, but CLI startup was
   denied when it tried to create `/sandbox/.local/share`; the read-only policy
@@ -106,7 +107,7 @@ been separately booted or qualified for sandbox CLI execution.
 
 The shared gateway template now owns the UID mapping and explicit loopback bind
 previously applied only by bootc. All tested images were rebuilt on the same
-native AWS RHEL 9 builder and passed `bootc/test-images`.
+native AWS RHEL 9 builder and passed [`bootc/test-images`](test-images).
 
 Additional review checks:
 
@@ -136,9 +137,6 @@ reject integrated `--config`; OpenCode's config path is explicitly experimental.
 The runtime workflow is an opt-in qualification gate and will fail while those
 network prerequisites are unmet. Existing sandbox deletion/recreation also proved
 unreliable during canary testing; retained harness/session claims were removed.
-
-[Review resolution matrix](../openshell/REVIEW-FOLLOWUP.md) maps F01–F10 to changes
-and the remaining qualification boundaries.
 
 ## Shared gateway cleanup regression (September 25)
 

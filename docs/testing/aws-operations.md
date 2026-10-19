@@ -9,7 +9,7 @@ cache allocation or harness output limits.
 
 ## Resource boundary and permissions
 
-`scripts/aws/rhel-vm` uses AWS CLI v2's credential chain. It creates one
+[`scripts/aws/rhel-vm`](../../scripts/aws/rhel-vm) uses AWS CLI v2's credential chain. It creates one
 on-demand official Red Hat RHEL 9 PAYG VM, one encrypted gp3 root disk, one
 security group and one imported **public** SSH key. The primary interface and
 root EBS disk have `DeleteOnTermination=true`. IMDSv2 is required. Resources

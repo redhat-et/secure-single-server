@@ -40,25 +40,15 @@ execution, and tensor parallel size 1. GPU memory utilization is limited to
 disabled by default for predictable demo latency; callers can explicitly
 set `chat_template_kwargs.enable_thinking` to true.
 
-## Separate AWS server and endpoint discovery
+## Separate vLLM server and endpoint discovery
 
-Use the [AWS deployment guide](../docs/testing/aws.md#separate-vllm-server)
-to launch a dedicated tagged vLLM VM, grant TCP 8000 only to the single
-server's security group, and discover its private address. After both VMs are
-in the same VPC, the administrator-side helper prints an `RFC1918_IP:PORT` endpoint;
-no AWS credential or instance profile is placed on the single server.
+Use any dedicated VM or cloud-provider server that meets the host requirements
+above. Put the vLLM server and single server on a trusted private network, and
+permit TCP 8000 only from the single server. No cloud-provider credential is
+placed on the single server. Record the resulting `RFC1918_IP:PORT` endpoint.
 
-```console
-source scripts/aws/session.sh
-VLLM_INFO="$(aws_test_vllm_endpoint vllm-server-gpu)" \
-  || printf 'Endpoint discovery failed; inspect the vLLM VM.\n'
-VLLM_ENDPOINT="$(printf '%s' "${VLLM_INFO:-}" | jq -er '.VllmEndpoint')" \
-  || printf 'Endpoint JSON was invalid.\n'
-printf 'Private vLLM endpoint: %s\n' "${VLLM_ENDPOINT:-unknown}"
-```
-
-On the dedicated server, deploy `vllm-cpu:v0.1` on a CPU instance or
-`vllm-gpu:v0.1` on the L4 instance. Do not substitute the mutable RHEL vLLM
+On the dedicated server, deploy `vllm-cpu:v0.1` on a CPU server or
+`vllm-gpu:v0.1` on the L4 server. Do not substitute the mutable RHEL vLLM
 installer or a locally built image. On the booted single server, configure
 Praxis without changing the OpenShell harness policy:
 
@@ -91,8 +81,8 @@ server or bare-metal host, use a standard bootc deployment workflow with the
 published reference; do not create or substitute a locally built image.
 
 Deployment changes the host's SSH host keys. Compare the new fingerprint
-through a trusted AWS or console channel before accepting it and reconnecting
-as `cloud-user@BOOTC_HOST`. Do not bypass host-key verification in production.
+through a trusted out-of-band channel before accepting it and reconnecting as
+`cloud-user@BOOTC_HOST`. Do not bypass host-key verification in production.
 
 GPU drivers are OS components; vLLM and model weights remain separate workload
 containers and persistent data. On the booted host, select the mode matching
@@ -218,8 +208,8 @@ Upstream OpenShell removed workspace-global managed inference routes and the
 The supported replacement is [provider profiles and per-sandbox attachments](https://github.com/NVIDIA/OpenShell/blob/v0.1.4/docs/how-it-works/inference.mdx#migrate-from-managed-inference-routes).
 This example uses an explicit **OpenCode** Praxis provider configuration plus a
 sandbox policy permitting only the Praxis endpoint. It does not yet import an
-OpenShell provider profile or attach a provider; that integration is tracked in
-[the roadmap](../docs/roadmap.md#upstream-01x-capabilities-we-do-not-use-yet).
+OpenShell provider profile or attach a provider; that integration is not yet
+part of the reviewed configuration.
 OpenCode's canonical binary path is `/usr/local/bin/opencode`; its
 `/usr/local/sbin` launcher is a symlink.
 

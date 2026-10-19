@@ -42,7 +42,7 @@ data, and starts the selected pinned model. The served model ID is the preset
 name. vLLM has no published host port. To switch models on this test installation
 before adding cloud keys, repeat setup with the other preset; its downloaded
 cache is retained. After adding real keys, use the
-[administrator installer](../quickstarts/common/vllm.md#3-install-one-backend)
+[administrator installer](../quickstarts/vllm/README.md#3-install-one-backend)
 to change models; the test setup refuses real provider credentials.
 Downloads and CPU startup take several minutes. No cloud key is required.
 Qwen thinking is enabled. The [matrix](compatibility.md) records the current
@@ -52,7 +52,7 @@ OpenCode/Claude output budget. Short GPU tool/switching tests passed at these
 limits; CPU and near-limit compaction still need qualification. Reapply
 setup before testing these limits on an existing test VM. `real-test` refreshes
 the shared launcher but does not upgrade the inference service. For a host with
-real provider keys, follow [the managed update instructions](../quickstarts/common/vllm.md#update-an-existing-installations-budgets).
+real provider keys, follow [the managed update instructions](../quickstarts/vllm/README.md#update-an-existing-installation).
 
 ## 2. Test real inference
 
@@ -76,7 +76,7 @@ before comparing the backends.
 
 ## 3. Add OpenAI to existing Praxis
 
-After real setup, use [provider administration](../quickstarts/common/providers.md)
+After real setup, use [provider administration](../examples/praxis-quotas/README.md#enable-openai-anthropic-or-a-compatible-provider)
 from an administrator SSH session. OpenAI, Anthropic and compatible providers
 are optional. On all-in-one, enable the shared vLLM quota and unified catalog
 there before refreshing user configurations.
@@ -105,5 +105,5 @@ using the authenticated service operator; individual-user enrollment remains
 unimplemented. See that guide for the distinction.
 
 For installation without the runner, maintenance or removal, use
-[vLLM administration](../quickstarts/common/vllm.md). For another VM, return to
+[vLLM administration](../quickstarts/vllm/README.md). For another VM, return to
 [AWS selection](aws.md#4-select-one-vm-for-testing) and repeat the tests.

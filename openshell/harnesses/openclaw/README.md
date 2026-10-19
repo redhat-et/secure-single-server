@@ -13,4 +13,5 @@ Agent files live in `/home/node/.openclaw/workspace`; `/app` remains read-only.
 Automatic `exec` is disabled because process-group cleanup is not qualified.
 Browser/gateway authentication, retained sessions, and `--backend` are not qualified.
 
-The preinstalled harness image is digest-pinned in `openshell/configs/images.env`.
+The preinstalled harness image is digest-pinned in
+[`openshell/configs/images.env`](../../configs/images.env).

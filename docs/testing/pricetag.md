@@ -118,7 +118,7 @@ Use an existing all-in-one provider configuration with a unified model catalog.
 The first pilot needs `/etc/praxis/shared-gateway.yaml` in the installer's JSON
 format and `/etc/praxis/unified-models.json`. It needs the locked `praxis-svc`
 account, its `praxis.network` Quadlet and its existing provider secret references.
-On a fresh VM, complete the [provider setup](../quickstarts/common/providers.md)
+On a fresh VM, complete the [provider setup](../examples/praxis-quotas/README.md#enable-openai-anthropic-or-a-compatible-provider)
 and unified catalog first. A separate external vLLM can replace the local model
 later without moving the metering database.
 
@@ -259,7 +259,8 @@ only for administration.
 <details>
 <summary>What the harness launcher configures, and file-based alternatives</summary>
 
-This deployment's launcher is `scripts/pricetag/harness`. It reads the
+This deployment's launcher is
+[`scripts/pricetag/harness`](../../scripts/pricetag/harness). It reads the
 authenticated gateway catalog and uses the selected alias's native API,
 context window and output allowance. Pass the HTTPS origin without `/v1`.
 The model argument is the complete gateway alias, such as
@@ -369,7 +370,8 @@ sudo install -m 0600 -o root -g root \
   /root/pricetag-admin/admin-v2.jwt /root/pricetag-admin/admin.jwt
 ```
 
-Update any private workstation copy afterward. `scripts/pricetag/user` reads
+Update any private workstation copy afterward.
+[`scripts/pricetag/user`](../../scripts/pricetag/user) reads
 the canonical `admin.jwt` path. Use a fresh filename for every later rotation.
 
 ### 8. Change a USD allowance

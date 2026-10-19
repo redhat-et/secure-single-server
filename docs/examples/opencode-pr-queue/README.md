@@ -14,8 +14,8 @@ issue or prompt
 ```
 
 The sandbox has no GitHub token and cannot push, create a pull request, comment,
-or close an issue. The EC2 or bootc host also never receives the credentials used
-to publish code.
+or close an issue. The single-server host also never receives the credentials
+used to publish code.
 
 ## What you get
 
@@ -43,8 +43,8 @@ Known limits found in validation:
   follow the [history adapter](../../testing/gateway-features.md#model-switching-and-reasoning)
   setup.
 - The OpenShell service account must be able to read the checkout. On a manual
-  or AWS host, use a service-readable path such as `/opt/secure-single-server`
-  rather than another user's home directory.
+  host, use a service-readable path such as `/opt/secure-single-server` rather
+  than another user's home directory.
 
 ## Try it
 
@@ -77,7 +77,7 @@ sudo sss-bootc harness create \
 The explicit `--config` is required. `pr-queue` is integrated with Praxis and
 has no standalone direct-provider catalog entry.
 
-On a manual or AWS all-in-one deployment, use the service-owner helper from the
+On a manual deployment, use the service-owner helper from the
 [manual guide](../../quickstarts/openshell-single-server/manual.md#2-set-up-the-service-owner-shell-helper):
 
 ```console
@@ -100,7 +100,7 @@ sudo sss-bootc harness queue \
   --timeout 7200
 ```
 
-On a manual or AWS all-in-one deployment, use the queue runner directly:
+On a manual deployment, use the queue runner directly:
 
 ```console
 os_run "$repo/openshell/harnesses/opencode/pr-queue/queue.sh" \
@@ -131,7 +131,7 @@ sudo sss-bootc harness queue \
   --timeout 900
 ```
 
-On a manual or AWS deployment, use the prompt checked out with the repository:
+On a manual deployment, use the prompt checked out with the repository:
 
 ```console
 os_run "$repo/openshell/harnesses/opencode/pr-queue/queue.sh" \
@@ -236,7 +236,7 @@ Detach with `Ctrl-b` and then `d`; reconnect with:
 tmux attach-session -t opencode-bot-watcher
 ```
 
-On a manual or AWS all-in-one deployment, replace the `sss-bootc harness watch`
+On a manual deployment, replace the `sss-bootc harness watch`
 command with the direct runner:
 
 ```console
@@ -322,7 +322,7 @@ explains the failure.
 Copy the bundle to the workstation when ready:
 
 ```console
-scp -r ec2-user@SERVER:/var/tmp/opencode-pr-queue-artifacts ./
+scp -r ADMIN_USER@SERVER:/var/tmp/opencode-pr-queue-artifacts ./
 ```
 
 ### 6. Review and publish
@@ -398,7 +398,7 @@ sudo scripts/common/quota-reset --provider openai --apply
 ```
 
 These are shared allowances, not per-user budgets or USD spend caps. See the
-[token quota guide](../../quickstarts/common/token-quotas.md) for backend
+[Praxis token quota scenario](../praxis-quotas/README.md) for backend
 persistence, metrics, and reset limitations.
 
 ## Security boundary
@@ -446,7 +446,7 @@ Issue #57 refers to an earlier `pr-review` proposal and
 `docs/development/review-service.md`; that service and document are not part of
 the current tree. This queue generates patch candidates, and its boundary is
 stricter than the proposed host-side report poster: publication credentials
-belong on the workstation, not the EC2 or bootc host. A future host-side poster
+belong on the workstation, not the single-server host. A future host-side poster
 would need its own reviewed design for token scope, storage, repository and
 operation restrictions, and explicit human approval before posting. Sandbox
 reports and metadata must remain untrusted proposals, never instructions to run
@@ -467,8 +467,8 @@ authenticated commands or automatic authorization to publish.
 | Agent instructions and artifact contract | [`openshell/harnesses/opencode/pr-queue/instructions.md`](../../../openshell/harnesses/opencode/pr-queue/instructions.md) |
 | Contracts and tests | [`openshell/tests/pr-queue.py`](../../../openshell/tests/pr-queue.py) |
 
-Executable runtime code stays under `openshell/` and deployment configuration
-stays under `configs/`. This page is the single entry point; the source map
+Executable runtime code stays under [`openshell/`](../../../openshell/) and deployment configuration
+stays under [`configs/`](../../../configs/). This page is the single entry point; the source map
 above exists for review and audit, not as required reading before the first run.
 
 ## Limits and factory evolution

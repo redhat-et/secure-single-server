@@ -1,7 +1,20 @@
-# Token quotas
+# Praxis token quotas
 
-> **Where this fits:** The usage-control deep dive. Read it before promising
-> per-user budgets or spend caps.
+Use this scenario after a reviewed manual or bootc deployment is running. It
+shows how an administrator can inspect enabled providers and a shared Praxis
+token allowance, enable or rotate a provider, preview a quota change, apply it
+safely, and verify the result.
+
+This is an operations scenario, not a sandbox-policy change. It does not create
+per-user budgets, USD spend caps, or provider billing limits.
+
+## Prerequisites
+
+- Administrator access to the deployed host and its reviewed checkout.
+- At least one enabled Praxis provider, such as OpenAI, Anthropic, vLLM, or a
+  reviewed custom provider.
+- Active model requests stopped before applying a capacity change or resetting
+  usage.
 
 Run as the server administrator, separately on each gateway.
 
@@ -38,8 +51,86 @@ The list shows enabled providers, current and minimum capacities, and whether
 each rule is settable. It prints a copyable setting command for each selected
 rule. Add `--json` for structured output. Listing works without inference metrics.
 
-Disabled providers have no active rules to adjust. Inspect their configuration
-with `sudo scripts/common/providers show`; enable them using [provider setup](providers.md).
+Disabled providers have no active rules to adjust. Use
+[provider operations](#enable-openai-anthropic-or-a-compatible-provider) to
+inspect and enable them.
+
+## Enable OpenAI, Anthropic, or a compatible provider
+
+Provider changes preserve other providers and listener authentication, but they
+restart Praxis. Finish active tasks first. Valkey quotas persist across the
+restart. Run from the matching deployment checkout:
+
+```console
+cd ~/secure-single-server-deploy
+sudo dnf install -y python3-pyyaml
+sudo scripts/common/providers show
+sudo scripts/common/quota-set --list
+```
+
+OpenAI:
+
+```console
+sudo scripts/common/providers enable openai
+sudo scripts/common/quota-set --provider openai --capacity 2000000
+sudo scripts/common/quota-set --provider openai --capacity 2000000 --apply
+```
+
+Enter the key at the hidden prompt. It becomes a versioned Podman secret; it is
+never passed in command arguments or given to harness users. The quota is an
+independent rolling 24-hour token allowance shared by that provider's users.
+
+Anthropic:
+
+```console
+sudo scripts/common/providers enable anthropic
+sudo scripts/common/quota-set --provider anthropic --capacity 2000000 --apply
+```
+
+For another compatible provider, choose a unique lowercase name and replace the
+example URL. The upstream must speak the native API used by the harness:
+Messages for Claude Code, or the selected SDK API for OpenCode. There is no API
+translation.
+
+```console
+sudo scripts/common/providers enable team \
+  --openai-url https://openai.example.com/v1
+sudo scripts/common/quota-set --list --provider team
+sudo scripts/common/quota-set --provider team --capacity 2000000 --apply
+```
+
+If the same provider and key support native Anthropic Messages, supply both
+endpoints when enabling it:
+
+```console
+sudo scripts/common/providers enable team \
+  --openai-url https://openai.example.com/v1 \
+  --anthropic-url https://messages.example.com
+```
+
+This prompts for the provider key again. Use separate provider names when the
+two endpoints require different keys. URLs must use HTTPS and an origin or
+`/v1` path; other upstream path prefixes are not supported by this helper.
+With both APIs enabled, `team-openai-rolling-day` and
+`team-anthropic-rolling-day` are independent quotas; `--provider team` selects
+both. Direct OpenAI, Anthropic, and local vLLM budgets remain independent.
+
+## Share the local vLLM quota across harnesses
+
+On a Valkey gateway:
+
+```console
+sudo scripts/common/providers enable vllm --shared-quota --capacity 10000000
+sudo scripts/common/quota-set --list --provider vllm
+sudo scripts/common/quota-status
+```
+
+This creates one `vllm-rolling-day` budget for Chat, Responses, and Messages.
+It migrates the two existing vLLM ledgers with their original timestamps and
+retains charges for interrupted reservations. Old ledgers remain for recovery;
+the allowance is the supplied capacity, not the sum of the former capacities.
+Migration requires the pinned image and managed 24h/300s Valkey rules.
+In-memory quotas cannot share a budget across the two all-in-one listeners.
 
 ## Adjust capacities
 
@@ -73,7 +164,7 @@ sudo scripts/common/quota-set --provider anthropic --capacity 2000000
 ```
 
 To change one rule, use its exact name; `--rule` can be repeated. This example
-requires the [shared vLLM quota](providers.md#share-the-local-vllm-quota-across-harnesses);
+requires the [shared vLLM quota](#share-the-local-vllm-quota-across-harnesses);
 otherwise choose a name printed by `--list`:
 
 ```console
@@ -112,7 +203,7 @@ sliding-window rules. It never flushes the database. Resets cannot be undone.
 
 | Rule | Shared allowance |
 | --- | --- |
-| `vllm-rolling-day` | Local Chat, Responses and Messages after [enabling the shared Valkey quota](providers.md#share-the-local-vllm-quota-across-harnesses) |
+| `vllm-rolling-day` | Local Chat, Responses and Messages after [enabling the shared Valkey quota](#share-the-local-vllm-quota-across-harnesses) |
 | `vllm-openai-rolling-day`, `vllm-anthropic-rolling-day` | Separate API allowances before migration, or on memory gateways |
 | `openai-rolling-day` | Enabled OpenAI routes |
 | `anthropic-rolling-day` | Enabled Anthropic routes |
@@ -137,7 +228,7 @@ and managed local backend. Other images, key scopes and algorithms display
 or reservation expiry; they are not necessarily provider-reported token usage.
 The image omits Valkey settlement/refund counters, so cumulative reserved tokens
 must not be treated as net charges. Use the first table for the current allowance.
-Use the [Valkey profile](../all-in-one/valkey.md) for restart persistence; changing
+Use the [Valkey profile](../../quickstarts/all-in-one/valkey.md) for restart persistence; changing
 from memory starts a new ledger, not a transfer of old usage.
 
 ## Read accounting and identify a 429
@@ -164,16 +255,50 @@ Capacities are stored in managed `/etc/praxis/quota-overrides.json`; do not edit
 it by hand. Failed activation restores the previous configuration, with backups
 under `/etc/praxis/rollback/quotas-*`. Rollback cannot recover lost memory usage.
 
+Inspect providers, quotas, and the host after any change:
+
+```console
+sudo scripts/common/providers show
+sudo scripts/common/quota-status
+sudo scripts/common/verify --host
+```
+
+Repeat `enable NAME` to rotate a key; saved custom URLs are retained. To reuse
+an existing Podman secret, add `--secret NAME` instead of entering a new key.
+To disable a provider while retaining its secret:
+
+```console
+sudo scripts/common/providers disable team
+```
+
+Keep at least one provider enabled. Local inference installation is separate;
+see [optional vLLM deployment](../../quickstarts/vllm/README.md).
+
+| Setting | Managed location |
+| --- | --- |
+| Enabled providers, custom URLs, secret references, applied catalog | `/etc/praxis/providers.json` |
+| Administrator-edited non-secret model catalog | `/etc/praxis/unified-models.json` |
+| Rendered routes, filters and quotas | `/etc/praxis/shared-gateway.yaml` |
+| Capacity overrides | `/etc/praxis/quota-overrides.json` |
+| Upstream keys | Rootless Podman secrets owned by `praxis-svc` |
+| Harness models and menus | User-owned CLI configuration files |
+
+Use the helpers for provider and capacity changes; hand edits to managed files
+are rejected as configuration drift. Upgrades retain custom providers, the
+shared-vLLM setting, and the applied unified catalog. Failed activation
+restores configuration from `/etc/praxis/rollback/`. A failed quota migration
+never overwrites a shared ledger; inspect its reported recovery state before
+retrying.
+
 For windows, reservations or Switchyard rules, edit source YAML and use the
-[all-in-one](../all-in-one/in-memory.md#operate-the-service) or
-[remote-gateway](../remote-gateway/install.md#operations) upgrade procedure,
+[all-in-one](../../quickstarts/all-in-one/in-memory.md#operate-the-service) or
+[remote-gateway](../../quickstarts/remote-gateway/install.md#operations) upgrade procedure,
 retaining its provider/image/security arguments. Saved capacity overrides take
 precedence over source capacities.
 
 Quotas are shared token allowances, not per-user, per-model or dollar budgets.
 Reservation expiry does not guarantee a refund. Valkey uses AOF `everysec`,
-which can lose roughly a second of writes on sudden failure. See
-[feature testing](../../testing/gateway-features.md) for qualification.
+which can lose roughly a second of writes on sudden failure.
 
 ## Update the helpers on an existing VM
 
@@ -193,7 +318,9 @@ scp -p -o IdentitiesOnly=yes -o ForwardAgent=no -i "$SSH_KEY" \
 This updates scripts without changing running services. They use Python/PyYAML
 and keep the admin listener private.
 
-## Next step
+## Evidence and limits
 
-Validate quotas with the [testing guide](../../testing/README.md) and compare
-supported combinations in the [compatibility matrix](../../testing/compatibility.md).
+A successful run shows the selected provider's capacity before and after the
+change, confirms the saved value after the Praxis restart, and preserves other
+providers' allowances. It does not prove provider billing, exact token
+accounting, or suitability for multi-user cost allocation.

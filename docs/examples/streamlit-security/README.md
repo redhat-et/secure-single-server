@@ -23,8 +23,8 @@ OpenShell sandbox
 
 ### Where to run it
 
-AWS is not required. The commands below use a dedicated RHEL 9 x86_64 Linux
-host, such as a local or cloud VM or bare-metal machine; an ordinary nested
+The commands below use a dedicated RHEL 9 x86_64 Linux host, such as a VM from
+any cloud provider, a local VM, or a bare-metal server; an ordinary nested
 container is not a supported OpenShell host. Before running the demo, complete
 steps 1 and 2 of the [manual OpenShell deployment guide](../../quickstarts/openshell-single-server/manual.md):
 install OpenShell, verify Landlock ABI 3 or newer, start the gateway, and define
@@ -68,8 +68,8 @@ os_run openshell profile lint -f "$repo/openshell/demos/streamlit-security/provi
 os_run openshell profile import -f "$repo/openshell/demos/streamlit-security/providers/openai.yaml"
 ```
 
-Register the provider by reusing the manual guide's
-[hidden-prompt procedure](../../quickstarts/openshell-single-server/manual.md#4-choose-model-access),
+Register the provider by reusing the
+[hidden-prompt procedure](../../quickstarts/openshell-single-server/model-access.md#self-hosted-or-private-openai-compatible-service),
 with these Streamlit-specific values: `--name streamlit-demo-openai`,
 `--type streamlit-openai`, and `--credential OPENAI_API_KEY`. Keep the command
 in the service-owner shell so the real key is entered at a hidden prompt.
@@ -85,9 +85,9 @@ export OPENAI_MODEL=gpt-5.5
 ### OpenAI-compatible endpoint
 
 For endpoint setup details, see the
-[OpenAI-compatible model guide](../../quickstarts/openshell-single-server/model-access.md#local-openai-compatible-service).
+[OpenAI-compatible model guide](../../quickstarts/openshell-single-server/model-access.md#self-hosted-or-private-openai-compatible-service).
 Edit the host and port in
-`openshell/demos/streamlit-security/providers/openai-compatible.yaml`. The
+[`openshell/demos/streamlit-security/providers/openai-compatible.yaml`](../../../openshell/demos/streamlit-security/providers/openai-compatible.yaml). The
 profile host and port must match the HTTPS host and port in `MODEL_BASE_URL`.
 Lint and import the profile:
 

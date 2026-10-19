@@ -8,16 +8,16 @@ workload and then exits:
 
 | Unit | Script | Workload |
 | --- | --- | --- |
-| `secure-single-server.service` | `bootc/scripts/reconcile` | Praxis and OpenShell |
-| `secure-single-server-praxis.service` | `bootc/scripts/praxis` | Standalone Praxis |
-| `secure-single-server-vllm.service` | `bootc/scripts/vllm` | Optional vLLM |
+| `secure-single-server.service` | [`bootc/scripts/reconcile`](../../bootc/scripts/reconcile) | Praxis and OpenShell |
+| `secure-single-server-praxis.service` | [`bootc/scripts/praxis`](../../bootc/scripts/praxis) | Standalone Praxis |
+| `secure-single-server-vllm.service` | [`bootc/scripts/vllm`](../../bootc/scripts/vllm) | Optional vLLM |
 
 All three set `UMask=0077` and deliberately do not set `NoNewPrivileges` or
 `PrivateTmp`. Both flags look harmless for a root service that only pulls images
 and asks the per-user manager to start containers. On RHEL 9 they each break the
 rootless Podman path, as measured on a booted image below. The container units
 that these reconcilers write into `/etc/containers/systemd/users/<uid>/` keep
-`NoNewPrivileges=true`, and `tests/shared-gateway-static.sh` fails the build when
+`NoNewPrivileges=true`, and [`tests/shared-gateway-static.sh`](../../tests/shared-gateway-static.sh) fails the build when
 a rendered container manifest drops it.
 
 ## Why `NoNewPrivileges` breaks the reconciler
@@ -118,7 +118,7 @@ above:
 | --- | --- | --- |
 | `NoNewPrivileges=true`, `PrivateTmp=true` | first boot | `newuidmap ... Operation not permitted`, reconciler failed |
 | `NoNewPrivileges=false` (drop-in), `PrivateTmp=true` | first boot | reconciler passed; container start failed with the `pasta` `pivot_root` error |
-| neither flag | first boot | `OpenShell ready`; dummy secrets activate Praxis, `bootc/test-host` passes |
+| neither flag | first boot | `OpenShell ready`; dummy secrets activate Praxis, [`bootc/test-host`](../../bootc/test-host) passes |
 
 After activation, `sudo bootc/test-host opencode` checks the rest of the host
 contract: SELinux enforcing, read-only `/usr`, healthy Praxis, authenticated

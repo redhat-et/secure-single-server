@@ -1,5 +1,8 @@
 .state/
 evidence/
+.docs-build/
+site/
+.venv-docs/
 *.local
 *.secret
 __pycache__/

@@ -90,7 +90,7 @@ urllib.request.urlopen(request).read()
 ## Dedicated RHEL gateway
 
 Launch using [aws-pricetag.md](aws-pricetag.md), then install with
-`scripts/pricetag/prepare.py --mock-provider`. This uses only the private
+[`scripts/pricetag/prepare.py`](../../scripts/pricetag/prepare.py) `--mock-provider`. This uses only the private
 `pricetag-private` network and publishes HTTPS 8443. The mock starts with the
 same one-second stream delay. Do not run this synthetic capacity test on a
 real provider alias or the current GPU pilot.
@@ -130,7 +130,8 @@ access during load. Establish application latency objectives from the first
 measured baseline; this procedure does not invent an unmeasured SLA. Follow
 with a longer soak and a separate client generator before accepting capacity.
 
-Revoke each test subject with `scripts/pricetag/credentials revoke`; keep its
+Revoke each test subject with
+[`scripts/pricetag/credentials`](../../scripts/pricetag/credentials) `revoke`; keep its
 ledger for review. Do not delete usage to make reconciliation pass. Protect
 private token directories and retain redacted reports, image IDs and machine
 settings. A mock-only Quadlet deployment still needs RHEL qualification on the

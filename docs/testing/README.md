@@ -31,7 +31,7 @@ References, as needed:
 - [Compatibility matrix](compatibility.md): direct and OpenShell results by scenario/backend.
 - [Gateway feature testing](gateway-features.md): model selection, limits, quotas and recovery by harness.
 - [AWS operations](aws-operations.md): access choices, custom hardware, recovery and cleanup.
-- [vLLM administration](../quickstarts/common/vllm.md): installation without the smoke runner and maintenance.
+- [vLLM administration](../quickstarts/vllm/README.md): installation without the smoke runner and maintenance.
 - [vLLM debugging](vllm-debugging.md): known failures, upstream leads and fix qualification.
 
 ## OpenShell harness model and tool checks

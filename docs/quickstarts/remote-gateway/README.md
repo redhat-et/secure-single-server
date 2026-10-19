@@ -50,7 +50,7 @@ Using 8443 avoids changing the host's privileged-port policy.
   Anthropic exposes only `/v1/messages` and `/v1/messages/count_tokens`.
   Batch APIs are blocked: asynchronous batch work has no qualified quota
   accounting here. Unknown paths are rejected; cross-API translation is off.
-- Shared provider/API [token quotas](../common/token-quotas.md), not per-JWT
+- Shared provider/API [token quotas](../../examples/praxis-quotas/README.md), not per-JWT
   or USD budgets. All valid callers can use every configured model/provider.
 - Administrator-issued, expiring JWTs; no OIDC login/refresh or immediate
   per-token revocation. Emergency key rotation invalidates all callers.

@@ -18,7 +18,7 @@ need access from any IP. That step is separate from the initial launch.
 
 ## Initial capacity
 
-Use `configs/aws/pricetag-cloud.json`: **m7i.2xlarge, 8 vCPU, 32 GiB RAM,
+Use [`configs/aws/pricetag-cloud.json`](../../configs/aws/pricetag-cloud.json): **m7i.2xlarge, 8 vCPU, 32 GiB RAM,
 150 GiB encrypted gp3 root disk**. This is a conservative test candidate for
 10–20 concurrent streaming users, not a measured production capacity promise.
 The existing VM helper requires at least 32 GiB RAM. AWS lists the hardware in
@@ -254,7 +254,7 @@ printf '%s' "$PRICETAG_OPENAI_KEY" | sudo scripts/common/secret-set openai v1
 Stop on an error. To rotate later, create a new version and update only the
 new gateway's secret reference; do not overwrite an existing secret. Podman
 secrets protect against ordinary users, but the host administrator can access
-them. Do not use `scripts/common/providers enable` against this standalone
+them. Do not use [`scripts/common/providers`](../../scripts/common/providers) `enable` against this standalone
 PriceTag installation: that helper manages the older gateway deployment.
 
 Choose an upstream model actually available to the account, with reviewed
@@ -502,7 +502,7 @@ new URL and certificate trust; the user JWT issuer/audience do not change.
 Run on the workstation with the launch session restored and AWS credentials
 loaded. Additional IAM permission `ec2:ModifySecurityGroupRules` is needed.
 Changing the launch array to `--https-access public` does not update an existing
-VM, and `scripts/aws/https-access` only supports restricted `/32` additions.
+VM, and [`scripts/aws/https-access`](../../scripts/aws/https-access) only supports restricted `/32` additions.
 Use the existing rule's ID for this transition.
 
 Verify the real VM against its journal and retain a recovery copy:

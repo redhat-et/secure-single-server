@@ -30,13 +30,13 @@ TLS/mTLS for the service operator; individual user/workspace authorization is
 not implemented.
 
 For Qwen3-8B on a separate server, see the [vLLM/Praxis workflow](../../../bootc/VLLM.md).
-It includes private AWS endpoint discovery, a loopback Praxis upstream, and an
+It includes private endpoint discovery, a loopback Praxis upstream, and an
 OpenCode dev configuration with a dedicated Praxis-only policy. Its updated
 OpenShell pins provide host-alias routing; see the linked guide for runtime evidence.
 
 ## Next step
 
-- Choose the inference path through the
-  [common configuration index](../common/README.md).
+- Configure harnesses through
+  [harness configuration](harness-configuration.md).
 - Check the [integration matrix](users.md) before claiming support for a
   harness or provider.

@@ -62,3 +62,10 @@ The demo container receives the provider key through its environment. For
 protected service-account secrets and startup at boot, use the deployment
 guides. See [Podman details](../../testing/podman.md).
 
+## Next step
+
+- For a complete deployment, use the [bootc guide](../openshell-single-server/bootc.md)
+  or [manual container guide](../openshell-single-server/manual.md).
+- After deployment, try a [scenario](../../examples/README.md) that shows the
+  OpenShell boundary in practice.
+

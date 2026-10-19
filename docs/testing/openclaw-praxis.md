@@ -98,7 +98,7 @@ sudo env OPENSHELL_TEST_OWNER=openshell-svc \
 
 Ports 18000/18080 must be free. It creates and deletes its sandbox, fixture, and
 Praxis container; no real credentials are required. The full
-`openshell/tests/runtime.sh` also runs this check.
+[`openshell/tests/runtime.sh`](../../openshell/tests/runtime.sh) also runs this check.
 
 For an already-ready real Praxis upstream, execute as its OpenShell service
 owner from a readable checkout:

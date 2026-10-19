@@ -77,7 +77,7 @@ second, and enforces a shared one-million-token rolling day with a 4,096-token
 reservation per request.
 
 Those limits are shared allowances, not per-user or USD budgets. See
-[quota semantics](../common/token-quotas.md) before relying on them for cost
+[quota semantics](../../examples/praxis-quotas/README.md) before relying on them for cost
 control.
 
 ### 3. Give the harness only the gateway
@@ -192,5 +192,5 @@ validated path.
 - [Deploy the local Qwen3-8B example](../../../bootc/VLLM.md)
 - Before extending the path, read the
   [integration matrix](../openshell-praxis/users.md) and
-  [quota semantics](../common/token-quotas.md).
+  [quota semantics](../../examples/praxis-quotas/README.md).
 - [Reproduce the acceptance evidence](../../testing/README.md).

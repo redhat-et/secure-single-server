@@ -7,23 +7,125 @@ It configures the selected CLI; Praxis is the server handling inference.
 
 ## Unified native configuration
 
-For the two unified all-in-one listeners, follow [user setup](../all-in-one/users.md#3-configure-and-run-the-native-harnesses).
-Run `praxis-harness-config` as the ordinary user, then `claude-code` or
-`opencode`. The refresh helper reads the gateway's configured
-catalogs; no alternate config home or per-launch provider URL is needed.
-Its source is `scripts/common/harness_config.py`, installed as
-`/usr/local/bin/praxis-harness-config` by the account helper.
+Unified mode replaces per-provider paths with two loopback endpoints:
 
-The reference below covers **per-provider routes without unified mode**, including
-remote clients. Those paths no longer exist after enabling unified models.
+| Client API | Base URL | Catalog |
+| --- | --- | --- |
+| Responses / Chat | `http://127.0.0.1:8080/v1` | `GET /v1/models` |
+| Messages | Claude: `http://127.0.0.1:8081`; OpenCode: append `/v1` | `GET /v1/models` |
+
+The model alias selects the provider. Praxis allows only configured aliases,
+rewrites each to its upstream model ID, and applies that provider's credentials
+and quota. Unknown aliases are rejected. Cloud budgets remain independent; the
+shared vLLM budget covers both listeners. There is no automatic failover. This
+mode currently supports all-in-one memory and Valkey gateways, not remote
+HTTPS/JWT gateways or Switchyard.
+
+For Qwen, select the installed preset. Change the first line to `qwen3-8b` for
+8B. Run once; an existing catalog is never overwritten:
+
+```console
+VLLM_MODEL=qwen3.8-27b-int4
+sudo python3 - "$VLLM_MODEL" <<'PY'
+import json, pathlib, sys
+model = sys.argv[1]
+context, output = {'qwen3-8b': (16384, 4096), 'qwen3.8-27b-int4': (32768, 8192)}[model]
+entry = dict(id='vllm/' + model, provider='vllm', model=model,
+             apis=['openai', 'anthropic'], context=context, output=output)
+with pathlib.Path('/etc/praxis/unified-models.json').open('x') as f:
+    json.dump([entry], f, indent=2)
+    f.write('\n')
+PY
+```
+
+Enable the desired providers with the
+[Praxis token quota scenario](../../examples/praxis-quotas/README.md#enable-openai-anthropic-or-a-compatible-provider).
+Choose exact IDs available to the account and confirm the required API;
+appearing in a model list does not prove Responses or tool support.
+
+To query an OpenAI-compatible upstream catalog without reading stored secrets,
+run in Bash and enter its HTTPS `/v1/models` URL and key:
+
+```console
+(
+  set +x
+  set -o pipefail
+  IFS= read -r -p 'Upstream HTTPS models URL: ' models_url
+  IFS= read -r -s -p 'API key: ' key; printf '\n'
+  printf 'Authorization: Bearer %s\n' "$key" |
+    curl --proto '=https' --fail --silent --show-error --connect-timeout 10 --max-time 60 \
+      --header @- "$models_url" | python3 -m json.tool
+)
+```
+
+For an Anthropic-native catalog:
+
+```console
+(
+  set +x
+  set -o pipefail
+  IFS= read -r -p 'Upstream HTTPS models URL: ' models_url
+  IFS= read -r -s -p 'API key: ' key; printf '\n'
+  printf 'x-api-key: %s\nanthropic-version: 2023-06-01\n' "$key" |
+    curl --proto '=https' --fail --silent --show-error --connect-timeout 10 --max-time 60 \
+      --header @- "$models_url" | python3 -m json.tool
+)
+```
+
+For direct OpenAI the URL is `https://api.openai.com/v1/models`; direct
+Anthropic uses `https://api.anthropic.com/v1/models`.
+
+Edit the non-secret JSON array. Add one object per approved model using this
+shape, replacing the model ID and choosing supported client budgets:
+
+```json
+{
+  "id": "openai/APPROVED_MODEL",
+  "provider": "openai",
+  "model": "APPROVED_MODEL",
+  "apis": ["openai"],
+  "context": 128000,
+  "output": 8192
+}
+```
+
+Use `provider: "anthropic"` with `apis: ["anthropic"]`, or the custom provider
+name and its supported APIs. `id` is a unique menu alias; `model` is the exact
+upstream ID. Context includes input and output; set both within the served
+limits. These are client hints, not gateway-enforced generation caps.
+
+Edit, validate, and apply together; then inspect the published catalogs:
+
+```console
+sudoedit /etc/praxis/unified-models.json &&
+sudo scripts/common/providers unified --models /etc/praxis/unified-models.json --vllm-reasoning hide &&
+sudo scripts/common/providers models
+```
+
+`--vllm-reasoning hide` keeps Qwen thinking enabled but omits plaintext
+reasoning from its Responses output. This prevents that reasoning from breaking
+a later cloud request. It does not make encrypted cloud reasoning acceptable to
+vLLM on the return path. Messages and cloud output are unchanged.
+
+Only entries with enabled provider backends are published. Upstream catalogs
+never update this allowlist automatically. After each change, ordinary users
+run `praxis-harness-config` and restart their CLIs. Its source is
+[`scripts/common/harness_config.py`](../../../scripts/common/harness_config.py),
+installed as `/usr/local/bin/praxis-harness-config` by the account helper.
+
+The reference below covers **per-provider routes without unified mode**,
+including remote clients. Those paths no longer exist after enabling unified
+models.
 
 ## Native files or the launcher
 
 For ongoing use, configure the CLI's files and launch the CLI directly. The
 `praxis-harness` helper is optional: it supplies per-launch provider settings,
 known Qwen limits, environment cleanup and bounded smoke-test options without
-rewriting your usual configuration. Its source is `scripts/common/harness.py`,
-installed as `/usr/local/bin/praxis-harness` by `scripts/common/harness-user`.
+rewriting your usual configuration. Its source is
+[`scripts/common/harness.py`](../../../scripts/common/harness.py),
+installed as `/usr/local/bin/praxis-harness` by
+[`scripts/common/harness-user`](../../../scripts/common/harness-user).
 
 | CLI menu | Where the list comes from | Switching limits |
 | --- | --- | --- |
@@ -49,7 +151,8 @@ provider keys stay with Praxis.
 
 The examples below target **27B after the server is updated to 32,768 tokens**.
 For 8B, use `qwen3-8b`, context 16,384 and output 4,096.
-Thinking consumes output tokens. See [preset limits](vllm.md#requirements).
+Thinking consumes output tokens. See
+[preset limits](../vllm/README.md#requirements).
 Merge file settings deliberately with existing configuration. Native files do not
 inherit future launcher fixes; verify menu selection and a tool query after editing.
 
@@ -182,7 +285,7 @@ returns OpenAI's catalog, so use configured Claude entries there.
 
 ## Additional compatible providers
 
-[Enable the provider on the server](providers.md#another-compatible-provider),
+[Enable the provider on the server](../../examples/praxis-quotas/README.md#enable-openai-anthropic-or-a-compatible-provider),
 then configure its route in the native CLI files above. For provider `team`:
 
 | Client | Local base URL |

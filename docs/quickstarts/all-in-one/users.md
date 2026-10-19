@@ -49,7 +49,7 @@ git init -q
 
 ## 3. Configure and run the native harnesses
 
-For an administrator-configured [unified catalog](../common/providers.md#unified-models-all-in-one),
+For an administrator-configured [unified catalog](../openshell-praxis/harness-configuration.md#unified-native-configuration),
 run once, and again after changing enabled providers or allowed models:
 
 ```console
@@ -111,13 +111,13 @@ Claude runs in simple/Manual mode for Qwen compatibility: approve tools yourself
 automatic skill/plugin discovery and the auto-mode classifier are not qualified.
 
 On `429`, stop repeated retries and ask the administrator to
-[inspect the quota and request throttle](../common/token-quotas.md#read-accounting-and-identify-a-429).
+[inspect the quota and request throttle](../../examples/praxis-quotas/README.md#read-accounting-and-identify-a-429).
 
 ### Gateways without a unified catalog
 
-Use [the per-provider launcher or native-file examples](../common/harness-configuration.md)
+Use [the per-provider launcher or native-file examples](../openshell-praxis/harness-configuration.md)
 for legacy all-in-one or Switchyard installations. `praxis-harness` is defined
-in `scripts/common/harness.py` and installed as `/usr/local/bin/praxis-harness`.
+in [`scripts/common/harness.py`](../../../scripts/common/harness.py) and installed as `/usr/local/bin/praxis-harness`.
 It supplies settings for one launch; it is unnecessary after generating the
 unified native files above. Provider-specific `/vllm` and `/providers/NAME`
 routes are replaced when unified mode is enabled.

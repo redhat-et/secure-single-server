@@ -62,7 +62,7 @@ certificate or token was rejected with `missing authorization header`.
 The public TOML adapter rejects the internal `require_client_auth` field;
 leave it out of the deployment configuration. A fresh follow-up AWS installation
 caught an attempted explicit setting, which was removed before merge.
-`bootc/test-host` now checks that rejection, alongside a CA-verified TLS positive
+[`bootc/test-host`](../../bootc/test-host) now checks that rejection, alongside a CA-verified TLS positive
 control and an authenticated operator sandbox listing, rather than expecting
 all certificate-free TLS handshakes to fail.
 
@@ -72,7 +72,7 @@ Follow the [manual guide](../quickstarts/openshell-single-server/manual.md) and
 [bootc guide](../quickstarts/openshell-single-server/bootc.md), selecting a model
 available to the test account. Require a final response, tool evidence and
 independent file readback; gateway health alone does not prove inference.
-Run `bootc/test-host` on the booted host after secrets and service startup.
+Run [`bootc/test-host`](../../bootc/test-host) on the booted host after secrets and service startup.
 The [upgrade tests](upgrade-0.1.3.md) cover controlled authentication, both
 harnesses and policy negative controls in CI without paid model credentials.
 

@@ -72,7 +72,8 @@ harness use needs the connection details and caller token, without that export.
 Use [AWS deployment](aws.md) and [RHEL smoke testing](rhel-smoke.md) to prepare
 a remote-gateway with synthetic providers. Complete mock acceptance before
 [real Qwen setup](rhel-real.md). Use the matching reviewed checkout on both
-machines; the test bundle includes `tests/remote-client/`. Do not run these
+machines; the test bundle includes
+[`tests/remote-client/`](../../tests/remote-client/). Do not run these
 tests against the existing all-in-one installations.
 
 On the separate client, install Python 3.9+, OpenSSL, Git and the pinned CLIs

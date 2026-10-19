@@ -394,7 +394,7 @@ printf 'Private vLLM endpoint: %s\n' "${VLLM_ENDPOINT:-unknown}"
 The endpoint command prints the tagged instance's private IPv4 address as
 `VllmEndpoint`. It refuses ambiguous matches and rejects any vLLM security
 group with public IPv4/IPv6 ingress on port 8000. Configure the dedicated VM
-with [the vLLM administration guide](../quickstarts/common/vllm.md), using
+with [the vLLM administration guide](../quickstarts/vllm/README.md), using
 `--remote` and the printed private IP. Configure the gateway with
 `--vllm-endpoint "$VLLM_ENDPOINT"`. For the bootc/OpenShell path, run
 `sudo sss-bootc inference remote-vllm "$VLLM_ENDPOINT"` instead.
@@ -521,9 +521,9 @@ before running the test runner; keep `RHEL_HOST` as the administrator login.
 
 For **manual installation on a fresh VM**, follow the official guides in order:
 
-1. Administrator: [install Qwen and Praxis](../quickstarts/common/vllm.md), choosing
+1. Administrator: [install Qwen and Praxis](../quickstarts/vllm/README.md), choosing
    the intended inference topology and a Valkey gateway for persistent quotas.
-2. Administrator: [configure providers and the unified model catalog](../quickstarts/common/providers.md).
+2. Administrator: [configure providers and the unified model catalog](../quickstarts/openshell-praxis/harness-configuration.md).
    Cloud credentials are optional; begin with Qwen alone.
 3. Ordinary user: [generate native configurations and launch harnesses](../quickstarts/all-in-one/users.md).
    The account above is already created. Remote clients instead use
