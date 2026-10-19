@@ -2,6 +2,7 @@
 """Controlled model driving OpenCode's real write and bash tools, without keys."""
 import argparse
 import json
+import os
 from pathlib import Path
 import sys
 import threading
@@ -47,11 +48,22 @@ def completion(path, body, missing_usage=False):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=18000)
+    parser.add_argument('--control-port', type=int, default=0,
+                        help='also serve the /state records endpoint on this port')
+    parser.add_argument('--model', default='fixture-model',
+                        help='model id the fixture lists and, in local mode, the only one it serves')
+    parser.add_argument('--authorization-env',
+                        help='environment variable holding the bearer token; switches to non-local '
+                             'mode where any model is served and this Authorization header is required')
     args = parser.parse_args()
     provider.continuation = continuation
     provider.completion = completion
+    local = args.authorization_env is None
+    authorization = ('Bearer ' + os.environ[args.authorization_env]) if args.authorization_env \
+        else 'Bearer synthetic-openai'
     fixture = provider.Provider(host='127.0.0.1', control_host='127.0.0.1',
-                                ports=(args.port, 0, 0), model='fixture-model', local=True)
+                                ports=(args.port, 0, args.control_port), model=args.model,
+                                local=local, openai_authorization=authorization)
     fixture.start()
     print('fixture ready', flush=True)
     threading.Event().wait()
