@@ -97,11 +97,15 @@ mkdir -p "${sideA}/home/.config/opencode" "${sideA}/sandbox"
 chmod 0777 "${sideA}/home" "${sideA}/sandbox"
 # The client-side copy of the rule: the agent's config lists only the
 # approved model. The move under test walks straight past it with -m.
+# The provider id must not be "openai": opencode would fold the config into
+# its built-in OpenAI provider (Responses API, full model registry), and the
+# stand-in drives tools over chat completions - the same reason the deployed
+# harness names its provider "praxis".
 cat >"${sideA}/home/.config/opencode/opencode.json" <<EOF
 {
   "\$schema": "https://opencode.ai/config.json",
   "provider": {
-    "openai": {
+    "standalone": {
       "npm": "@ai-sdk/openai-compatible",
       "name": "OpenAI (standalone install)",
       "options": {"baseURL": "http://127.0.0.1:${fixture_port}/v1", "apiKey": "{env:OPENAI_API_KEY}"},
@@ -121,7 +125,7 @@ fi
   --env-file <(printf 'OPENAI_API_KEY=%s\n' "${canary}") \
   -v "${sideA}/home:/home/sandbox:Z" -v "${sideA}/sandbox:/sandbox:Z" -w /sandbox \
   --entrypoint /usr/local/bin/opencode "${ODH_OPENCODE_IMAGE}" \
-  run --format json --model "openai/${wrong_model}" \
+  run --format json --model "standalone/${wrong_model}" \
   "Write the proof script, run it with bash, then confirm completion." \
   >"${td}/side-a.out" 2>&1 \
   || die "side A: opencode failed against the stand-in provider: $(tail -5 "${td}/side-a.out}")"
