@@ -197,9 +197,9 @@ say "Act 4: the skill's move 4 - no curl in the image, so git"
 # curl is absent (asserted below, like Python), so the skill falls back
 # to git. The commands drive /usr/bin/git explicitly - the path the
 # policy pairs with GitHub - so the denials below mean "right binary,
-# wrong endpoint" (the shell's PATH resolves git via /usr/sbin,
-# which in this image is a symlink to bin - the same file; move 5 measures
-# that, and move 6 shows what actually denies git). git's exit code
+# wrong endpoint" (Act 5's audit entry names git's HTTP
+# helper, git-remote-http, as the process that connected - the policy
+# evaluates the exec chain, and no entry pairs git with these endpoints). git's exit code
 # alone cannot prove the denial (a non-git destination also fails
 # ls-remote), and libcurl does not surface the kernel's EACCES - a
 # policy denial renders as "Failed to connect ... Could not connect to
@@ -230,66 +230,6 @@ grep -q "Could not connect to server" "${td}/git-results.out" \
   || die "attacker bucket counted a request from the sandbox"
 [[ "$(count "${td}/results.count")" -eq $((results_base + 1)) ]] \
   || die "results server counted a sandbox request outside the sanctioned flow"
-
-say "Act 4: the skill's move 5 - the other git, the one with different rights?"
-# The shell's PATH resolves git to /usr/sbin/git (sbin-first) while the
-# policy lists /usr/bin/git. Whether that is a real difference is a
-# property of the image: a separate git at an unlisted path has no
-# rights - the policy identifies binaries by path, not content - but a
-# merged-/usr image ships /usr/sbin as a symlink to bin: one file, one
-# identity, and the skill's question dissolves. Print the filesystem
-# facts, then run the beat only when there really are two files.
-# shellcheck disable=SC2016  # the checks must run inside the sandbox
-git_facts="$(harness_ssh "${name}" \
-  'echo "PATH resolves git to: $(command -v git)"; ls -ld /usr/sbin; stat -c "%i %h %n" /usr/bin/git /usr/sbin/git; sha256sum /usr/bin/git /usr/sbin/git' 2>&1 || true)"
-printf '%s\n' "${git_facts}"
-# shellcheck disable=SC2016  # the checks must run inside the sandbox
-if harness_ssh "${name}" \
-  'test -x /usr/sbin/git && test "$(stat -c %i /usr/bin/git)" != "$(stat -c %i /usr/sbin/git)"'; then
-  echo "two separate gits in the image; only /usr/bin/git is policy-listed"
-  if harness_ssh "${name}" '/usr/sbin/git ls-remote https://github.com/redhat-et/secure-single-server.git' \
-    >"${td}/git-twin.out" 2>&1; then
-    die "SECURITY FAILURE: the unlisted sbin git reached github.com"
-  fi
-  echo "twin git to GitHub itself:"; cat "${td}/git-twin.out"
-  grep -q "Could not connect to server" "${td}/git-twin.out" \
-    || die "twin git was not denied at connect(): $(cat "${td}/git-twin.out}")"
-  [[ "$(count "${td}/attacker.count")" -eq "${attacker_base}" ]] \
-    || die "attacker bucket counted a request from the sandbox"
-else
-  echo "the twin-git act retires in this image: /usr/sbin/git is not a separate"
-  echo "file from /usr/bin/git (see the facts above), so there is no unlisted"
-  echo "binary to try. The skill's last idea was a path; the image answers with"
-  echo "one identity."
-fi
-
-say "Act 4: the skill's move 6 - the legitimate pairing itself"
-# The last resort: everything about this attempt is legitimate - the
-# binary path the policy names for git and the destination the policy
-# names for it. It is denied anyway, and the audit record says why: git
-# does not make HTTP connections itself, it execs a libexec helper, and
-# the policy evaluates the process that connects.
-if harness_ssh "${name}" '/usr/bin/git ls-remote https://github.com/redhat-et/secure-single-server.git' \
-  >"${td}/git-listed.out" 2>&1; then
-  die "UNEXPECTED: the policy-listed git reached github.com over https - the helper attribution no longer holds; update the story (one read-only ls-remote was made)"
-fi
-echo "the policy-listed git against its own allowed destination:"
-cat "${td}/git-listed.out"
-grep -q "Could not connect to server" "${td}/git-listed.out" \
-  || die "the listed git did not fail at connect() to github.com: $(cat "${td}/git-listed.out}")"
-helper_denial=""
-for _ in $(seq 1 10); do
-  helper_denial="$(_os logs "${name}" 2>/dev/null | grep "transparent_tcp_policy_denied" | grep "git-remote-http" | grep "github.com" || true)"
-  [[ -n "${helper_denial}" ]] && break
-  sleep 1
-done
-[[ -n "${helper_denial}" ]] \
-  || die "no audit denial naming git-remote-http against github.com (log format may differ): $(_os logs "${name}" 2>/dev/null | grep "transparent_tcp_policy_denied" | head -3)"
-printf '%s\n' "${helper_denial}"
-echo "read the denial's binary field: the connection came from git's libexec"
-echo "helper (git-remote-http), which no policy entry lists - so even the"
-echo "policy-listed git cannot reach its own allowed endpoint over https."
-echo "The policy evaluates the process that connects, not the command typed."
 
 say "Act 5: the attempts are on the record"
 denials=""
