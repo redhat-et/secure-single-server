@@ -240,6 +240,11 @@ for _ in $(seq 1 10); do
 done
 [[ -n "${denials}" ]] || die "no transparent_tcp_policy_denied entries in the sandbox log"
 printf '%s\n' "${denials}"
+# The reason string above is verified for denials at endpoints a policy
+# entry lists; denials to unlisted destinations may carry a different
+# reason. Print every denied network event so the audit picture is whole.
+echo "every denied network event the log query returns, whatever its reason:"
+_os logs "${name}" 2>/dev/null | grep "NET:OPEN.*DENIED" || true
 echo "total sandbox log lines this query returns: $(_os logs "${name}" 2>/dev/null | wc -l)"
 
 say "Act 6: the same network outside the boundary, and the redirect that works"

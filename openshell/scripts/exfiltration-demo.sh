@@ -90,13 +90,16 @@ if printf '%s\n' \
 fi
 
 say "Act 4: the attempts are on the record"
+# Assert on any denied network event, not one reason string: both vectors
+# target openrouter.ai, which no policy entry lists, and the reason that
+# unlisted-destination denials log under is not assumed.
 denials=""
 for _ in $(seq 1 10); do
-  denials="$(_os logs "${name}" 2>/dev/null | grep "transparent_tcp_policy_denied" || true)"
+  denials="$(_os logs "${name}" 2>/dev/null | grep "NET:OPEN.*DENIED" || true)"
   [[ -n "${denials}" ]] && break
   sleep 1
 done
-[[ -n "${denials}" ]] || die "no transparent_tcp_policy_denied entries in the sandbox log"
+[[ -n "${denials}" ]] || die "no denied network events in the sandbox log"
 printf '%s\n' "${denials}"
 
 say "Act 5: the same network, outside the boundary"
