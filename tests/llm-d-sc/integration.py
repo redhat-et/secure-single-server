@@ -489,6 +489,7 @@ def assert_trace(records, label, backend):
     assert row is not None, f"trace API has no {label} record; records={available}"
     assert row["route"] == backend, f"expected {backend}, received {row['route']}"
     assert row["status"] == 200, f"expected HTTP 200, received {row['status']}"
+    assert row["score"], f"trace API has no classifier score for {label}"
     return {
         "label": row["label"],
         "route": row["route"],

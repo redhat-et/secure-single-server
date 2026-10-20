@@ -2,8 +2,10 @@
 """Offline contract checks for the llm-d-sc routing profile."""
 
 import importlib.util
+import http.client
 import json
 import os
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import socket
 import sys
@@ -20,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = ROOT / "configs/llm-d-sc/praxis.yaml"
 IMAGES_PATH = ROOT / "configs/llm-d-sc/images.env"
 INTEGRATION_PATH = ROOT / "tests/llm-d-sc/integration.py"
+TRACE_UI_PATH = ROOT / "apps/llm-d-sc/trace-ui/server.py"
 
 
 class LlmDScConfig(unittest.TestCase):
@@ -161,6 +164,85 @@ class LlmDScConfig(unittest.TestCase):
         self.assertIn("vllm-cpu", events[0]["choices"][0]["delta"]["content"])
         self.assertEqual(events[-1]["choices"][0]["finish_reason"], "stop")
         self.assertTrue(body.endswith("data: [DONE]\n\n"))
+
+    def test_backend_relay_preserves_classifier_score(self):
+        spec = importlib.util.spec_from_file_location("llm_d_sc_trace_ui", TRACE_UI_PATH)
+        trace_ui = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(trace_ui)
+
+        class Upstream(BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(b"{}")
+
+            def log_message(self, fmt, *args):
+                return
+
+        upstream = ThreadingHTTPServer(("127.0.0.1", 0), Upstream)
+        relay = trace_ui.RelayServer(
+            ("127.0.0.1", 0),
+            f"http://127.0.0.1:{upstream.server_port}",
+            "vllm-cpu",
+        )
+        for server in (upstream, relay):
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            self.addCleanup(lambda server=server, thread=thread: (
+                server.shutdown(), server.server_close(), thread.join(timeout=2)))
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{relay.server_port}/v1/models",
+            headers={
+                "X-Llm-D-Sc-Label": "SIMPLE",
+                "X-Llm-D-Sc-Score": "0.9989",
+            },
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            self.assertEqual(response.status, 200)
+            self.assertEqual(response.headers["X-Demo-Route"], "vllm-cpu")
+            self.assertEqual(response.headers["X-Demo-Classification"], "SIMPLE")
+            self.assertEqual(response.headers["X-Llm-D-Sc-Score"], "0.9989")
+
+    def test_relay_rejects_non_origin_form_request_targets(self):
+        spec = importlib.util.spec_from_file_location("llm_d_sc_trace_ui", TRACE_UI_PATH)
+        trace_ui = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(trace_ui)
+        hits = []
+
+        class Upstream(BaseHTTPRequestHandler):
+            def do_GET(self):
+                hits.append(self.path)
+                self.send_response(200)
+                self.end_headers()
+
+            def log_message(self, fmt, *args):
+                return
+
+        upstream = ThreadingHTTPServer(("127.0.0.1", 0), Upstream)
+        relay = trace_ui.RelayServer(
+            ("127.0.0.1", 0),
+            f"http://127.0.0.1:{upstream.server_port}",
+            "vllm-cpu",
+        )
+        for server in (upstream, relay):
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            self.addCleanup(lambda server=server, thread=thread: (
+                server.shutdown(), server.server_close(), thread.join(timeout=2)))
+        for target in ("@attacker.example/x", "http://attacker.example/x"):
+            with self.subTest(target=target):
+                client = http.client.HTTPConnection(
+                    "127.0.0.1", relay.server_port, timeout=5,
+                )
+                self.addCleanup(client.close)
+                client.putrequest("GET", target, skip_host=True)
+                client.endheaders()
+                response = client.getresponse()
+                self.assertEqual(response.status, 400)
+                self.assertEqual(json.loads(response.read()),
+                                 {"error": "invalid request target"})
+        self.assertEqual(hits, [])
 
 
 if __name__ == "__main__":

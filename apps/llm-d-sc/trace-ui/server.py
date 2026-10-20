@@ -219,6 +219,10 @@ class Handler(BaseHTTPRequestHandler):
         self.relay("PATCH")
 
     def relay(self, method: str):
+        if not self.path.startswith("/") or self.path.startswith("//"):
+            self.send_bytes(400, "application/json",
+                            b'{"error":"invalid request target"}')
+            return
         trace_id = uuid.uuid4().hex
         length = int(self.headers.get("Content-Length", "0"))
         body = self.rfile.read(length) if length else b""
@@ -248,6 +252,9 @@ class Handler(BaseHTTPRequestHandler):
                     classification = self.headers.get("X-Llm-D-Sc-Label")
                     if classification:
                         response_headers["X-Demo-Classification"] = classification
+                    score = self.headers.get("X-Llm-D-Sc-Score")
+                    if score:
+                        response_headers["X-Llm-D-Sc-Score"] = score
                 else:
                     complete_trace(trace_id, response.status, response_headers,
                                    int((time.monotonic() - started) * 1000))
