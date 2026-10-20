@@ -60,7 +60,9 @@ CONTAINER_ENGINE=podman python3 tests/llm-d-sc/integration.py
 The integration test pulls immutable image digests, creates a temporary Podman
 network and model volume, waits for the classifier to report `READY`, sends
 one simple and one reasoning prompt through Open WebUI and the gateway, checks
-the trace records, and removes the resources it created.
+the trace records, and removes the resources it created. The synthetic
+backends also return OpenAI-compatible server-sent events so OpenCode's
+streaming client follows the same path as non-streaming clients.
 
 A successful run reports:
 
@@ -70,6 +72,26 @@ A successful run reports:
 
 On GitHub-hosted CI, the same path runs with Docker. It does not exercise real
 vLLM generation, GPU scheduling, model quality, throughput, or latency.
+
+## Run OpenCode through the routed backend
+
+After the integration test prints the trace relay port, create an OpenShell
+OpenCode workload that uses that relay as its only model gateway:
+
+```bash
+os_run env PRAXIS_PORT=PRINTED_TRACE_PORT \
+  openshell/harnesses/opencode/create.sh \
+  --profile dev \
+  --name opencode-llm-d-sc \
+  --config "$PWD/configs/llm-d-sc"
+```
+
+The template catalog supplies the `Semantic-Qwen` model ID. The sandbox can
+contact only `host.openshell.internal:<trace-port>`, and the strict policy
+permits only model discovery and chat completion. The trace relay records the
+request and forwards it to Praxis. The provider marks the model as reasoning
+but intentionally does not replay interleaved reasoning; Qwen's reasoning
+parser can otherwise emit malformed content after tool calls.
 
 ## Run the AWS split-host scenario
 
@@ -146,6 +168,12 @@ or latency benchmark. The GPU model load used about 16.84 GiB of VRAM and
 steady serving used about 20.5 GiB. The real-mode requests explicitly disable
 Qwen thinking for short validation prompts so the test receives final content
 instead of consuming the token budget on hidden reasoning.
+
+The OpenCode harness was separately validated on a disposable AWS
+`m7i.2xlarge` RHEL 9.6 host with OpenShell v0.1.4 and the mocked CPU/GPU
+backends. A simple prompt completed in one OpenCode turn and routed to
+`vllm-cpu`; a reasoning prompt also completed in one turn and routed to
+`vllm-gpu`.
 
 ## Security boundary
 

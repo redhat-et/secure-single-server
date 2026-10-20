@@ -2,8 +2,14 @@
 """Offline contract checks for the llm-d-sc routing profile."""
 
 import importlib.util
+import json
+import os
 from pathlib import Path
+import socket
 import sys
+import threading
+import time
+import urllib.request
 import unittest
 from unittest import mock
 
@@ -109,6 +115,52 @@ class LlmDScConfig(unittest.TestCase):
             json_request.call_args.args[1]["chat_template_kwargs"],
             {"enable_thinking": False},
         )
+
+    def test_mock_backend_supports_openai_streaming(self):
+        spec = importlib.util.spec_from_file_location("llm_d_sc_integration", INTEGRATION_PATH)
+        integration = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(integration)
+        with socket.socket() as probe:
+            probe.bind(("127.0.0.1", 0))
+            port = probe.getsockname()[1]
+        source = integration.BACKEND_SOURCE.replace(
+            'ThreadingHTTPServer(("0.0.0.0", 8000), Handler)',
+            f'ThreadingHTTPServer(("127.0.0.1", {port}), Handler)',
+        )
+        namespace = {"__name__": "llm_d_sc_mock_backend"}
+        with mock.patch.dict(os.environ, {"BACKEND_NAME": "vllm-cpu"}):
+            thread = threading.Thread(target=exec, args=(source, namespace), daemon=True)
+            thread.start()
+            for _ in range(50):
+                if "server" in namespace:
+                    break
+                time.sleep(0.01)
+            self.addCleanup(lambda: (namespace["server"].shutdown(),
+                                     namespace["server"].server_close(),
+                                     thread.join(timeout=2)))
+            request = urllib.request.Request(
+                f"http://127.0.0.1:{port}/v1/chat/completions",
+                data=json.dumps({
+                    "model": "Semantic-Qwen",
+                    "messages": [{"role": "user", "content": "hello"}],
+                    "stream": True,
+                }).encode(),
+                headers={"Content-Type": "application/json"},
+            )
+            with urllib.request.urlopen(request, timeout=5) as response:
+                self.assertEqual(response.status, 200)
+                self.assertEqual(response.headers["Content-Type"], "text/event-stream")
+                body = response.read().decode()
+        events = [
+            json.loads(line.removeprefix("data: "))
+            for line in body.splitlines()
+            if line.startswith("data: ") and line != "data: [DONE]"
+        ]
+        self.assertEqual(events[0]["object"], "chat.completion.chunk")
+        self.assertEqual(events[0]["choices"][0]["delta"]["role"], "assistant")
+        self.assertIn("vllm-cpu", events[0]["choices"][0]["delta"]["content"])
+        self.assertEqual(events[-1]["choices"][0]["finish_reason"], "stop")
+        self.assertTrue(body.endswith("data: [DONE]\n\n"))
 
 
 if __name__ == "__main__":

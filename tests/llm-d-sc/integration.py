@@ -71,6 +71,42 @@ class Handler(BaseHTTPRequestHandler):
             }],
             "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
         }
+        if request_body.get("stream"):
+            chunks = [
+                {
+                    "id": response["id"],
+                    "object": "chat.completion.chunk",
+                    "created": response["created"],
+                    "model": response["model"],
+                    "choices": [{
+                        "index": 0,
+                        "delta": {
+                            "role": "assistant",
+                            "content": response["choices"][0]["message"]["content"],
+                        },
+                        "finish_reason": None,
+                    }],
+                },
+                {
+                    "id": response["id"],
+                    "object": "chat.completion.chunk",
+                    "created": response["created"],
+                    "model": response["model"],
+                    "choices": [{
+                        "index": 0,
+                        "delta": {},
+                        "finish_reason": "stop",
+                    }],
+                },
+            ]
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.end_headers()
+            for chunk in chunks:
+                self.wfile.write(b"data: " + json.dumps(chunk).encode() + b"\n\n")
+            self.wfile.write(b"data: [DONE]\n\n")
+            return
         data = json.dumps(response).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
@@ -81,7 +117,8 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         return
 
-ThreadingHTTPServer(("0.0.0.0", 8000), Handler).serve_forever()
+server = ThreadingHTTPServer(("0.0.0.0", 8000), Handler)
+server.serve_forever()
 '''
 
 
