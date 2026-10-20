@@ -22,14 +22,17 @@ def completion(path, body, missing_usage=False):
     result = original_completion(path, body, missing_usage)
     choice = result['choices'][0]
     message = choice['message']
-    names = {tool.get('function', {}).get('name') for tool in body.get('tools', [])}
+    # Chat-completions tools arrive wrapped ({function: {name}}) or flat
+    # ({name}), depending on the client SDK's serialization.
+    names = {(tool.get('function') or tool).get('name') for tool in body.get('tools', [])}
     if not names or continuation(path, body):
         message.pop('tool_calls', None)
         message['content'] = MARKER
         choice['finish_reason'] = 'stop'
         return result
     if not {'write', 'bash'} <= names:
-        raise RuntimeError('OpenCode did not advertise write and bash tools')
+        raise RuntimeError('OpenCode did not advertise write and bash tools; advertised: '
+                           + ', '.join(sorted(name for name in names if name)))
     written = any(item.get('role') == 'tool' and item.get('tool_call_id') == 'call_write'
                   for item in body.get('messages', []))
     function = {'name': 'bash', 'arguments': json.dumps({
