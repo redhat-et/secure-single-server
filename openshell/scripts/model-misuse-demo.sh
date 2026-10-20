@@ -128,9 +128,9 @@ fi
   run --format json --model "standalone/${wrong_model}" \
   "Write the proof script, run it with bash, then confirm completion." \
   >"${td}/side-a.out" 2>&1 \
-  || die "side A: opencode failed against the stand-in provider: $(tail -5 "${td}/side-a.out}")"
+  || die "side A: opencode failed against the stand-in provider: $(tail -5 "${td}/side-a.out")"
 grep -q "OPENCODE_TOOL_OK" "${td}/side-a.out" \
-  || die "side A: the stand-in provider did not drive the agent's tools: $(tail -5 "${td}/side-a.out}")"
+  || die "side A: the stand-in provider did not drive the agent's tools: $(tail -5 "${td}/side-a.out")"
 [[ "$(tr -d '[:space:]' <"${sideA}/sandbox/opencode-exec-proof.txt")" == "OPENCODE_TOOL_OK" ]] \
   || die "side A: the agent's bash tool produced no proof file under the wrong model"
 echo "the agent completed its whole task loop - write, bash, confirm - on ${wrong_model}"
@@ -175,9 +175,9 @@ say "Act 4: the sanctioned flow - the approved model answers"
 if ! harness_ssh "${name}" \
   "/usr/local/bin/opencode run --format json 'Which model are you? Answer in one short sentence.'" \
   >"${td}/sanctioned.out" 2>&1; then
-  die "the sanctioned model did not answer: $(tail -5 "${td}/sanctioned.out}")"
+  die "the sanctioned model did not answer: $(tail -5 "${td}/sanctioned.out")"
 fi
-python3 - "${td}/sanctioned.out" <<'PY' || die "no answer text in the sanctioned run: $(tail -5 "${td}/sanctioned.out}")"
+python3 - "${td}/sanctioned.out" <<'PY' || die "no answer text in the sanctioned run: $(tail -5 "${td}/sanctioned.out")"
 import json, sys
 for line in open(sys.argv[1]):
     if not line.startswith("{"):
@@ -217,9 +217,9 @@ printf '%s\n' \
   '  .catch((e) => { console.log("request error: " + (e.cause?.code ?? e.message)); process.exit(1); });' \
   | harness_ssh "${name}" '/usr/bin/node-26' | tee "${td}/wrong-raw.out"
 grep -q "HTTP 404" "${td}/wrong-raw.out" \
-  || die "the wrong model was not refused with 404: $(cat "${td}/wrong-raw.out}")"
+  || die "the wrong model was not refused with 404: $(cat "${td}/wrong-raw.out")"
 grep -q "Unknown model" "${td}/wrong-raw.out" \
-  || die "the refusal is not the gateway's Unknown-model body: $(cat "${td}/wrong-raw.out}")"
+  || die "the refusal is not the gateway's Unknown-model body: $(cat "${td}/wrong-raw.out")"
 echo "the gateway's own answer: 404, Unknown model - before credentials, before the upstream"
 # The fallback a downloaded skill would try: forge the routing header and
 # keep the wrong model in the body. Caller copies of the routing header
@@ -235,9 +235,9 @@ printf '%s\n' \
   '  .catch((e) => { console.log("request error: " + (e.cause?.code ?? e.message)); process.exit(1); });' \
   | harness_ssh "${name}" '/usr/bin/node-26' | tee "${td}/forged.out"
 grep -q "HTTP 404" "${td}/forged.out" \
-  || die "the forged routing header was not refused: $(cat "${td}/forged.out}")"
+  || die "the forged routing header was not refused: $(cat "${td}/forged.out")"
 grep -q "Unknown model" "${td}/forged.out" \
-  || die "the forged-header refusal is not the gateway's Unknown-model body: $(cat "${td}/forged.out}")"
+  || die "the forged-header refusal is not the gateway's Unknown-model body: $(cat "${td}/forged.out")"
 echo "the forged routing header was stripped; the body's model decides"
 # The last fallback: skip the gateway entirely and call the provider
 # directly - Story 1's vector, one layer down.
@@ -248,7 +248,7 @@ printf '%s\n' \
   's.on("connect", () => { console.log("UNEXPECTED: connected"); process.exit(0); });' \
   | harness_ssh "${name}" '/usr/bin/node-26' | tee "${td}/direct.out"
 grep -q "EACCES" "${td}/direct.out" \
-  || die "the direct provider path was not denied at connect(): $(cat "${td}/direct.out}")"
+  || die "the direct provider path was not denied at connect(): $(cat "${td}/direct.out")"
 echo "no direct path to any provider: the boundary routes model traffic through the gateway"
 
 say "Act 6: the attempts are on the record"
