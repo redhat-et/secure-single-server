@@ -84,6 +84,7 @@ class LlmDScConfig(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("llm_d_sc_integration", INTEGRATION_PATH)
         integration = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(integration)
+        integration.ENGINE = "podman"
         with self.assertRaisesRegex(ValueError, "--gpu-only requires --real"):
             integration.main(gpu_only=True)
         with self.assertRaisesRegex(ValueError, "--gpu-only cannot use --remote-gpu"):
