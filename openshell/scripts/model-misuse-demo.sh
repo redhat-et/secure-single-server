@@ -100,7 +100,9 @@ chmod 0777 "${sideA}/home" "${sideA}/sandbox"
 # The provider id must not be "openai": opencode would fold the config into
 # its built-in OpenAI provider (Responses API, full model registry), and the
 # stand-in drives tools over chat completions - the same reason the deployed
-# harness names its provider "praxis".
+# harness names its provider "praxis". The canary is baked in, mirroring the
+# deployed harness's literal apiKey placeholder rather than an {env:...}
+# lookup this stack never executes.
 cat >"${sideA}/home/.config/opencode/opencode.json" <<EOF
 {
   "\$schema": "https://opencode.ai/config.json",
@@ -108,10 +110,11 @@ cat >"${sideA}/home/.config/opencode/opencode.json" <<EOF
     "standalone": {
       "npm": "@ai-sdk/openai-compatible",
       "name": "OpenAI (standalone install)",
-      "options": {"baseURL": "http://127.0.0.1:${fixture_port}/v1", "apiKey": "{env:OPENAI_API_KEY}"},
+      "options": {"baseURL": "http://127.0.0.1:${fixture_port}/v1", "apiKey": "${canary}"},
       "models": {"${sanctioned}": {"name": "Administrator-approved model"}}
     }
-  }
+  },
+  "model": "standalone/${sanctioned}"
 }
 EOF
 userns=()
@@ -128,7 +131,10 @@ fi
   run --format json --model "standalone/${wrong_model}" \
   "Write the proof script, run it with bash, then confirm completion." \
   >"${td}/side-a.out" 2>&1 \
-  || die "side A: opencode failed against the stand-in provider: $(tail -5 "${td}/side-a.out")"
+  || { echo "the stand-in's records for the requests it saw (path, model, credential verdict):"
+       curl -s "http://127.0.0.1:${control_port}/state" || true
+       echo
+       die "side A: opencode failed against the stand-in provider: $(tail -5 "${td}/side-a.out")"; }
 grep -q "OPENCODE_TOOL_OK" "${td}/side-a.out" \
   || die "side A: the stand-in provider did not drive the agent's tools: $(tail -5 "${td}/side-a.out")"
 [[ "$(tr -d '[:space:]' <"${sideA}/sandbox/opencode-exec-proof.txt")" == "OPENCODE_TOOL_OK" ]] \
