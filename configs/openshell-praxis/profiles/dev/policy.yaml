@@ -40,4 +40,4 @@ network_policies:
   npm_registry:
     name: npm-registry
     endpoints: [{host: registry.npmjs.org, port: 443}]
-    binaries: [{path: /usr/bin/node-26}, {path: /usr/bin/npm}]
+    binaries: [{path: /usr/bin/node-26}, {path: /usr/bin/npm}, {path: /usr/local/bin/opencode}]
