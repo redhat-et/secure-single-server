@@ -60,7 +60,7 @@ say "Act 1: the rule, as the gateway states it"
 # entry carries a praxis block with the upstream mapping. A raw provider
 # catalog means no catalog is installed and the story's refusal does not
 # exist - fail loudly rather than demo the wrong configuration.
-catalog_ids="$(python3 - "${td}/models.json" <<'PY' || die "the gateway lists no unified model catalog; install one with 'sss-bootc providers unified --models <file>' - this story demonstrates the catalog"
+catalog_ids="$(python3 - "${td}/models.json" <<'PY' || die "the gateway lists no unified model catalog; install one with 'sss-bootc providers unified --models <file>' - this repo ships the single-model catalog openshell/scripts/model-misuse-catalog.json"
 import json, sys
 entries = json.load(open(sys.argv[1])).get("data", [])
 if not entries or not all("praxis" in entry for entry in entries):

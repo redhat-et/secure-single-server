@@ -1,0 +1,10 @@
+[
+  {
+    "id": "gpt-6-luna",
+    "provider": "openai",
+    "model": "gpt-6-luna",
+    "apis": ["openai"],
+    "context": 128000,
+    "output": 8192
+  }
+]
