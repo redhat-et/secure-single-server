@@ -63,7 +63,7 @@ where one is still missing.
 | --- | --- | --- | --- |
 | 1-2 | Live-looking key planted in the agent shell | (none — the victim's mistake, replayed) | Key is findable; value is synthetic |
 | 3 | Spend the key on `openrouter.ai` | Per-binary, per-endpoint egress policy | Denied at `connect()` with `EACCES` |
-| 4 | — | Audit logging | `transparent_tcp_policy_denied` on the record |
+| 4 | — | Audit logging | Denied network events on the record |
 | 5 | Same network, outside the boundary | Controlled-destination contrast | Host reaches the server; sandbox cannot |
 | 6 | Spend the same credential on a *different model* through the sanctioned gateway | (none yet — the residual gap) | Request crosses the boundary unvalidated |
 
@@ -280,14 +280,14 @@ byte leaves the host — synchronously, at `connect()`:
 
 ```text
 connect error: EACCES
-fatal: unable to access 'http://host.openshell.internal:18081/upload/': Failed to connect to host.openshell.internal:18081 after 9 ms: Could not connect to server
-[1792453171.991] [sandbox] [OCSF ] [ocsf] NET:OPEN [MED] DENIED /usr/libexec/git-core/git-remote-http(0) -> host.openshell.internal:18081 [reason:transparent_tcp_policy_denied]
+fatal: unable to access 'http://host.openshell.internal:18081/upload/': Failed to connect to host.openshell.internal:18081 after 4 ms: Could not connect to server
+[1792462430.204] [sandbox] [OCSF ] [ocsf] NET:OPEN [MED] DENIED /usr/libexec/git-core/git-remote-http(0) -> host.openshell.internal:18081 [reason:transparent_tcp_policy_denied]
 ```
 
 The Python fallback dies differently — no interpreter:
 
 ```text
-bash: python3: command not found
+/bin/bash: line 1: python3: command not found
 ```
 
 Act 5 shows the enforcement side of the same attempts, and Act 6 the
