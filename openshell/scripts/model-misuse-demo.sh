@@ -141,7 +141,7 @@ grep -q "OPENCODE_TOOL_OK" "${td}/side-a.out" \
   || die "side A: the stand-in provider did not drive the agent's tools: $(tail -5 "${td}/side-a.out")"
 [[ "$(tr -d '[:space:]' <"${sideA}/sandbox/opencode-exec-proof.txt")" == "OPENCODE_TOOL_OK" ]] \
   || die "side A: the agent's bash tool produced no proof file under the wrong model"
-echo "the agent completed its whole task loop - write, bash, confirm - on ${wrong_model}"
+echo "the agent ran its bash tool, wrote the proof file, and confirmed completion on ${wrong_model}"
 python3 - "${control_port}" "${wrong_model}" <<'PY' || die "side A: the stand-in provider never served ${wrong_model} with the canary credential"
 import json, sys, urllib.request
 state = json.load(urllib.request.urlopen("http://127.0.0.1:" + sys.argv[1] + "/state"))

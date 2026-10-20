@@ -30,20 +30,17 @@ def completion(path, body, missing_usage=False):
         message['content'] = MARKER
         choice['finish_reason'] = 'stop'
         return result
-    if not {'write', 'bash'} <= names:
-        raise RuntimeError('OpenCode did not advertise write and bash tools; advertised: '
+    # The pinned image's opencode has no separate write tool (apply_patch
+    # owns file edits), so the proof is written through bash itself.
+    if 'bash' not in names:
+        raise RuntimeError('OpenCode did not advertise a bash tool; advertised: '
                            + ', '.join(sorted(name for name in names if name)))
-    written = any(item.get('role') == 'tool' and item.get('tool_call_id') == 'call_write'
-                  for item in body.get('messages', []))
-    function = {'name': 'bash', 'arguments': json.dumps({
-        'command': 'node /sandbox/opencode-proof.cjs',
-        'description': 'Run the fixed proof script', 'timeout': 10000})} if written else {
-        'name': 'write', 'arguments': json.dumps({
-            'filePath': '/sandbox/opencode-proof.cjs',
-            'content': "require('node:fs').writeFileSync('/sandbox/opencode-exec-proof.txt', 'OPENCODE_TOOL_OK\\n');\n"})}
     message['content'] = None
-    message['tool_calls'] = [{'id': 'call_bash' if written else 'call_write',
-                             'type': 'function', 'function': function}]
+    message['tool_calls'] = [{'id': 'call_bash', 'type': 'function', 'function': {
+        'name': 'bash',
+        'arguments': json.dumps({
+            'command': "node -e \"require('node:fs').writeFileSync('/sandbox/opencode-exec-proof.txt', 'OPENCODE_TOOL_OK');\"",
+            'description': 'Write the proof file', 'timeout': 10000})}}]
     choice['finish_reason'] = 'tool_calls'
     return result
 
