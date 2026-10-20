@@ -95,8 +95,9 @@ echo "stand-in provider up on 127.0.0.1:${fixture_port} (control on ${control_po
 sideA="${td}/side-a"
 mkdir -p "${sideA}/home/.config/opencode" "${sideA}/sandbox"
 chmod 0777 "${sideA}/home" "${sideA}/sandbox"
-# The client-side copy of the rule: the agent's config lists only the
-# approved model. The move under test walks straight past it with -m.
+# Side A has no server-side rule, only the user-owned model list that
+# opencode resolves -m against - so the stronger model must be listed for
+# the move under test to run at all. The default stays the approved model.
 # The provider id must not be "openai": opencode would fold the config into
 # its built-in OpenAI provider (Responses API, full model registry), and the
 # stand-in drives tools over chat completions - the same reason the deployed
@@ -111,7 +112,8 @@ cat >"${sideA}/home/.config/opencode/opencode.json" <<EOF
       "npm": "@ai-sdk/openai-compatible",
       "name": "OpenAI (standalone install)",
       "options": {"baseURL": "http://127.0.0.1:${fixture_port}/v1", "apiKey": "${canary}"},
-      "models": {"${sanctioned}": {"name": "Administrator-approved model"}}
+      "models": {"${sanctioned}": {"name": "Default model"},
+                 "${wrong_model}": {"name": "Stronger model"}}
     }
   },
   "model": "standalone/${sanctioned}"
@@ -153,9 +155,10 @@ PY
 kill "${fixture_pid}" 2>/dev/null || true
 fixture_pid=""
 echo "read the record above carefully: the client's model choice was honored verbatim,"
-echo "the key traveled with it, and nothing refused or logged a violation. The model"
-echo "policy existed only in a client-side config file - and one -m flag walked past"
-echo "it. A real provider would bill for this and tell no one."
+echo "the key traveled with it, and nothing refused or logged a violation. The only"
+echo "model list was the one in the user's own config file - and the user who owns"
+echo "the config owns the list. One -m flag chose the stronger model; a real provider"
+echo "would bill for this and tell no one."
 
 say "Act 3: side B - the same image behind the OpenShell boundary"
 # Render the policy and provider config exactly as the deployment's
@@ -199,8 +202,10 @@ raise SystemExit("no text part in the transcript")
 PY
 
 say "Act 5: the same pick, through the boundary"
-# The move from the live sandbox, replayed at the user-facing layer. The
-# refusal is real; only its wording is opencode's wrapper.
+# The move from the live sandbox, replayed at the user-facing layer. This
+# layer cannot show who refused - opencode resolves -m against its own
+# config, which lists only the sanctioned model - so the raw request below
+# is the proof that the gateway itself refuses.
 if harness_ssh "${name}" \
   "/usr/local/bin/opencode run --format json --model praxis/${wrong_model} 'Which model are you?'" \
   >"${td}/wrong-ux.out" 2>&1; then
