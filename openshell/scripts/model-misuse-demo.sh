@@ -181,9 +181,13 @@ say "Act 4: the sanctioned flow - the approved model answers"
 # The one real request this demo makes: a few tokens on the sanctioned
 # model. Note what the model calls itself - the catalog decouples the
 # client-facing id from the upstream model name.
+# opencode run reads stdin when it is an open pipe: over ssh without -n
+# the caller's terminal stays attached and the run blocks forever. Every
+# opencode invocation below closes stdin; the node-26 probes pipe their
+# scripts through stdin and keep it.
 if ! harness_ssh "${name}" \
   "/usr/local/bin/opencode run --format json 'Which model are you? Answer in one short sentence.'" \
-  >"${td}/sanctioned.out" 2>&1; then
+  >"${td}/sanctioned.out" 2>&1 </dev/null; then
   die "the sanctioned model did not answer: $(tail -5 "${td}/sanctioned.out")"
 fi
 python3 - "${td}/sanctioned.out" <<'PY' || die "no answer text in the sanctioned run: $(tail -5 "${td}/sanctioned.out")"
@@ -208,7 +212,7 @@ say "Act 5: the same pick, through the boundary"
 # is the proof that the gateway itself refuses.
 if harness_ssh "${name}" \
   "/usr/local/bin/opencode run --format json --model praxis/${wrong_model} 'Which model are you?'" \
-  >"${td}/wrong-ux.out" 2>&1; then
+  >"${td}/wrong-ux.out" 2>&1 </dev/null; then
   grep -q '"type": *"error"' "${td}/wrong-ux.out" \
     || die "SECURITY FAILURE: opencode served ${wrong_model} through the gateway"
 fi
