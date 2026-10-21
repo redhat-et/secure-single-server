@@ -255,13 +255,17 @@ grep -q "Unknown model" "${td}/forged.out" \
   || die "the forged-header refusal is not the gateway's Unknown-model body: $(cat "${td}/forged.out")"
 echo "the forged routing header was stripped; the body's model decides"
 # The last fallback: skip the gateway entirely and call the provider
-# directly - Story 1's vector, one layer down.
-printf '%s\n' \
+# directly - Story 1's vector, one layer down. The node script exits 1 on
+# the denial, so the pipeline runs inside the guard: bare, errexit plus
+# pipefail would end the script silently right after the EACCES line.
+if printf '%s\n' \
   'const net = require("net");' \
   'const s = net.connect({host: "api.openai.com", port: 443});' \
   's.on("error", (e) => { console.log("connect error:", e.code); process.exit(1); });' \
   's.on("connect", () => { console.log("UNEXPECTED: connected"); process.exit(0); });' \
-  | harness_ssh "${name}" '/usr/bin/node-26' | tee "${td}/direct.out"
+  | harness_ssh "${name}" '/usr/bin/node-26' | tee "${td}/direct.out"; then
+  die "SECURITY FAILURE: the direct provider path reached api.openai.com"
+fi
 grep -q "EACCES" "${td}/direct.out" \
   || die "the direct provider path was not denied at connect(): $(cat "${td}/direct.out")"
 echo "no direct path to any provider: the boundary routes model traffic through the gateway"
