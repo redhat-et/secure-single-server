@@ -680,6 +680,8 @@ def main(real=False, model="qwen3.8-27b-int4", keep=False, remote_gpu=None,
                 "--read-only", "--cap-drop", "all",
                 "--security-opt", "no-new-privileges",
                 "--tmpfs", "/tmp",
+                "--env", "PRAXIS_CONFIG=/etc/praxis/config.yaml",
+                "--health-cmd", "wget -qO- http://127.0.0.1:9902/healthy || exit 1",
                 *bind(ROOT / "configs/llm-d-sc/praxis.yaml", "/etc/praxis/config.yaml"),
                 PRAXIS_IMAGE,
             )
