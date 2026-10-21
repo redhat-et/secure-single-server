@@ -27,8 +27,7 @@ Open WebUI
 
 The front relay records each request in SQLite, forwards it to Praxis, and
 adds `X-Demo-Route` and `X-Demo-Classification` response headers. The two
-backend relays record the selected route. The dashboard is at `/`, and the
-redacted JSON trace API is at `/_trace/api/traces`.
+backend relays record backend attempts with their timing, including failovers. The dashboard is at `/`, and the redacted JSON trace API is at `/_trace/api/traces`.
 
 The validated AWS topology splits CPU and GPU work across two hosts:
 
@@ -190,8 +189,8 @@ reviewed network and authorization boundary.
 `WEBUI_AUTH=false` is only for a disposable, loopback-only demonstration. A
 shared deployment must enable authentication and place the UI behind an
 appropriate HTTPS and authorization boundary. The trace relay stores recent
-request prompts in a temporary SQLite database for observability; treat its
-output as sensitive and do not expose it publicly.
+request prompts and model responses (capped at 16,000 characters) in a temporary SQLite database for observability;
+treat its output as sensitive and do not expose it publicly.
 
 ## Temporary image
 
