@@ -16,7 +16,7 @@
 # planted key is a synthetic canary whose value is never printed. Side B
 # makes exactly one real completion request (the sanctioned model, a few
 # tokens); every other request is refused or stands in. See
-# docs/development/exfiltration-story.md for the story.
+# docs/examples/model-escalation/README.md for the story.
 set -euo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=../scripts/harness-lib.sh

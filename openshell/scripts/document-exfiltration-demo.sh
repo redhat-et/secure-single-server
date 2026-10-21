@@ -6,7 +6,7 @@
 # destination is a host-side controlled stand-in. Every denial is
 # provable: EACCES at connect() plus an unchanged server-side request
 # count, and no real external request leaves the host. See
-# docs/development/exfiltration-story.md for the story.
+# docs/examples/document-exfiltration/README.md for the story.
 set -euo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=../scripts/harness-lib.sh

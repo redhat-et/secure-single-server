@@ -7,7 +7,7 @@
 # even on failure. No real external request leaves the sandbox: the
 # exfiltration attempts are denied at connect() before any byte is
 # sent, and the escalation act refuses to run against a non-local
-# upstream. See docs/development/exfiltration-story.md for the story.
+# upstream. See docs/examples/api-key-theft/README.md for the story.
 set -euo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=../scripts/harness-lib.sh
