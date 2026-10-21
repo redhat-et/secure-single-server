@@ -59,9 +59,11 @@ CONTAINER_ENGINE=podman python3 tests/llm-d-sc/integration.py
 The integration test pulls immutable image digests, creates a temporary Podman
 network and model volume, waits for the classifier to report `READY`, sends
 one simple and one reasoning prompt through Open WebUI and the gateway, checks
-the trace records, and removes the resources it created. The synthetic
-backends also return OpenAI-compatible server-sent events so OpenCode's
-streaming client follows the same path as non-streaming clients.
+the trace records, and removes the resources it created unless you pass
+`--keep`, which leaves the stack running (for example, to [run OpenCode through
+it](#run-opencode-through-the-routed-backend)). The synthetic backends also
+return OpenAI-compatible server-sent events so OpenCode's streaming client
+follows the same path as non-streaming clients.
 
 A successful run reports:
 
@@ -71,26 +73,6 @@ A successful run reports:
 
 On GitHub-hosted CI, the same path runs with Docker. It does not exercise real
 vLLM generation, GPU scheduling, model quality, throughput, or latency.
-
-## Run OpenCode through the routed backend
-
-After the integration test prints the trace relay port, create an OpenShell
-OpenCode workload that uses that relay as its only model gateway:
-
-```bash
-os_run env PRAXIS_PORT=PRINTED_TRACE_PORT \
-  openshell/harnesses/opencode/create.sh \
-  --profile dev \
-  --name opencode-llm-d-sc \
-  --config "$PWD/configs/llm-d-sc"
-```
-
-The template catalog supplies the `Semantic-Qwen` model ID. The sandbox can
-contact only `host.openshell.internal:<trace-port>`, and the strict policy
-permits only model discovery and chat completion. The trace relay records the
-request and forwards it to Praxis. The provider marks the model as reasoning
-but intentionally does not replay interleaved reasoning; Qwen's reasoning
-parser can otherwise emit malformed content after tool calls.
 
 ## Run the AWS split-host scenario
 
@@ -147,6 +129,31 @@ Add `--cache-volume NAME` to either real command to reuse a named Podman
 cache volume. This avoids downloading the approximately 18 GiB model weights
 again after the first qualification run. A named cache is not removed by the
 test's cleanup path.
+
+## Run OpenCode through the routed backend
+
+Run this against a stack that is still up, so start the integration test with
+`--keep`: either the mock stack from the deterministic test or the real
+split-host stack above. OpenShell has to run on the same host as that stack,
+because the sandbox reaches the trace relay at `host.openshell.internal`. Take
+the port from the trace relay URL the test prints (`trace_ui.url` in its
+result) and use it as `PRINTED_TRACE_PORT` to create an OpenShell OpenCode
+workload that uses that relay as its only model gateway:
+
+```bash
+os_run env PRAXIS_PORT=PRINTED_TRACE_PORT \
+  openshell/harnesses/opencode/create.sh \
+  --profile dev \
+  --name opencode-llm-d-sc \
+  --config "$PWD/configs/llm-d-sc"
+```
+
+The template catalog supplies the `Semantic-Qwen` model ID. The sandbox can
+contact only `host.openshell.internal:<trace-port>`, and the strict policy
+permits only model discovery and chat completion. The trace relay records the
+request and forwards it to Praxis. The provider marks the model as reasoning
+but intentionally does not replay interleaved reasoning; Qwen's reasoning
+parser can otherwise emit malformed content after tool calls.
 
 ## AWS validation record
 
