@@ -34,7 +34,19 @@ while [[ $# -gt 0 ]]; do
   shift 2
 done
 [[ -n "${HOST}" ]] || usage
-[[ "${DEST}" =~ ^[A-Za-z0-9._/-]+$ ]] || die 'invalid destination path'
+# rsync --delete runs against this value, so it must be a real, specific
+# directory: absolute, at least two segments, and no . or .. segments -
+# "/" or "/home" would erase every remote file the local tree lacks.
+[[ "${DEST}" =~ ^/([A-Za-z0-9._-]+/)+[A-Za-z0-9._-]+$ ]] \
+  || die 'destination must be an absolute path of at least two plain segments'
+if [[ "${DEST}" =~ /(\.|\.\.)(/|$) ]]; then
+  die 'destination must not contain . or .. segments'
+fi
+# The key path is joined into one string for rsync -e, which splits it on
+# whitespace; spaces or quotes would corrupt the ssh command.
+case "${KEY_FILE}" in
+  *[[:space:]]* | *\'* | *\"*) die 'key file path must not contain whitespace or quotes' ;;
+esac
 command -v rsync >/dev/null || die 'rsync is not installed on this workstation'
 
 # Seeded non-empty so Bash 3.2 with nounset can expand them.
