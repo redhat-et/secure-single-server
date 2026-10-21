@@ -597,6 +597,9 @@ class Handler(BaseHTTPRequestHandler):
         trace_id = uuid.uuid4().hex
         length = int(self.headers.get("Content-Length", "0"))
         body = self.rfile.read(length) if length else b""
+        if self.server.route is None and self.path.startswith("/ws/"):
+            self.send_bytes(404, "application/json", b'{"error":"not found"}')
+            return
         question = question_from(body) if self.path.startswith("/v1/chat/completions") else None
         if (self.server.route is None and method == "POST"
                 and self.path.split("?", 1)[0] == "/v1/chat/completions"):
