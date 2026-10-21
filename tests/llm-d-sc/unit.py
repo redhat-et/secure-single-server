@@ -9,8 +9,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import socket
 import sys
+import tempfile
 import threading
 import time
+import urllib.error
 import urllib.request
 import unittest
 from unittest import mock
@@ -29,17 +31,24 @@ class LlmDScConfig(unittest.TestCase):
     def setUp(self):
         self.config = yaml.safe_load(CONFIG_PATH.read_text())
 
+    def step(self, name):
+        router = next(
+            item for item in self.config["filter_chains"][0]["filters"]
+            if item["filter"] == "iterative_request_router"
+        )
+        return next(step for step in router["steps"] if step["name"] == name)
+
     def test_filter_chain_has_one_cluster_selector(self):
         filters = self.config["filter_chains"][0]["filters"]
         kinds = [item["filter"] for item in filters]
         self.assertEqual(
             kinds,
-            ["request_id", "access_log", "static_response", "llm_d_sc", "load_balancer"],
+            ["request_id", "access_log", "static_response", "iterative_request_router"],
         )
         self.assertNotIn("router", kinds)
 
     def test_labels_map_to_expected_backends(self):
-        filters = self.config["filter_chains"][0]["filters"]
+        filters = self.step("classify-and-route")["filters"]
         classifier = next(item for item in filters if item["filter"] == "llm_d_sc")
         routes = {item["label"]: item["cluster"] for item in classifier["routes"]}
         self.assertEqual(
@@ -56,7 +65,7 @@ class LlmDScConfig(unittest.TestCase):
         self.assertEqual(classifier["status_on_reject"], 503)
 
     def test_endpoints_stay_on_the_private_container_network(self):
-        filters = self.config["filter_chains"][0]["filters"]
+        filters = self.step("classify-and-route")["filters"]
         classifier = next(item for item in filters if item["filter"] == "llm_d_sc")
         load_balancer = next(item for item in filters if item["filter"] == "load_balancer")
         self.assertEqual(classifier["endpoint"], "llm-d-sc:50051")
@@ -67,6 +76,23 @@ class LlmDScConfig(unittest.TestCase):
                 "vllm-gpu": ["trace-ui:8082"],
             },
         )
+
+    def test_failed_requests_fail_over_to_a_health_checked_pool(self):
+        pool = {"trace-ui:8081", "trace-ui:8082"}
+        on_result = self.step("classify-and-route")["on_result"]
+        self.assertIn({"origin": "transport", "next": "failover"}, on_result)
+        self.assertIn(
+            {"status": [429, 500, 502, 503, 504], "next": "failover"}, on_result,
+        )
+        failover = self.step("failover")
+        balancer = next(item for item in failover["filters"] if item["filter"] == "load_balancer")
+        self.assertEqual(
+            {item["name"]: set(item["endpoints"]) for item in balancer["clusters"]},
+            {"vllm-any": pool},
+        )
+        cluster = next(item for item in self.config["clusters"] if item["name"] == "vllm-any")
+        self.assertEqual(set(cluster["endpoints"]), pool)
+        self.assertIn("health_check", cluster)
 
     def test_admin_listener_stays_private(self):
         self.assertEqual(self.config["admin"]["address"], "127.0.0.1:9901")
@@ -203,6 +229,58 @@ class LlmDScConfig(unittest.TestCase):
             self.assertEqual(response.headers["X-Demo-Route"], "vllm-cpu")
             self.assertEqual(response.headers["X-Demo-Classification"], "SIMPLE")
             self.assertEqual(response.headers["X-Llm-D-Sc-Score"], "0.9989")
+
+    def test_failover_keeps_the_classifier_score(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        spec = importlib.util.spec_from_file_location("llm_d_sc_trace_ui", TRACE_UI_PATH)
+        trace_ui = importlib.util.module_from_spec(spec)
+        with mock.patch.dict(os.environ, {"TRACE_DB_PATH": f"{directory.name}/traces.db"}):
+            spec.loader.exec_module(trace_ui)
+
+        class Upstream(BaseHTTPRequestHandler):
+            def do_POST(self):
+                self.rfile.read(int(self.headers.get("Content-Length", "0")))
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(b"{}")
+
+            def log_message(self, fmt, *args):
+                return
+
+        with socket.socket() as probe:
+            probe.bind(("127.0.0.1", 0))
+            stopped_port = probe.getsockname()[1]
+        upstream = ThreadingHTTPServer(("127.0.0.1", 0), Upstream)
+        cpu = trace_ui.RelayServer(
+            ("127.0.0.1", 0), f"http://127.0.0.1:{stopped_port}", "vllm-cpu")
+        gpu = trace_ui.RelayServer(
+            ("127.0.0.1", 0), f"http://127.0.0.1:{upstream.server_port}", "vllm-gpu")
+        for server in (upstream, cpu, gpu):
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            self.addCleanup(lambda server=server, thread=thread: (
+                server.shutdown(), server.server_close(), thread.join(timeout=2)))
+
+        def post(relay, headers):
+            request = urllib.request.Request(
+                f"http://127.0.0.1:{relay.server_port}/v1/chat/completions?_trace=t1",
+                data=b"{}", headers=headers, method="POST",
+            )
+            return urllib.request.urlopen(request, timeout=5)
+
+        trace_ui.create_trace("t1", "POST", "/v1/chat/completions", None)
+        with self.assertRaises(urllib.error.HTTPError) as stopped:
+            post(cpu, {"X-Llm-D-Sc-Label": "SIMPLE", "X-Llm-D-Sc-Score": "0.9876"})
+        stopped.exception.close()
+        with post(gpu, {}) as response:
+            self.assertNotIn("X-Llm-D-Sc-Score", response.headers)
+            trace_ui.complete_trace("t1", response.status, dict(response.headers.items()), 1)
+        trace = trace_ui.traces()[0]
+        self.assertEqual(trace["route"], "vllm-gpu")
+        self.assertEqual(trace["label"], "SIMPLE")
+        self.assertEqual(trace["score"], "0.9876")
 
     def test_relay_rejects_non_origin_form_request_targets(self):
         spec = importlib.util.spec_from_file_location("llm_d_sc_trace_ui", TRACE_UI_PATH)
