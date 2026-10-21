@@ -90,16 +90,15 @@ if printf '%s\n' \
 fi
 
 say "Act 4: the attempts are on the record"
-# Assert on any denied network event, not one reason string: both vectors
-# target openrouter.ai, which no policy entry lists, and the reason that
-# unlisted-destination denials log under is not assumed.
+# Both vectors target openrouter.ai, so the audit entry must name that
+# destination: a denial of anything else cannot stand in for them.
 denials=""
 for _ in $(seq 1 10); do
-  denials="$(_os logs "${name}" 2>/dev/null | grep "NET:OPEN.*DENIED" || true)"
+  denials="$(_os logs "${name}" 2>/dev/null | grep "NET:OPEN.*DENIED.*openrouter.ai:443" || true)"
   [[ -n "${denials}" ]] && break
   sleep 1
 done
-[[ -n "${denials}" ]] || die "no denied network events in the sandbox log"
+[[ -n "${denials}" ]] || die "no policy denial for openrouter.ai:443 in the sandbox log"
 printf '%s\n' "${denials}"
 
 say "Act 5: the same network, outside the boundary"
@@ -128,7 +127,16 @@ kill "${controlled_pid}" 2>/dev/null || true
 controlled_pid=""
 
 say "Act 6: the sanctioned door - model escalation through the gateway"
-if ! grep -q "Qwen" "${td}/models.json"; then
+# A unified catalog answers /v1/models from administrator configuration
+# and refuses unknown models before credentials, so the escalation request
+# cannot traverse - the model-escalation example demonstrates that refusal
+# end to end. This act runs only on a catalog-less gateway with a local
+# vLLM upstream, where the request does cross the boundary.
+if grep -q '"praxis"' "${td}/models.json"; then
+  echo "skipped: a unified catalog is installed, so the unapproved model is"
+  echo "refused at the gateway before credentials - the model-escalation"
+  echo "example demonstrates that control end to end."
+elif ! grep -q "Qwen" "${td}/models.json"; then
   echo "skipped: the gateway lists no local Qwen upstream, so the escalation"
   echo "request could reach a real provider. Re-run with the vLLM backend selected."
 else
@@ -149,11 +157,19 @@ else
     '  .then(async (r) => { console.log("HTTP", r.status); console.log((await r.text()).slice(0, 400)); })' \
     '  .catch((e) => { console.log("error:", e.message); process.exit(1); });' \
     | harness_ssh "${name}" '/usr/bin/node-26' | tee "${td}/escalation.out"
+  # Report the observed outcome, never a fixed conclusion: a 200 would mean
+  # the unapproved model was served, and the traversal is proven only by the
+  # upstream's own error naming the model - a gateway-generated refusal
+  # would not.
+  grep -q "HTTP 200" "${td}/escalation.out" \
+    && die "SECURITY FAILURE: the gateway served the unapproved model"
+  grep -q "${escalation_model}" "${td}/escalation.out" \
+    || die "the escalation response does not name the model, so it did not traverse: $(cat "${td}/escalation.out}")"
   echo
-  echo "Read the line above carefully: the gateway did not reject the unknown"
-  echo "model. The error text comes from the local vLLM upstream, which proves"
-  echo "the request crossed the boundary with the model field intact. Model"
-  echo "selection is client-owned today; the fix is gateway-side model pinning."
+  echo "Read the response above: the request crossed the boundary with the"
+  echo "model field intact, and the error text is the local upstream's, not"
+  echo "the gateway's. On a catalog-less gateway, model selection is the"
+  echo "client's; the model-escalation example shows the catalog closing it."
 fi
 
 say "Demo passed: exfiltration blocked at every layer, escalation honestly shown"

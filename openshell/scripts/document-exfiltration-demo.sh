@@ -232,17 +232,24 @@ grep -q "Could not connect to server" "${td}/git-results.out" \
   || die "results server counted a sandbox request outside the sanctioned flow"
 
 say "Act 5: the attempts are on the record"
-denials=""
+# Match the audit entry to the attempt that carries the binary x endpoint
+# point: git's connection to the results server. The attacker-port attempts
+# are proven by their client-visible failures plus unchanged request
+# counts; on this deployment their denials log under a different reason
+# (the host is policy-known, the port is not), so they are printed, not
+# required.
+git_denial=""
 for _ in $(seq 1 10); do
-  denials="$(_os logs "${name}" 2>/dev/null | grep "transparent_tcp_policy_denied" || true)"
-  [[ -n "${denials}" ]] && break
+  git_denial="$(_os logs "${name}" 2>/dev/null \
+    | grep "git-remote-http(0) -> host.openshell.internal:${results_port}" || true)"
+  [[ -n "${git_denial}" ]] && break
   sleep 1
 done
-[[ -n "${denials}" ]] || die "no transparent_tcp_policy_denied entries in the sandbox log"
-printf '%s\n' "${denials}"
-# The reason string above is verified for denials at endpoints a policy
-# entry lists; denials to unlisted destinations may carry a different
-# reason. Print every denied network event so the audit picture is whole.
+[[ -n "${git_denial}" ]] \
+  || die "no policy denial for git's connection to the results server in the sandbox log"
+[[ "${git_denial}" == *"transparent_tcp_policy_denied"* ]] \
+  || die "git's results-server denial is not a policy denial: ${git_denial}"
+printf '%s\n' "${git_denial}"
 echo "every denied network event the log query returns, whatever its reason:"
 _os logs "${name}" 2>/dev/null | grep "NET:OPEN.*DENIED" || true
 echo "total sandbox log lines this query returns: $(_os logs "${name}" 2>/dev/null | wc -l)"

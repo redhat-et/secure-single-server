@@ -89,15 +89,17 @@ cooperating. This deployment answers them at the architecture level:
 | 3 | Spend the key on `openrouter.ai` | Per-binary, per-endpoint egress policy | Denied at `connect()` with `EACCES` |
 | 4 | — | Audit logging | Denied network events on the record |
 | 5 | Same network, outside the boundary | Controlled-destination contrast | Host reaches the server; sandbox cannot |
-| 6 | Spend the same credential on a *different model* through the sanctioned gateway | (was the residual gap; now closed — see below) | Refused by the catalog before credentials |
+| 6 | Spend the same credential on a *different model* through the sanctioned gateway | (the historical residual gap; closed since — see below) | On a catalog-less gateway the request traverses and the upstream's error proves it; with a catalog installed the act skips — the model-escalation example demonstrates the refusal |
 
 ## Running the demo
 
 Prerequisites: the openshell-praxis all-in-one deployment on the
 managed host, and a repo checkout on the host as the OpenShell owner
 account that manages sandboxes. The demo works with or without a
-unified model catalog installed; Act 6 runs only when a local vLLM
-upstream is served and skips itself otherwise.
+unified model catalog installed. Act 6 runs only on a catalog-less
+gateway with a local vLLM upstream; it skips when a catalog is
+installed (the [model escalation](../model-escalation/README.md)
+example demonstrates that refusal) or when no local upstream is served.
 
 ```console
 ./openshell/scripts/exfiltration-demo.sh
