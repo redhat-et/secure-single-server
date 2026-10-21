@@ -778,6 +778,7 @@ def main(real=False, model="qwen3.8-27b-int4", keep=False, remote_gpu=None,
                 simple = assert_trace(records, "SIMPLE", "vllm-cpu")
                 reasoning = assert_trace(records, "REASONING", "vllm-gpu")
             result["traces"] = [simple, reasoning]
+            result["trace_ui"] = {"url": f"http://127.0.0.1:{port}"}
             result["webui"] = {
                 "url": f"http://127.0.0.1:{open_webui_port}",
                 "health": "passed",
