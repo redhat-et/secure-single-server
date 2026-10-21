@@ -125,11 +125,11 @@ connect error: EACCES
 Act 4 shows the same attempts from the enforcement side — policy
 denials are first-class audit events, not silence. The sandbox log
 records each attempt as a `NET:OPEN` event in the OCSF format, naming
-the runtime binary and the destination — the same shape the
-[model escalation](../model-escalation/README.md) example captures
-verbatim for its direct-provider attempt (`/usr/bin/node-26(0) ->
-api.openai.com:443`); against `openrouter.ai` the entry names that
-host.
+the runtime binary and the destination:
+
+```text
+[1792605563.603] [sandbox] [OCSF ] [ocsf] NET:OPEN [MED] DENIED /usr/bin/node-26(0) -> openrouter.ai:443 [reason:transparent_tcp_policy_denied]
+```
 
 Act 5 rules out the boring explanation. A controlled server on the
 host answers `401` and counts requests; the sandbox's attempt to reach
