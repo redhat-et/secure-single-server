@@ -14,6 +14,7 @@ import threading
 import time
 import uuid
 from urllib.error import HTTPError, URLError
+from urllib.parse import parse_qsl, urlencode, urlsplit
 from urllib.request import Request, urlopen
 
 
@@ -27,6 +28,7 @@ HOP_BY_HOP = {
     "connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
     "te", "trailers", "transfer-encoding", "upgrade", "host", "content-length",
 }
+GPU_LABELS = {"COMPLEX", "REASONING"}
 
 
 def connection() -> sqlite3.Connection:
@@ -46,7 +48,19 @@ def connection() -> sqlite3.Connection:
             score TEXT,
             duration_ms INTEGER,
             error TEXT,
-            question TEXT
+            question TEXT,
+            fallback INTEGER NOT NULL DEFAULT 0
+        )"""
+    )
+    if "fallback" not in {row[1] for row in database.execute("PRAGMA table_info(traces)")}:
+        database.execute("ALTER TABLE traces ADD COLUMN fallback INTEGER NOT NULL DEFAULT 0")
+    database.execute(
+        """CREATE TABLE IF NOT EXISTS hops (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            trace_id TEXT NOT NULL,
+            route TEXT NOT NULL,
+            status INTEGER,
+            error TEXT
         )"""
     )
     return database
@@ -64,6 +78,21 @@ def create_trace(trace_id: str, method: str, path: str, question: str | None) ->
         )
 
 
+def record_hop(trace_id: str, route: str, label: str | None, status: int | None,
+               error: str | None = None, score: str | None = None) -> None:
+    with DB_LOCK, connection() as database:
+        database.execute(
+            "INSERT INTO hops (trace_id, route, status, error) VALUES (?, ?, ?, ?)",
+            (trace_id, route, status, error),
+        )
+        database.execute(
+            """UPDATE traces SET label = COALESCE(label, ?), route = COALESCE(route, ?),
+               score = COALESCE(score, ?)
+               WHERE id = ? AND completed_at IS NULL""",
+            (label, route, score, trace_id),
+        )
+
+
 def complete_trace(trace_id: str, status: int | None, headers, duration_ms: int,
                    error: str | None = None) -> None:
     completed = datetime.now(timezone.utc).isoformat()
@@ -71,16 +100,28 @@ def complete_trace(trace_id: str, status: int | None, headers, duration_ms: int,
     request_id = lowered.get("x-request-id")
     label = lowered.get("x-demo-classification")
     route = lowered.get("x-demo-route")
-    if route is None and label:
-        route = "vllm-gpu" if label.upper() in {"COMPLEX", "REASONING"} else "vllm-cpu"
     score = lowered.get("x-llm-d-sc-score")
+    fallback = lowered.get("x-praxis-fallback", "").lower() in {"true", "1", "yes"}
     with DB_LOCK, connection() as database:
+        if label is None or route is None or score is None:
+            saved = database.execute(
+                "SELECT label, route, score FROM traces WHERE id = ?", (trace_id,)
+            ).fetchone()
+            if saved:
+                label = label or saved[0]
+                route = route or saved[1]
+                score = score or saved[2]
+        if route is None and label:
+            route = "vllm-gpu" if label.upper() in GPU_LABELS else "vllm-cpu"
+        if label and route and (label.upper() in GPU_LABELS) != ("gpu" in route.lower()):
+            fallback = True
         database.execute(
             """UPDATE traces SET completed_at = ?, request_id = ?, status = ?,
-               label = ?, route = ?, score = ?, duration_ms = ?, error = ?
+               label = ?, route = ?, score = ?, duration_ms = ?, error = ?,
+               fallback = ?
                WHERE id = ?""",
             (completed, request_id, status, label, route, score, duration_ms,
-             error, trace_id),
+             error, int(fallback), trace_id),
         )
         if MAX_TRACES >= 0:
             database.execute(
@@ -89,6 +130,7 @@ def complete_trace(trace_id: str, status: int | None, headers, duration_ms: int,
                    )""",
                 (MAX_TRACES,),
             )
+            database.execute("DELETE FROM hops WHERE trace_id NOT IN (SELECT id FROM traces)")
 
 
 def traces() -> list[dict[str, object]]:
@@ -98,12 +140,25 @@ def traces() -> list[dict[str, object]]:
             "SELECT * FROM traces ORDER BY started_at DESC LIMIT ?",
             (MAX_TRACES if MAX_TRACES >= 0 else -1,),
         ).fetchall()
-    return [dict(row) for row in rows]
+        hops = database.execute(
+            "SELECT trace_id, route, status, error FROM hops ORDER BY id"
+        ).fetchall()
+    result = [dict(row, hops=[]) for row in rows]
+    by_id = {row["id"]: row for row in result}
+    for hop in hops:
+        if hop["trace_id"] in by_id:
+            by_id[hop["trace_id"]]["hops"].append(
+                {key: hop[key] for key in ("route", "status", "error")})
+    for row in result:
+        if len({hop["route"] for hop in row["hops"]}) > 1:
+            row["fallback"] = 1
+    return result
 
 
 def clear_traces() -> None:
     with DB_LOCK, connection() as database:
         database.execute("DELETE FROM traces")
+        database.execute("DELETE FROM hops")
 
 
 def question_from(body: bytes) -> str | None:
@@ -134,12 +189,13 @@ def dashboard(rows: list[dict[str, object]]) -> bytes:
 
     table_rows = []
     for row in rows:
+        failover = ' <small class="failover">failover</small>' if row["fallback"] else ""
         table_rows.append(
             "<tr>"
             f"<td>{text(row['started_at'])}</td>"
             f"<td><code>{text(row['method'])}</code> {text(row['path'])}</td>"
             f"<td>{text(row['label'])}</td>"
-            f"<td>{text(row['route'])}</td>"
+            f"<td>{text(row['route'])}{failover}</td>"
             f"<td>{text(row['score'])}</td>"
             f"<td>{text(row['status'])}</td>"
             f"<td>{text(row['duration_ms'])}</td>"
@@ -161,6 +217,7 @@ def dashboard(rows: list[dict[str, object]]) -> bytes:
     th, td {{ border: 1px solid #374151; padding: .5rem; text-align: left; vertical-align: top; }}
     th {{ background: #1f2937; }}
     code {{ color: #93c5fd; }}
+    .failover {{ color: #fbbf24; font-weight: 600; }}
   </style>
 </head>
 <body>
@@ -234,8 +291,17 @@ class Handler(BaseHTTPRequestHandler):
             key: value for key, value in self.headers.items()
             if key.lower() not in HOP_BY_HOP
         }
+        path, hop_trace_id, hop_recorded = self.path, None, False
+        if self.server.route is None and method == "POST":
+            path += ("&" if "?" in path else "?") + "_trace=" + trace_id
+        elif self.server.route is not None and "_trace=" in path:
+            parts = urlsplit(path)
+            query = parse_qsl(parts.query, keep_blank_values=True)
+            hop_trace_id = next((value for key, value in reversed(query) if key == "_trace"), None)
+            query = [(key, value) for key, value in query if key != "_trace"]
+            path = parts.path + ("?" + urlencode(query) if query else "")
         request = Request(
-            self.server.upstream + self.path,
+            self.server.upstream + path,
             data=body if method != "GET" else None,
             headers=headers,
             method=method,
@@ -255,6 +321,10 @@ class Handler(BaseHTTPRequestHandler):
                     score = self.headers.get("X-Llm-D-Sc-Score")
                     if score:
                         response_headers["X-Llm-D-Sc-Score"] = score
+                    if hop_trace_id:
+                        record_hop(hop_trace_id, self.server.route, classification,
+                                   response.status, score=score)
+                        hop_recorded = True
                 else:
                     complete_trace(trace_id, response.status, response_headers,
                                    int((time.monotonic() - started) * 1000))
@@ -269,12 +339,20 @@ class Handler(BaseHTTPRequestHandler):
             if self.server.route is None:
                 complete_trace(trace_id, error.code, error.headers,
                                int((time.monotonic() - started) * 1000), str(error))
+            elif hop_trace_id:
+                record_hop(hop_trace_id, self.server.route,
+                           self.headers.get("X-Llm-D-Sc-Label"), error.code, str(error),
+                           self.headers.get("X-Llm-D-Sc-Score"))
             self.send_bytes(error.code, error.headers.get_content_type(),
                             response_body)
         except (OSError, URLError) as error:
             if self.server.route is None:
                 complete_trace(trace_id, None, {},
                                int((time.monotonic() - started) * 1000), str(error))
+            elif hop_trace_id and not hop_recorded:
+                record_hop(hop_trace_id, self.server.route,
+                           self.headers.get("X-Llm-D-Sc-Label"), None, str(error),
+                           self.headers.get("X-Llm-D-Sc-Score"))
             self.send_bytes(502, "application/json",
                             json.dumps({"error": "upstream unavailable"}).encode())
 
