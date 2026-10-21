@@ -41,3 +41,7 @@ network_policies:
     name: npm-registry
     endpoints: [{host: registry.npmjs.org, port: 443, protocol: rest, enforcement: enforce, access: read-only, allow_encoded_slash: true}]
     binaries: [{path: /usr/bin/node-26}, {path: /usr/bin/npm}, {path: /usr/local/bin/opencode}]
+  models_catalog:
+    name: models-catalog
+    endpoints: [{host: models.opencode.ai, port: 443, protocol: rest, enforcement: enforce, access: read-only}]
+    binaries: [{path: /usr/local/bin/opencode}]
