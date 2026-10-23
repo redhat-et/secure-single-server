@@ -9,8 +9,18 @@ telemetry:
   sampling_rate: 1.0
 
 clusters:
-  - name: vllm-any
-    endpoints: ["trace-ui:8081", "trace-ui:8082"]
+  - name: vllm-cpu
+    endpoints: ["trace-ui:8081"]
+    health_check:
+      type: http
+      path: /health
+      expected_status: 200
+      interval_ms: 5000
+      timeout_ms: 2000
+      healthy_threshold: 2
+      unhealthy_threshold: 2
+  - name: vllm-gpu
+    endpoints: ["trace-ui:8082"]
     health_check:
       type: http
       path: /health
@@ -96,11 +106,30 @@ filter_chains:
               - filter: router
                 routes:
                   - path_prefix: "/"
-                    cluster: vllm-any
+                    headers:
+                      x-llm-d-sc-label: SIMPLE
+                    cluster: vllm-gpu
+                  - path_prefix: "/"
+                    headers:
+                      x-llm-d-sc-label: MEDIUM
+                    cluster: vllm-gpu
+                  - path_prefix: "/"
+                    headers:
+                      x-llm-d-sc-label: COMPLEX
+                    cluster: vllm-cpu
+                  - path_prefix: "/"
+                    headers:
+                      x-llm-d-sc-label: REASONING
+                    cluster: vllm-cpu
+                  # Classification failure uses the default CPU route, so retry on GPU.
+                  - path_prefix: "/"
+                    cluster: vllm-gpu
               - filter: load_balancer
                 clusters:
-                  - name: vllm-any
-                    endpoints: ["trace-ui:8081", "trace-ui:8082"]
+                  - name: vllm-cpu
+                    endpoints: ["trace-ui:8081"]
+                  - name: vllm-gpu
+                    endpoints: ["trace-ui:8082"]
             on_result:
               - default: true
                 done: true

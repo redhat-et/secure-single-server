@@ -636,14 +636,16 @@ class Handler(BaseHTTPRequestHandler):
             note_route(hop_trace_id, self.server.route,
                        self.headers.get("X-Llm-D-Sc-Label"), self.headers.get("X-Llm-D-Sc-Score"))
 
+        response_started = False
         try:
             with urlopen(request, timeout=600) as response:
                 ttfb_ms = elapsed_ms()
-                response_body = response.read()
                 response_headers = {
                     key: value for key, value in response.headers.items()
                     if key.lower() not in HOP_BY_HOP
                 }
+                classification = None
+                score = None
                 if self.server.route is not None:
                     response_headers["X-Demo-Route"] = self.server.route
                     classification = self.headers.get("X-Llm-D-Sc-Label")
@@ -652,6 +654,36 @@ class Handler(BaseHTTPRequestHandler):
                     score = self.headers.get("X-Llm-D-Sc-Score")
                     if score:
                         response_headers["X-Llm-D-Sc-Score"] = score
+
+                streaming = "text/event-stream" in response_headers.get(
+                    "Content-Type", ""
+                ).lower()
+                if streaming:
+                    self.send_response(response.status)
+                    for key, value in response_headers.items():
+                        self.send_header(key, value)
+                    # The handler uses HTTP/1.0, so a closed connection frames
+                    # the stream without buffering it or inventing a length.
+                    self.send_header("Connection", "close")
+                    self.close_connection = True
+                    self.end_headers()
+                    response_started = True
+
+                    chunks = []
+                    client_disconnected = False
+                    while chunk := response.read1(65536):
+                        chunks.append(chunk)
+                        if not client_disconnected:
+                            try:
+                                self.wfile.write(chunk)
+                                self.wfile.flush()
+                            except OSError:
+                                client_disconnected = True
+                    response_body = b"".join(chunks)
+                else:
+                    response_body = response.read()
+
+                if self.server.route is not None:
                     if hop_trace_id:
                         record_hop(hop_trace_id, self.server.route, classification,
                                    response.status, score=score, arrived_at=arrived_at,
@@ -663,12 +695,14 @@ class Handler(BaseHTTPRequestHandler):
                                    int((time.monotonic() - started) * 1000),
                                    response=extract_response(self.path, response_headers,
                                                              response_body))
-                self.send_response(response.status)
-                for key, value in response_headers.items():
-                    self.send_header(key, value)
-                self.send_header("Content-Length", str(len(response_body)))
-                self.end_headers()
-                self.wfile.write(response_body)
+                if not streaming:
+                    self.send_response(response.status)
+                    for key, value in response_headers.items():
+                        self.send_header(key, value)
+                    self.send_header("Content-Length", str(len(response_body)))
+                    self.end_headers()
+                    response_started = True
+                    self.wfile.write(response_body)
         except HTTPError as error:
             ttfb_ms = elapsed_ms()
             response_body = error.read()
@@ -691,8 +725,9 @@ class Handler(BaseHTTPRequestHandler):
                            self.headers.get("X-Llm-D-Sc-Label"), None, str(error),
                            self.headers.get("X-Llm-D-Sc-Score"), arrived_at=arrived_at,
                            total_ms=elapsed_ms(), classifier_us=classifier_us)
-            self.send_bytes(502, "application/json",
-                            json.dumps({"error": "upstream unavailable"}).encode())
+            if not response_started:
+                self.send_bytes(502, "application/json",
+                                json.dumps({"error": "upstream unavailable"}).encode())
 
 
 class RelayServer(ThreadingHTTPServer):

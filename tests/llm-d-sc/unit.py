@@ -78,21 +78,40 @@ class LlmDScConfig(unittest.TestCase):
         )
 
     def test_failed_requests_fail_over_to_a_health_checked_pool(self):
-        pool = {"trace-ui:8081", "trace-ui:8082"}
         on_result = self.step("classify-and-route")["on_result"]
         self.assertIn({"origin": "transport", "next": "failover"}, on_result)
         self.assertIn(
             {"status": [429, 500, 502, 503, 504], "next": "failover"}, on_result,
         )
         failover = self.step("failover")
+        router = next(item for item in failover["filters"] if item["filter"] == "router")
+        alternate = {
+            (next(iter(route.get("headers", {}).items()))[1]): route["cluster"]
+            for route in router["routes"] if route.get("headers")
+        }
+        self.assertEqual(alternate, {
+            "SIMPLE": "vllm-gpu",
+            "MEDIUM": "vllm-gpu",
+            "COMPLEX": "vllm-cpu",
+            "REASONING": "vllm-cpu",
+        })
         balancer = next(item for item in failover["filters"] if item["filter"] == "load_balancer")
         self.assertEqual(
-            {item["name"]: set(item["endpoints"]) for item in balancer["clusters"]},
-            {"vllm-any": pool},
+            {item["name"]: item["endpoints"] for item in balancer["clusters"]},
+            {
+                "vllm-cpu": ["trace-ui:8081"],
+                "vllm-gpu": ["trace-ui:8082"],
+            },
         )
-        cluster = next(item for item in self.config["clusters"] if item["name"] == "vllm-any")
-        self.assertEqual(set(cluster["endpoints"]), pool)
-        self.assertIn("health_check", cluster)
+        clusters = {item["name"]: item for item in self.config["clusters"]}
+        self.assertEqual(
+            {name: item["endpoints"] for name, item in clusters.items()},
+            {
+                "vllm-cpu": ["trace-ui:8081"],
+                "vllm-gpu": ["trace-ui:8082"],
+            },
+        )
+        self.assertTrue(all("health_check" in item for item in clusters.values()))
 
     def test_admin_listener_stays_private(self):
         self.assertEqual(self.config["admin"]["address"], "127.0.0.1:9901")
@@ -167,6 +186,10 @@ class LlmDScConfig(unittest.TestCase):
             self.addCleanup(lambda: (namespace["server"].shutdown(),
                                      namespace["server"].server_close(),
                                      thread.join(timeout=2)))
+            for path in ("/health", "/v1/models"):
+                with urllib.request.urlopen(f"http://127.0.0.1:{port}{path}",
+                                            timeout=5) as response:
+                    self.assertEqual(response.status, 200)
             request = urllib.request.Request(
                 f"http://127.0.0.1:{port}/v1/chat/completions",
                 data=json.dumps({
@@ -190,6 +213,62 @@ class LlmDScConfig(unittest.TestCase):
         self.assertIn("vllm-cpu", events[0]["choices"][0]["delta"]["content"])
         self.assertEqual(events[-1]["choices"][0]["finish_reason"], "stop")
         self.assertTrue(body.endswith("data: [DONE]\n\n"))
+
+    def test_relay_streams_sse_before_upstream_completes(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        spec = importlib.util.spec_from_file_location("llm_d_sc_trace_ui", TRACE_UI_PATH)
+        trace_ui = importlib.util.module_from_spec(spec)
+        with mock.patch.dict(os.environ, {"TRACE_DB_PATH": f"{directory.name}/traces.db"}):
+            spec.loader.exec_module(trace_ui)
+
+        release_stream = threading.Event()
+        first_event = b'data: {"choices":[{"delta":{"content":"hello"}}]}\n\n'
+
+        class Upstream(BaseHTTPRequestHandler):
+            def do_POST(self):
+                self.rfile.read(int(self.headers.get("Content-Length", "0")))
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream")
+                self.send_header("Cache-Control", "no-cache")
+                self.end_headers()
+                self.wfile.write(first_event)
+                self.wfile.flush()
+                release_stream.wait(timeout=5)
+                self.wfile.write(b"data: [DONE]\n\n")
+                self.wfile.flush()
+
+            def log_message(self, fmt, *args):
+                return
+
+        upstream = ThreadingHTTPServer(("127.0.0.1", 0), Upstream)
+        relay = trace_ui.RelayServer(
+            ("127.0.0.1", 0), f"http://127.0.0.1:{upstream.server_port}")
+        for server in (upstream, relay):
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            self.addCleanup(lambda server=server, thread=thread: (
+                server.shutdown(), server.server_close(), thread.join(timeout=2)))
+        self.addCleanup(release_stream.set)
+
+        body = json.dumps({
+            "model": "fixture",
+            "messages": [{"role": "user", "content": "hello"}],
+            "stream": True,
+        }).encode()
+        client = http.client.HTTPConnection("127.0.0.1", relay.server_port, timeout=5)
+        self.addCleanup(client.close)
+        client.request(
+            "POST", "/v1/chat/completions", body,
+            {"Content-Type": "application/json"},
+        )
+        response = client.getresponse()
+        self.assertEqual(response.status, 200)
+        self.assertEqual(response.headers.get("Content-Type"), "text/event-stream")
+        self.assertEqual(response.read(len(first_event)), first_event)
+        self.assertFalse(release_stream.is_set(), "relay must forward before upstream completes")
+        release_stream.set()
+        self.assertEqual(response.read(), b"data: [DONE]\n\n")
 
     def test_backend_relay_preserves_classifier_score(self):
         spec = importlib.util.spec_from_file_location("llm_d_sc_trace_ui", TRACE_UI_PATH)

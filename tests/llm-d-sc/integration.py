@@ -43,6 +43,25 @@ import json
 import os
 
 class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == "/health":
+            data = b"OK"
+            content_type = "text/plain"
+        elif self.path == "/v1/models":
+            data = json.dumps({
+                "object": "list",
+                "data": [{"id": "Semantic-Qwen", "object": "model"}],
+            }).encode()
+            content_type = "application/json"
+        else:
+            self.send_error(404)
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
     def do_POST(self):
         length = int(self.headers.get("Content-Length", "0"))
         request_body = json.loads(self.rfile.read(length) or b"{}")
