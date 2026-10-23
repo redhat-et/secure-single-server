@@ -60,12 +60,11 @@ A successful run reports:
 
 - `SIMPLE` with `x-llm-d-sc-status: OK`, routed to `vllm-cpu`.
 - `REASONING` with `x-llm-d-sc-status: OK`, routed to `vllm-gpu`.
-- A synthetic CPU 503 retries on the other backend and records both hops.
+- A synthetic CPU 503 fails over to the alternate backend and records both hops.
 - Open WebUI health, model discovery, chat, and trace API checks passed.
 
 GitHub CI runs this path with Docker; it does not test real generation, GPU
-scheduling, model quality, throughput, or latency. Praxis retries chat POSTs
-with bodies up to its 64 KiB replay limit; larger requests cannot be retried.
+scheduling, model quality, throughput, or latency.
 
 ## Run the AWS split-host scenario
 

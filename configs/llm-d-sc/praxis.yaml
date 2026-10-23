@@ -106,20 +106,30 @@ filter_chains:
               - filter: router
                 routes:
                   - path_prefix: "/"
-                    cluster: vllm-any
+                    headers:
+                      x-llm-d-sc-label: SIMPLE
+                    cluster: vllm-gpu
+                  - path_prefix: "/"
+                    headers:
+                      x-llm-d-sc-label: MEDIUM
+                    cluster: vllm-gpu
+                  - path_prefix: "/"
+                    headers:
+                      x-llm-d-sc-label: COMPLEX
+                    cluster: vllm-cpu
+                  - path_prefix: "/"
+                    headers:
+                      x-llm-d-sc-label: REASONING
+                    cluster: vllm-cpu
+                  # Classification failure defaults to CPU in the first step.
+                  - path_prefix: "/"
+                    cluster: vllm-gpu
               - filter: load_balancer
                 clusters:
-                  - name: vllm-any
-                    endpoints: ["trace-ui:8081", "trace-ui:8082"]
-                    load_balancer_strategy: round_robin
-                    # Retry POSTs on the other endpoint if the just-failed one
-                    # still appears healthy to the active health checker.
-                    retry_policy:
-                      max_retries: 1
-                      retriable_status_codes: [429]
-                      retriable_conditions: [connect_failure, reset, status5xx]
-                      allow_non_idempotent: true
-                      retry_body_limit_bytes: 65536
+                  - name: vllm-cpu
+                    endpoints: ["trace-ui:8081"]
+                  - name: vllm-gpu
+                    endpoints: ["trace-ui:8082"]
             on_result:
               - default: true
                 done: true

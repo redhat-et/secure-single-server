@@ -86,20 +86,27 @@ class LlmDScConfig(unittest.TestCase):
         )
         failover = self.step("failover")
         router = next(item for item in failover["filters"] if item["filter"] == "router")
-        self.assertEqual(router["routes"], [{"path_prefix": "/", "cluster": "vllm-any"}])
-        balancer = next(item for item in failover["filters"] if item["filter"] == "load_balancer")
-        self.assertEqual(balancer["clusters"], [{
-            "name": "vllm-any",
-            "endpoints": ["trace-ui:8081", "trace-ui:8082"],
-            "load_balancer_strategy": "round_robin",
-            "retry_policy": {
-                "max_retries": 1,
-                "retriable_status_codes": [429],
-                "retriable_conditions": ["connect_failure", "reset", "status5xx"],
-                "allow_non_idempotent": True,
-                "retry_body_limit_bytes": 65536,
+        self.assertEqual(
+            {
+                next(iter(route.get("headers", {}).values())): route["cluster"]
+                for route in router["routes"] if route.get("headers")
             },
-        }])
+            {
+                "SIMPLE": "vllm-gpu",
+                "MEDIUM": "vllm-gpu",
+                "COMPLEX": "vllm-cpu",
+                "REASONING": "vllm-cpu",
+            },
+        )
+        self.assertEqual(router["routes"][-1], {"path_prefix": "/", "cluster": "vllm-gpu"})
+        balancer = next(item for item in failover["filters"] if item["filter"] == "load_balancer")
+        self.assertEqual(
+            {item["name"]: item["endpoints"] for item in balancer["clusters"]},
+            {
+                "vllm-cpu": ["trace-ui:8081"],
+                "vllm-gpu": ["trace-ui:8082"],
+            },
+        )
         clusters = {item["name"]: item for item in self.config["clusters"]}
         self.assertEqual(
             {name: item["endpoints"] for name, item in clusters.items()},
