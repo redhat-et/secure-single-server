@@ -29,10 +29,11 @@ cloud VM or bare-metal machine; an ordinary nested container is not a supported
 OpenShell host. Before running the demo, complete the
 [manual gateway setup in OpenShell Overview](../../../openshell/docs/README.md#manual-gateway-setup-on-rhel):
 install OpenShell, verify Landlock ABI 3 or newer, start the gateway, and define
-the `repo` and `os_run` shell helper. Stop before creating a harness: this demo
-runs a Streamlit container directly and does not need a harness or Praxis. Run
-all commands below in the same Bash session so the `repo` variable and
-`os_run` helper remain available.
+the `repo` and `os_run` shell helper. The manual checkout is
+`/opt/secure-single-server`; keep `repo` pointed at that checkout. Stop before
+creating a harness: this demo runs a Streamlit container directly and does not
+need a harness or Praxis. Run all commands below in the same Bash session so
+the `repo` variable and `os_run` helper remain available.
 
 The unsafe half uses your login account's rootless Podman. The OpenShell half
 uses the `openshell-svc` account's OpenShell CLI and rootless Podman, so use the
@@ -87,7 +88,7 @@ in the service-owner shell so the real key is entered at a hidden prompt.
 ### OpenAI-compatible endpoint
 
 For endpoint setup details, see the
-[OpenAI-compatible model guide](../../quickstarts/openshell-single-server/model-access.md#local-openai-compatible-service).
+[OpenAI-compatible model guide](../../quickstarts/openshell-single-server/model-access.md#self-hosted-or-private-openai-compatible-service).
 Edit the host and port in
 `openshell/demos/streamlit-security/providers/openai-compatible.yaml`. The
 profile host and port must match the HTTPS host and port in `MODEL_BASE_URL`.
