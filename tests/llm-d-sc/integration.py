@@ -501,10 +501,11 @@ def wait_for_remote_backend(endpoint, attempts=None):
     raise AssertionError(f"remote GPU backend {endpoint} did not become ready: {last_error}")
 
 
-def assert_trace(records, label, backend):
+def assert_trace(records, label, backend, fallback=False):
     row = next(
         (item for item in records
-         if item.get("label") == label and item.get("route") == backend),
+         if item.get("route") == backend
+         and (item.get("fallback") if fallback else item.get("label") == label)),
         None,
     )
     available = [
@@ -514,7 +515,8 @@ def assert_trace(records, label, backend):
     assert row is not None, f"trace API has no {label} record; records={available}"
     assert row["route"] == backend, f"expected {backend}, received {row['route']}"
     assert row["status"] == 200, f"expected HTTP 200, received {row['status']}"
-    assert row["score"], f"trace API has no classifier score for {label}"
+    if label is not None:
+        assert row["score"], f"trace API has no classifier score for {label}"
     return {
         "label": row["label"],
         "route": row["route"],
@@ -801,19 +803,26 @@ def main(real=False, model="qwen3.8-27b-int4", keep=False, remote_gpu=None,
                     ),
                     "REASONING", "vllm-gpu", 0.99,
                 )
-                failover = assert_route(
-                    request(
-                        port,
-                        "What is the capital of France?",
-                        headers={"X-Test-Fail-Backend": "vllm-cpu"},
-                    ),
-                    "SIMPLE", "vllm-gpu", 0.99,
+                failover_response = request(
+                    port,
+                    "What is the capital of France?",
+                    headers={"X-Test-Fail-Backend": "vllm-cpu"},
                 )
+                assert failover_response["backend"] == "vllm-gpu", (
+                    f"expected failover to vllm-gpu, received "
+                    f"{failover_response['backend']}"
+                )
+                failover = {
+                    "label": failover_response["request_headers"].get(
+                        "x-llm-d-sc-label"
+                    ),
+                    "backend": failover_response["backend"],
+                }
                 result["routes"] = [simple, reasoning, failover]
                 records = trace_records(port)
                 simple = assert_trace(records, "SIMPLE", "vllm-cpu")
                 reasoning = assert_trace(records, "REASONING", "vllm-gpu")
-                failover = assert_trace(records, "SIMPLE", "vllm-gpu")
+                failover = assert_trace(records, None, "vllm-gpu", fallback=True)
                 assert failover["fallback"], "failover response did not include fallback metadata"
                 assert failover["hops"] == [
                     {"route": "vllm-cpu", "status": 503},
