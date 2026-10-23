@@ -90,7 +90,7 @@ Open <http://127.0.0.1:8000/> to review the site. To reproduce the CI build
 without starting a server, run:
 
 ```bash
-python3 scripts/docs/serve build
+scripts/docs/serve build
 ```
 
 CI hook tests cover inline and reference-style source links, page and

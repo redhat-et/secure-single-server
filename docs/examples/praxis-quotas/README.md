@@ -309,10 +309,17 @@ which can lose roughly a second of writes on sudden failure.
 ## Update the helpers on an existing VM
 
 New deployments include them. For an older deployment, run from the reviewed
-workstation checkout with its administrator login and SSH key:
+workstation checkout with its administrator login and SSH key. The commands
+find the checkout root, use `~/.ssh/id_ed25519` unless `SSH_KEY` is already set,
+and prompt for the target host in `user@host` form:
 
 ```console
-scp -p -o IdentitiesOnly=yes -o ForwardAgent=no -i "$SSH_KEY" \
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+SSH_KEY="${SSH_KEY:-$HOME/.ssh/id_ed25519}"
+read -r -p "RHEL host (user@host): " RHEL_HOST
+ssh -i "$SSH_KEY" -o IdentitiesOnly=yes -o ForwardAgent=no "$RHEL_HOST" true && \
+  scp -p -o IdentitiesOnly=yes -o ForwardAgent=no -i "$SSH_KEY" \
   scripts/common/quota-status scripts/common/quota_status.py \
   scripts/common/quota-set scripts/common/quota_manage.py scripts/common/quota_config.py \
   scripts/common/quota-reset scripts/common/quota_reset.py scripts/common/unified_config.py \
