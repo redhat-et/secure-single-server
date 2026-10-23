@@ -61,7 +61,6 @@ nav:
       - OpenShell + Praxis:
           - Overview: docs/quickstarts/openshell-praxis/README.md
           - Install: docs/quickstarts/openshell-praxis/install.md
-          - Harness configuration: docs/quickstarts/common/harness-configuration.md
           - OpenClaw bounded tasks: docs/quickstarts/openshell-praxis/openclaw.md
           - Integration matrix: docs/quickstarts/openshell-praxis/users.md
       - Common gateway configuration:
