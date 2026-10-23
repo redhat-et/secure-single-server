@@ -58,6 +58,8 @@ live in [`overrides/`](../../overrides/), which `theme.custom_dir` in
 [`mkdocs.yml`](../../mkdocs.yml) publishes alongside the site:
 
 - `overrides/assets/images/redhat-fedora-white.svg` is the header logo.
+- `overrides/assets/images/redhat-favicon.svg` is the red fedora browser-tab
+  icon.
 - `overrides/assets/stylesheets/redhat.css` defines the brand colors for the
   light and dark schemes.
 

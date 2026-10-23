@@ -17,6 +17,7 @@ theme:
   language: en
   custom_dir: overrides
   logo: assets/images/redhat-fedora-white.svg
+  favicon: assets/images/redhat-favicon.svg
   features:
     - navigation.sections
     - navigation.top
