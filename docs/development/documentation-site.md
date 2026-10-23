@@ -97,10 +97,13 @@ CI hook tests cover inline and reference-style source links, page and
 directory links, and GitHub-style heading anchors. The staging step verifies
 that every nav entry has a staged source, and the hook rejects unresolved
 repository-relative links. The strict build fails on missing pages and broken
-Markdown links. The site builds from `.docs-build/`; `scripts/docs/serve` stages the sources
-before starting the preview or building the static site. If you edit a source
-while the preview is running, rerun `python3 scripts/docs/stage.py` to refresh
-the staged copy.
+Markdown links. Contract tests check that each Scenarios nav page is linked
+from the scenario index and that every source in the older-VM helper-copy
+command exists. Pages CI runs the same `scripts/docs/serve build` command shown
+above. The site builds from `.docs-build/`; `scripts/docs/serve` stages the
+sources before starting the preview or building the static site. If you edit a
+source while the preview is running, rerun `python3 scripts/docs/stage.py` to
+refresh the staged copy.
 
 ## Publishing
 
@@ -109,6 +112,6 @@ on pull requests and deploys it from `main`. GitHub Pages must use **GitHub
 Actions** as its source. An administrator can set this under **Settings → Pages
 → Build and deployment → Source**.
 
-The workflow installs `requirements-docs.txt`, stages the Markdown, runs
-`mkdocs build --strict`, and publishes the `site/` artifact. The repository
+The workflow installs `requirements-docs.txt`, runs the documentation tests and
+`scripts/docs/serve build`, then publishes the `site/` artifact. The repository
 does not use Jekyll or a `gh-pages` branch.

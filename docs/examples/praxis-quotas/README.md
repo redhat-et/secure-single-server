@@ -323,7 +323,8 @@ ssh -i "$SSH_KEY" -o IdentitiesOnly=yes -o ForwardAgent=no "$RHEL_HOST" true && 
   scripts/common/quota-status scripts/common/quota_status.py \
   scripts/common/quota-set scripts/common/quota_manage.py scripts/common/quota_config.py \
   scripts/common/quota-reset scripts/common/quota_reset.py scripts/common/unified_config.py \
-  scripts/common/provider_manage.py scripts/common/provider_config.py scripts/common/quota_share.py \
+  scripts/common/providers scripts/common/provider_manage.py scripts/common/provider_config.py \
+  scripts/common/quota_share.py \
   scripts/common/lib.sh scripts/common/install \
   "$RHEL_HOST:~/secure-single-server-deploy/scripts/common/"
 ```
