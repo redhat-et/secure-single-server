@@ -4,8 +4,9 @@ This quickstart runs the [llm-d-sc semantic-routing demo](https://github.com/RMa
 with explicit Podman networking. It does **not** use OpenShift, RHOAI, KServe, Routes, or `podman compose`.
 
 Deterministic tests use synthetic OpenAI-compatible backends. GitHub CI checks
-image pins, container hardening, classifier readiness, routing, WebUI, and trace
-API without Qwen weights or a GPU. A manual AWS scenario validates real vLLM.
+image pins, container hardening, classifier readiness, routing and failover,
+WebUI, and trace API without Qwen weights or a GPU. A manual AWS scenario
+validates real vLLM.
 
 ## Architecture
 
@@ -59,10 +60,12 @@ A successful run reports:
 
 - `SIMPLE` with `x-llm-d-sc-status: OK`, routed to `vllm-cpu`.
 - `REASONING` with `x-llm-d-sc-status: OK`, routed to `vllm-gpu`.
+- A synthetic CPU 503 retries on the other backend and records both hops.
 - Open WebUI health, model discovery, chat, and trace API checks passed.
 
 GitHub CI runs this path with Docker; it does not test real generation, GPU
-scheduling, model quality, throughput, or latency.
+scheduling, model quality, throughput, or latency. Praxis retries chat POSTs
+with bodies up to its 64 KiB replay limit; larger requests cannot be retried.
 
 ## Run the AWS split-host scenario
 
@@ -171,12 +174,17 @@ need authentication and HTTPS. The trace relay stores prompts and responses
 
 ## Temporary image
 
-The integration uses the filter-enabled Praxis image pinned in [`images.env`](../../../configs/llm-d-sc/images.env):
+The integration uses the filter-enabled Praxis image pinned in
+[`images.env`](../../../configs/llm-d-sc/images.env):
 
 ```text
 quay.io/rmalone/praxis-ai-llm-d-sc@sha256:1db1eb2a115273836a186018f20df32197336a14ed2026cede8e0946385893dc
 ```
 
-This temporary unblock is tracked in [issue #74](https://github.com/redhat-et/secure-single-server/issues/74),
-which covers consolidating `llm_d_sc` into the reviewed Praxis image. Keep the
-digest pin; do not use the mutable `latest` tag.
+This linux/amd64 image's registry metadata identifies
+[`praxis-proxy/ai`](https://github.com/praxis-proxy/ai) as its source but does
+not include a source revision. It is the temporary digest-pinned input approved
+for this integration in [issue #73](https://github.com/redhat-et/secure-single-server/issues/73);
+[issue #74](https://github.com/redhat-et/secure-single-server/issues/74) tracks
+consolidating `llm_d_sc` into the reviewed Praxis image. Keep the digest pin;
+do not use the mutable `latest` tag.

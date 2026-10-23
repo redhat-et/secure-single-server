@@ -65,6 +65,11 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         length = int(self.headers.get("Content-Length", "0"))
         request_body = json.loads(self.rfile.read(length) or b"{}")
+        if self.headers.get("X-Test-Fail-Backend") == os.environ["BACKEND_NAME"]:
+            self.send_response(503)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
         request_headers = {
             key.lower(): value
             for key, value in self.headers.items()
@@ -271,7 +276,7 @@ def wait_for_classifier(name, attempts=120):
     raise AssertionError(f"classifier did not report readiness; logs:\n{last_log}")
 
 
-def request(port, prompt, max_tokens=16, timeout=10):
+def request(port, prompt, max_tokens=16, timeout=10, headers=None):
     body = json.dumps({
         "model": "Semantic-Qwen",
         "messages": [{"role": "user", "content": prompt}],
@@ -280,7 +285,7 @@ def request(port, prompt, max_tokens=16, timeout=10):
     request = urllib.request.Request(
         f"http://127.0.0.1:{port}/v1/chat/completions",
         data=body,
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json", **(headers or {})},
     )
     with urllib.request.build_opener(
         urllib.request.ProxyHandler({})
@@ -498,7 +503,8 @@ def wait_for_remote_backend(endpoint, attempts=None):
 
 def assert_trace(records, label, backend):
     row = next(
-        (item for item in records if item.get("label") == label),
+        (item for item in records
+         if item.get("label") == label and item.get("route") == backend),
         None,
     )
     available = [
@@ -514,6 +520,9 @@ def assert_trace(records, label, backend):
         "route": row["route"],
         "status": row["status"],
         "duration_ms": row["duration_ms"],
+        "fallback": bool(row["fallback"]),
+        "hops": [{"route": hop["route"], "status": hop["status"]}
+                 for hop in row["hops"]],
     }
 
 
@@ -792,11 +801,25 @@ def main(real=False, model="qwen3.8-27b-int4", keep=False, remote_gpu=None,
                     ),
                     "REASONING", "vllm-gpu", 0.99,
                 )
-                result["routes"] = [simple, reasoning]
+                failover = assert_route(
+                    request(
+                        port,
+                        "What is the capital of France?",
+                        headers={"X-Test-Fail-Backend": "vllm-cpu"},
+                    ),
+                    "SIMPLE", "vllm-gpu", 0.99,
+                )
+                result["routes"] = [simple, reasoning, failover]
                 records = trace_records(port)
                 simple = assert_trace(records, "SIMPLE", "vllm-cpu")
                 reasoning = assert_trace(records, "REASONING", "vllm-gpu")
-            result["traces"] = [simple, reasoning]
+                failover = assert_trace(records, "SIMPLE", "vllm-gpu")
+                assert failover["fallback"], "failover response did not include fallback metadata"
+                assert failover["hops"] == [
+                    {"route": "vllm-cpu", "status": 503},
+                    {"route": "vllm-gpu", "status": 200},
+                ], f"unexpected failover trace: {failover['hops']}"
+            result["traces"] = [simple, reasoning] + ([failover] if not real else [])
             result["trace_ui"] = {"url": f"http://127.0.0.1:{port}"}
             result["webui"] = {
                 "url": f"http://127.0.0.1:{open_webui_port}",

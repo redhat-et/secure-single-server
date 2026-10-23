@@ -653,6 +653,7 @@ class Handler(BaseHTTPRequestHandler):
         def elapsed_ms():
             return round((time.monotonic() - started) * 1000)
 
+        trace_completed = False
         if hop_trace_id:
             note_route(hop_trace_id, self.server.route,
                        self.headers.get("X-Llm-D-Sc-Label"), self.headers.get("X-Llm-D-Sc-Score"))
@@ -716,13 +717,14 @@ class Handler(BaseHTTPRequestHandler):
                                    int((time.monotonic() - started) * 1000),
                                    response=extract_response(self.path, response_headers,
                                                              response_body))
+                    trace_completed = True
                 if not streaming:
+                    response_started = True
                     self.send_response(response.status)
                     for key, value in response_headers.items():
                         self.send_header(key, value)
                     self.send_header("Content-Length", str(len(response_body)))
                     self.end_headers()
-                    response_started = True
                     self.wfile.write(response_body)
         except HTTPError as error:
             ttfb_ms = elapsed_ms()
@@ -733,6 +735,7 @@ class Handler(BaseHTTPRequestHandler):
                 error.close()
                 if self.server.route is None:
                     complete_trace(trace_id, 502, {}, elapsed_ms(), message)
+                    trace_completed = True
                 elif hop_trace_id:
                     record_hop(hop_trace_id, self.server.route,
                                self.headers.get("X-Llm-D-Sc-Label"), error.code,
@@ -747,6 +750,7 @@ class Handler(BaseHTTPRequestHandler):
             if self.server.route is None:
                 complete_trace(trace_id, error.code, error.headers,
                                int((time.monotonic() - started) * 1000), str(error))
+                trace_completed = True
             elif hop_trace_id:
                 record_hop(hop_trace_id, self.server.route,
                            self.headers.get("X-Llm-D-Sc-Label"), error.code, str(error),
@@ -758,6 +762,7 @@ class Handler(BaseHTTPRequestHandler):
             message = "upstream response ended early"
             if self.server.route is None:
                 complete_trace(trace_id, 502, {}, elapsed_ms(), message)
+                trace_completed = True
             elif hop_trace_id and not hop_recorded:
                 record_hop(hop_trace_id, self.server.route,
                            self.headers.get("X-Llm-D-Sc-Label"), None, message,
@@ -767,7 +772,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_bytes(502, "application/json",
                                 b'{"error":"upstream response ended early"}')
         except (OSError, URLError) as error:
-            if self.server.route is None:
+            if self.server.route is None and not trace_completed:
                 complete_trace(trace_id, None, {},
                                int((time.monotonic() - started) * 1000), str(error))
             elif hop_trace_id and not hop_recorded:

@@ -8,6 +8,7 @@ import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import socket
+import struct
 import sys
 import tempfile
 import threading
@@ -85,24 +86,20 @@ class LlmDScConfig(unittest.TestCase):
         )
         failover = self.step("failover")
         router = next(item for item in failover["filters"] if item["filter"] == "router")
-        alternate = {
-            (next(iter(route.get("headers", {}).items()))[1]): route["cluster"]
-            for route in router["routes"] if route.get("headers")
-        }
-        self.assertEqual(alternate, {
-            "SIMPLE": "vllm-gpu",
-            "MEDIUM": "vllm-gpu",
-            "COMPLEX": "vllm-cpu",
-            "REASONING": "vllm-cpu",
-        })
+        self.assertEqual(router["routes"], [{"path_prefix": "/", "cluster": "vllm-any"}])
         balancer = next(item for item in failover["filters"] if item["filter"] == "load_balancer")
-        self.assertEqual(
-            {item["name"]: item["endpoints"] for item in balancer["clusters"]},
-            {
-                "vllm-cpu": ["trace-ui:8081"],
-                "vllm-gpu": ["trace-ui:8082"],
+        self.assertEqual(balancer["clusters"], [{
+            "name": "vllm-any",
+            "endpoints": ["trace-ui:8081", "trace-ui:8082"],
+            "load_balancer_strategy": "round_robin",
+            "retry_policy": {
+                "max_retries": 1,
+                "retriable_status_codes": [429],
+                "retriable_conditions": ["connect_failure", "reset", "status5xx"],
+                "allow_non_idempotent": True,
+                "retry_body_limit_bytes": 65536,
             },
-        )
+        }])
         clusters = {item["name"]: item for item in self.config["clusters"]}
         self.assertEqual(
             {name: item["endpoints"] for name, item in clusters.items()},
@@ -144,6 +141,13 @@ class LlmDScConfig(unittest.TestCase):
             (ROOT / "configs/llm-d-sc/harness-provider.json.in").read_text()
         )
         self.assertEqual(provider["provider"]["praxis"]["npm"], "@ai-sdk/openai-compatible")
+
+    def test_mock_backend_health_and_failure_fixture_are_available(self):
+        spec = importlib.util.spec_from_file_location("llm_d_sc_integration", INTEGRATION_PATH)
+        integration = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(integration)
+        self.assertIn('if self.path == "/health":', integration.BACKEND_SOURCE)
+        self.assertIn('self.headers.get("X-Test-Fail-Backend")', integration.BACKEND_SOURCE)
 
     def test_remote_gpu_mode_requires_real_mode(self):
         spec = importlib.util.spec_from_file_location("llm_d_sc_integration", INTEGRATION_PATH)
@@ -491,6 +495,73 @@ class LlmDScConfig(unittest.TestCase):
                 self.assertEqual(trace["status"], 502)
                 self.assertIsNotNone(trace["completed_at"])
                 self.assertIn("ended early", trace["error"])
+
+    def test_client_disconnect_does_not_overwrite_a_completed_trace(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        spec = importlib.util.spec_from_file_location("llm_d_sc_trace_ui", TRACE_UI_PATH)
+        trace_ui = importlib.util.module_from_spec(spec)
+        with mock.patch.dict(os.environ, {"TRACE_DB_PATH": f"{directory.name}/traces.db"}):
+            spec.loader.exec_module(trace_ui)
+
+        upstream_ready = threading.Event()
+        release_response = threading.Event()
+        response_body = json.dumps({
+            "choices": [{"message": {"content": "upstream answer"}}],
+        }).encode()
+
+        class Upstream(BaseHTTPRequestHandler):
+            def do_POST(self):
+                length = int(self.headers.get("Content-Length", "0"))
+                self.rfile.read(length)
+                upstream_ready.set()
+                release_response.wait(timeout=5)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(response_body)))
+                self.end_headers()
+                self.wfile.write(response_body)
+
+            def log_message(self, fmt, *args):
+                return
+
+        upstream = ThreadingHTTPServer(("127.0.0.1", 0), Upstream)
+        relay = trace_ui.RelayServer(
+            ("127.0.0.1", 0), f"http://127.0.0.1:{upstream.server_port}"
+        )
+        for server in (upstream, relay):
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            self.addCleanup(lambda server=server, thread=thread: (
+                server.shutdown(), server.server_close(), thread.join(timeout=2)))
+        self.addCleanup(release_response.set)
+
+        client = http.client.HTTPConnection("127.0.0.1", relay.server_port, timeout=5)
+        self.addCleanup(client.close)
+        request_body = json.dumps({
+            "model": "fixture",
+            "messages": [{"role": "user", "content": "hello"}],
+        }).encode()
+        client.request(
+            "POST", "/v1/chat/completions", request_body,
+            {"Content-Type": "application/json"},
+        )
+        self.assertTrue(upstream_ready.wait(timeout=5))
+        client.sock.setsockopt(
+            socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0)
+        )
+        client.close()
+        release_response.set()
+
+        for _ in range(50):
+            records = trace_ui.traces()
+            if records and records[0]["completed_at"]:
+                break
+            time.sleep(0.02)
+        self.assertTrue(records, "request trace was not created")
+        self.assertEqual(records[0]["status"], 200)
+        self.assertEqual(records[0]["response"], "upstream answer")
+        self.assertIsNone(records[0]["error"])
 
 
 if __name__ == "__main__":
