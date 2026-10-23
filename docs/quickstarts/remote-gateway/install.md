@@ -110,9 +110,8 @@ PROVIDER_ARGS=(--openai-secret praxis-openai-api-key-v1 \
 
 First restrict network ingress: SSH only from the administrator's IP and TCP
 8443 only from approved clients. The installer does **not** change firewall
-rules. Configure both the host firewall and, where applicable, your cloud
-provider's security group for your chosen client networks. An internet-facing
-listener still requires TLS
+rules. Configure both the host firewall and, on AWS, the security group for
+your chosen client networks. An internet-facing listener still requires TLS
 and a valid caller JWT for inference.
 
 ```console
@@ -129,9 +128,9 @@ sudo scripts/common/status
 sudo scripts/common/verify --host
 ```
 
-For local Qwen, now [install one CPU or GPU backend](../vllm/README.md#3-install-one-backend)
+For local Qwen, now [install one CPU or GPU backend](../common/vllm.md#3-install-one-backend)
 in this same administrator session. For additional hosted models, use
-[provider management](../../examples/praxis-quotas/README.md#enable-openai-anthropic-or-a-compatible-provider).
+[provider management](../common/providers.md).
 
 Expected: only `0.0.0.0:8443` is published by Praxis. Admin/Valkey ports remain
 inside the private container network. Confirm TLS trust and unauthenticated

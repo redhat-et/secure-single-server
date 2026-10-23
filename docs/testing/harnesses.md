@@ -11,7 +11,7 @@ which combinations passed and which still need fixes or live tests.
 <details>
 <summary>What the launcher configures, and how to compare file-based alternatives</summary>
 
-The [configuration reference](../quickstarts/openshell-praxis/harness-configuration.md)
+The [configuration reference](../quickstarts/common/harness-configuration.md)
 shows OpenCode environment JSON/config files and Claude
 environment/settings files. The normal acceptance path uses `praxis-harness`
 without `--prompt`, preserving interactive approvals. `--prompt` selects the

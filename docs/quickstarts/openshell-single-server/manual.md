@@ -1,12 +1,10 @@
 # Manual single-server container deployment
 
 Install OpenShell and a harness sandbox on a dedicated RHEL 9 x86_64 VM or
-bare-metal host. Run from a reviewed repository checkout in a Bash session.
-For the OS-image route, use the separate [bootc guide](bootc.md).
-
-Use either this manual installation or the bootc image on a given host—not
-both. On a bootc-managed host, let `bootc` and `sss-bootc` own deployment and
-lifecycle commands; do not run this installer there.
+bare-metal host. Run every shell block in Bash on that host, logged in as the
+administrator, unless a command uses `sudo` or `os_run`. Keep one shell session
+open from the repository checkout through the setup so `repo` and `os_run`
+remain available. For the OS-image route, use the separate [bootc guide](bootc.md).
 
 OpenShell runs under a locked service account with rootless Podman. Praxis is
 an optional, separately installed model gateway. Review the
@@ -29,14 +27,16 @@ printf '%s  /tmp/rg.tar.gz\n' "${rg_sha256}" | sha256sum -c - &&
   sudo install -m 0755 "/tmp/ripgrep-${rg_version}-x86_64-unknown-linux-musl/rg" /usr/local/bin/rg
 ```
 
-Clone the reviewed repository to a durable, service-readable location, review
-the checked-out revision, and run the installer from that directory:
+In the same host shell, create a checkout under `/opt` and review the commit
+before installing. The checkout and its parent directory are readable by
+`openshell-svc`, so service-owner commands can use the scripts there:
 
 ```bash
 sudo install -d -o "$(id -un)" -m 0755 /opt/secure-single-server
 git clone https://github.com/redhat-et/secure-single-server /opt/secure-single-server
 cd /opt/secure-single-server
 repo="$PWD"
+git log -1 --oneline
 ```
 
 ```bash
@@ -109,12 +109,89 @@ profile and harness limitations.
 
 ## 4. Choose model access
 
-Use the [model endpoint guide](model-access.md). Choose a self-hosted or
-private OpenAI-compatible endpoint, route OpenAI through Praxis, or attach a
-frontier provider directly for evaluation. Do not paste a provider key into OpenCode or store it in harness
-configuration. Follow the
-[model verification steps](verification.md#1-prove-model-interaction) after
-selecting a route.
+### OpenAI API key
+
+The following example uses OpenCode. Run in Bash on the server after OpenShell
+is ready. Create and review this non-secret profile; a fresh gateway has no
+pre-imported provider profiles:
+
+```bash
+cat > /var/tmp/openai-model.yaml <<'YAML'
+id: openai-model
+display_name: OpenAI model access
+category: inference
+credentials:
+  - name: api_key
+    env_vars: [OPENAI_API_KEY]
+    required: true
+    auth_style: bearer
+    header_name: authorization
+endpoints:
+  - {host: api.openai.com, port: 443, protocol: rest, access: read-write, enforcement: enforce}
+binaries: [/usr/local/bin/opencode, /usr/bin/node-26]
+YAML
+os_run openshell profile lint -f /var/tmp/openai-model.yaml
+os_run openshell profile import -f /var/tmp/openai-model.yaml
+```
+
+Register your actual OpenAI API key at the hidden prompt. The key is read inside
+the service-account process, so it survives the administrator-to-service-account
+boundary without appearing in command arguments:
+
+```bash
+os_run bash -c '
+cd /
+set -eu
+set +x
+IFS= read -r -s -p "OpenAI API key: " OPENAI_API_KEY; printf "\n"
+export OPENAI_API_KEY
+openshell provider create --name openai-key --type openai-model \
+  --credential OPENAI_API_KEY
+unset OPENAI_API_KEY
+'
+```
+
+Attach the provider when creating a new sandbox, then connect:
+
+```bash
+os_run "$repo/openshell/harnesses/opencode/create.sh" --profile dev --name opencode-openai --provider openai-key
+os_run "$repo/openshell/harnesses/opencode/connect.sh" --name opencode-openai
+```
+
+In OpenCode, use `/models` to select an OpenAI model available to your account.
+The attached provider supplies an opaque `OPENAI_API_KEY` placeholder; OpenShell
+substitutes the real key only for the profile's authorized endpoint. Do not paste
+the real key into OpenCode's `/connect` prompt or store it in harness config.
+Follow the [model verification steps](verification.md#1-prove-model-interaction).
+Verify model access on your host. The
+[real-model deployment qualification](../../testing/upgrade-0.1.3-e2e.md) is
+historical 0.1.3 evidence and does not replace a current-host check.
+
+### Local OpenAI-compatible endpoint and key
+
+For an existing authenticated local endpoint, use the same import, hidden-prompt,
+and sandbox creation flow above with these substitutions:
+
+| Setting | Local endpoint example |
+| --- | --- |
+| Profile file and `id` | `/var/tmp/local-model.yaml`, `local-model` |
+| Profile endpoint | `host: inference.internal`, `port: 443` |
+| Provider creation | `--name local-key --type local-model --credential OPENAI_API_KEY` |
+| Prompt value | The key issued by your local inference server, not an OpenAI cloud key |
+| Sandbox | `--name opencode-local --provider local-key` |
+| Client base URL | `https://inference.internal/v1` |
+| Model | The exact model ID served by that endpoint |
+
+See the [complete local profile and OpenCode configuration](model-access.md#local-openai-compatible-service)
+for copyable examples. Use the endpoint's actual host and port in both the
+profile and client configuration. Changing only the base URL does not authorize
+credential delivery to a new host. For inference on the OpenShell host, use
+`host.openshell.internal`, rather than sandbox `localhost`.
+
+A server that enforces bearer authentication needs its real key. A server that
+does not authenticate requests needs a credentialless profile; an SDK may still
+require a non-empty placeholder such as `unused`. The placeholder does not grant
+access to an authenticated server.
 
 ## 5. Verify the deployment
 
@@ -122,7 +199,7 @@ Set `sandbox` to the name you created, then verify its runtime ceilings from
 the host:
 
 ```bash
-sandbox=opencode-dev  # use opencode-local or opencode-praxis for those routes
+sandbox=opencode-openai  # use opencode-dev or opencode-local for those examples
 cd /
 container_id="$(
 os_run podman ps --filter name=openshell-default--"$sandbox" -q)"

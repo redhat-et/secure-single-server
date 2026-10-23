@@ -111,7 +111,7 @@ the larger 27B budgets need fresh qualification. CPU inference can take minutes.
 <details>
 <summary>Per-launch settings, configuration files and remote credentials</summary>
 
-This is the same [launcher and per-harness configuration](../openshell-praxis/harness-configuration.md)
+This is the same [launcher and per-harness configuration](../common/harness-configuration.md)
 used on all-in-one hosts, with your gateway URL, caller JWT and CA added.
 OpenCode gets `OPENCODE_CONFIG_CONTENT`,
 and Claude gets environment variables and flags. The helper starts the CLI;
@@ -134,7 +134,7 @@ Model discovery and switching are separate checks from configuring a route.
 
 ### OpenAI
 
-The administrator [enables OpenAI](../../examples/praxis-quotas/README.md#enable-openai-anthropic-or-a-compatible-provider) and gives
+The administrator [enables OpenAI](../common/providers.md#openai) and gives
 you an approved model ID. Read it, then choose either client:
 
 ```console
@@ -148,7 +148,7 @@ IFS= read -r OPENAI_MODEL
 
 ### Anthropic
 
-The administrator [enables Anthropic](../../examples/praxis-quotas/README.md#enable-openai-anthropic-or-a-compatible-provider)
+The administrator [enables Anthropic](../common/providers.md#anthropic)
 independently of OpenAI. Read the approved model ID, then choose either client:
 
 ```console
@@ -176,7 +176,7 @@ use `tmux` on a remote client host if the process must survive SSH disconnects.
 
 On `401`, obtain a replacement JWT and repeat connection setup. On `429`, stop
 repeated retries and ask the administrator to
-[check the shared quota and request throttle](../../examples/praxis-quotas/README.md#read-accounting-and-identify-a-429).
+[check the shared quota and request throttle](../common/token-quotas.md#read-accounting-and-identify-a-429).
 When finished, close the harness and remove only the temporary caller file
 created above:
 

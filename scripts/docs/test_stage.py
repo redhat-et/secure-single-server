@@ -9,7 +9,7 @@ import stage
 
 
 class StageTests(unittest.TestCase):
-    def test_testing_documentation_is_not_staged(self):
+    def test_public_testing_and_pricetag_guides_are_staged(self):
         destination = stage.STAGE / "test-stage"
         try:
             stage.stage_docs(destination)
@@ -20,10 +20,13 @@ class StageTests(unittest.TestCase):
         finally:
             shutil.rmtree(destination)
 
-        self.assertNotIn("docs/testing/README.md", staged_paths)
-        self.assertFalse(
-            any(path.startswith("docs/testing/") for path in staged_paths)
-        )
+        self.assertIn("docs/testing/README.md", staged_paths)
+        self.assertIn("docs/testing/compatibility.md", staged_paths)
+        self.assertIn("docs/testing/pricetag.md", staged_paths)
+        self.assertIn("docs/testing/aws-pricetag.md", staged_paths)
+        self.assertIn("docs/testing/pricetag-perf.md", staged_paths)
+        self.assertNotIn("docs/testing/aws.md", staged_paths)
+        self.assertNotIn("docs/testing/rhel-real.md", staged_paths)
 
     def test_roadmap_is_not_staged(self):
         destination = stage.STAGE / "test-roadmap-stage"

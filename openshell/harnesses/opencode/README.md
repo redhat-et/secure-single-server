@@ -17,8 +17,7 @@ provider and model separately. In that route, tools do not receive direct vLLM o
 access. In standalone OpenShell mode, selected model endpoints remain governed
 by the harness policy.
 
-The preinstalled harness image is digest-pinned in
-[`openshell/configs/images.env`](../../configs/images.env).
+The preinstalled harness image is digest-pinned in `openshell/configs/images.env`.
 That upstream image does not yet include `ripgrep`; RHEL 9 also does not package
 it. The bootc image and manual quickstart provide the same checksum-pinned
 static `rg`, and harness creation copies it into the sandbox's `~/.local/bin` so

@@ -4,10 +4,10 @@ Start here. Deploy any of the VMs below; each has its own plan, launch
 and journal. They can run at the same time. AWS deployment prepares the host;
 [smoke tests](rhel-smoke.md) install and test the services afterward.
 
-For the PriceTag metering pilot, reuse an existing VM with the procedure below.
-Provision a new VM only if you want a separate environment; the gateway,
-metering/dashboard and PostgreSQL are independent containers, and metering does
-not require a GPU. [PriceTag deployment and local Podman dashboards](pricetag.md).
+For the PriceTag metering pilot, see the
+[pilot overview](pricetag.md) and its [AWS deployment runbook](aws-pricetag.md).
+The gateway, metering service, dashboard and PostgreSQL run as independent
+containers; the metering service does not require a GPU.
 
 ## PriceTag on an existing VM
 
@@ -48,7 +48,8 @@ services. If you use an AWS named profile, add `--profile NAME` to both commands
 Your browser and local OpenCode use the public HTTPS address. Harnesses on the
 VM use `https://localhost:8443` with the same JWT authentication and CA checks.
 The VM's public IP does **not** need a separate ingress rule for those tests.
-Continue with [PriceTag service preparation and startup](pricetag.md#prepare-the-existing-rhel-vm).
+Continue with the [PriceTag deployment runbook](aws-pricetag.md) for the pinned
+images, service setup, key provisioning and dashboard workflow.
 
 For a separate gateway host, use the **all-in-one without vLLM** recipe below
 to prepare the private provider configuration this pilot consumes. Complete
@@ -394,7 +395,7 @@ printf 'Private vLLM endpoint: %s\n' "${VLLM_ENDPOINT:-unknown}"
 The endpoint command prints the tagged instance's private IPv4 address as
 `VllmEndpoint`. It refuses ambiguous matches and rejects any vLLM security
 group with public IPv4/IPv6 ingress on port 8000. Configure the dedicated VM
-with [the vLLM administration guide](../quickstarts/vllm/README.md), using
+with [the vLLM administration guide](../quickstarts/common/vllm.md), using
 `--remote` and the printed private IP. Configure the gateway with
 `--vllm-endpoint "$VLLM_ENDPOINT"`. For the bootc/OpenShell path, run
 `sudo sss-bootc inference remote-vllm "$VLLM_ENDPOINT"` instead.
@@ -521,9 +522,9 @@ before running the test runner; keep `RHEL_HOST` as the administrator login.
 
 For **manual installation on a fresh VM**, follow the official guides in order:
 
-1. Administrator: [install Qwen and Praxis](../quickstarts/vllm/README.md), choosing
+1. Administrator: [install Qwen and Praxis](../quickstarts/common/vllm.md), choosing
    the intended inference topology and a Valkey gateway for persistent quotas.
-2. Administrator: [configure providers and the unified model catalog](../quickstarts/openshell-praxis/harness-configuration.md).
+2. Administrator: [configure providers and the unified model catalog](../quickstarts/common/providers.md).
    Cloud credentials are optional; begin with Qwen alone.
 3. Ordinary user: [generate native configurations and launch harnesses](../quickstarts/all-in-one/users.md).
    The account above is already created. Remote clients instead use

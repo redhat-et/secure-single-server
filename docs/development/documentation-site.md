@@ -19,6 +19,13 @@ entry points into `.docs-build/` while preserving repository-relative paths.
 | `README.md` | `/` |
 | `docs/README.md` | `/docs/` — Introduction |
 | `docs/examples/README.md` | `/docs/examples/` — Scenarios |
+| `docs/examples/praxis-quotas/README.md` | `/docs/examples/praxis-quotas/` |
+| `docs/examples/api-key-theft/README.md` | `/docs/examples/api-key-theft/` |
+| `docs/examples/document-exfiltration/README.md` | `/docs/examples/document-exfiltration/` |
+| `docs/examples/model-escalation/README.md` | `/docs/examples/model-escalation/` |
+| `docs/testing/pricetag.md` | `/docs/testing/pricetag/` — PriceTag pilot overview |
+| `docs/testing/aws-pricetag.md` | `/docs/testing/aws-pricetag/` — PriceTag deployment runbook |
+| `docs/testing/pricetag-perf.md` | `/docs/testing/pricetag-perf/` — PriceTag performance procedure |
 | `docs/quickstarts/bootc/README.md` | `/docs/quickstarts/bootc/` |
 | `bootc/README.md` | `/bootc/` |
 | `openshell/docs/README.md` | `/openshell/docs/` |
@@ -64,8 +71,9 @@ a client machine.
 - Identify generated or ignored locations, such as `.state/`, `evidence/`, and
   `site/`, and say which machine produces them.
 
-The site home repeats the deployment-facing summary in
-[Where files and URLs live](../README.md#where-files-and-urls-live).
+The site home uses the repository overview in [README.md](../../README.md), while
+the [documentation map](../README.md) links the architecture, deployment,
+scenario, PriceTag, and validation guides.
 
 ## Preview locally
 
@@ -75,26 +83,24 @@ Install the pinned documentation dependencies and build the staged sources:
 python3 -m venv .venv-docs
 . .venv-docs/bin/activate
 python3 -m pip install -r requirements-docs.txt
-python3 scripts/docs/stage.py
-mkdocs serve
+scripts/docs/serve
 ```
 
-Open <http://127.0.0.1:8000/> to review the site. To reproduce the CI check
+Open <http://127.0.0.1:8000/> to review the site. To reproduce the CI build
 without starting a server, run:
 
 ```bash
-python3 -m unittest discover -s scripts/docs -p 'test_*.py'
-python3 scripts/docs/stage.py
-mkdocs build --strict
+python3 scripts/docs/serve build
 ```
 
-The hook tests cover inline and reference-style source links, page and
+CI hook tests cover inline and reference-style source links, page and
 directory links, and GitHub-style heading anchors. The staging step verifies
 that every nav entry has a staged source, and the hook rejects unresolved
 repository-relative links. The strict build fails on missing pages and broken
-Markdown links. The site builds from `.docs-build/`, so
-re-run `scripts/docs/stage.py` after changing a source file. The staging step
-only needs to run once for a read-only preview.
+Markdown links. The site builds from `.docs-build/`; `scripts/docs/serve` stages the sources
+before starting the preview or building the static site. If you edit a source
+while the preview is running, rerun `python3 scripts/docs/stage.py` to refresh
+the staged copy.
 
 ## Publishing
 

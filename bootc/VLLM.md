@@ -1,8 +1,8 @@
 # Optional Qwen3-8B inference
 
-This guide is the implementation half of the story. If you want to understand
-why the layers are separated before enabling them, start with the
-[architecture value walkthrough](../docs/quickstarts/architecture-walkthrough/README.md).
+This guide covers private Qwen inference deployment. For an informational
+overview of the components and model access paths, see the
+[Architecture overview](../docs/quickstarts/architecture-walkthrough/README.md).
 
 The supported topology runs `Qwen/Qwen3-8B` in vLLM on a separate server. The
 bootc single server keeps only OpenShell, Praxis, and the harness, preserving
@@ -40,15 +40,25 @@ execution, and tensor parallel size 1. GPU memory utilization is limited to
 disabled by default for predictable demo latency; callers can explicitly
 set `chat_template_kwargs.enable_thinking` to true.
 
-## Separate vLLM server and endpoint discovery
+## Separate AWS server and endpoint discovery
 
-Use any dedicated VM or cloud-provider server that meets the host requirements
-above. Put the vLLM server and single server on a trusted private network, and
-permit TCP 8000 only from the single server. No cloud-provider credential is
-placed on the single server. Record the resulting `RFC1918_IP:PORT` endpoint.
+Use the [AWS deployment guide](../docs/testing/aws.md#separate-vllm-server)
+to launch a dedicated tagged vLLM VM, grant TCP 8000 only to the single
+server's security group, and discover its private address. After both VMs are
+in the same VPC, the administrator-side helper prints an `RFC1918_IP:PORT` endpoint;
+no AWS credential or instance profile is placed on the single server.
 
-On the dedicated server, deploy `vllm-cpu:v0.1` on a CPU server or
-`vllm-gpu:v0.1` on the L4 server. Do not substitute the mutable RHEL vLLM
+```console
+source scripts/aws/session.sh
+VLLM_INFO="$(aws_test_vllm_endpoint vllm-server-gpu)" \
+  || printf 'Endpoint discovery failed; inspect the vLLM VM.\n'
+VLLM_ENDPOINT="$(printf '%s' "${VLLM_INFO:-}" | jq -er '.VllmEndpoint')" \
+  || printf 'Endpoint JSON was invalid.\n'
+printf 'Private vLLM endpoint: %s\n' "${VLLM_ENDPOINT:-unknown}"
+```
+
+On the dedicated server, deploy `vllm-cpu:v0.1` on a CPU instance or
+`vllm-gpu:v0.1` on the L4 instance. Do not substitute the mutable RHEL vLLM
 installer or a locally built image. On the booted single server, configure
 Praxis without changing the OpenShell harness policy:
 
@@ -81,8 +91,8 @@ server or bare-metal host, use a standard bootc deployment workflow with the
 published reference; do not create or substitute a locally built image.
 
 Deployment changes the host's SSH host keys. Compare the new fingerprint
-through a trusted out-of-band channel before accepting it and reconnecting as
-`cloud-user@BOOTC_HOST`. Do not bypass host-key verification in production.
+through a trusted AWS or console channel before accepting it and reconnecting
+as `cloud-user@BOOTC_HOST`. Do not bypass host-key verification in production.
 
 GPU drivers are OS components; vLLM and model weights remain separate workload
 containers and persistent data. On the booted host, select the mode matching
@@ -129,7 +139,7 @@ retries every 30 seconds. Inspect failures with the journal commands above.
 
 ## Image pins and validation
 
-[Image and model pins](../configs/vllm/images.env) belong to the OS deployment.
+[Image and model pins](https://github.com/redhat-et/secure-single-server/blob/main/configs/vllm/images.env) belong to the OS deployment.
 The CPU image is vLLM `v0.19.0-x86_64`; the GPU image is `v0.19.0`.
 Both use the same pinned Hugging Face model revision. This guide intentionally
 refers to the published OS images by their `v0.1` tags.
@@ -208,8 +218,8 @@ Upstream OpenShell removed workspace-global managed inference routes and the
 The supported replacement is [provider profiles and per-sandbox attachments](https://github.com/NVIDIA/OpenShell/blob/v0.1.4/docs/how-it-works/inference.mdx#migrate-from-managed-inference-routes).
 This example uses an explicit **OpenCode** Praxis provider configuration plus a
 sandbox policy permitting only the Praxis endpoint. It does not yet import an
-OpenShell provider profile or attach a provider; that integration is not yet
-part of the reviewed configuration.
+OpenShell provider profile or attach a provider; that integration is tracked in
+[the roadmap](../docs/roadmap.md#upstream-01x-capabilities-we-do-not-use-yet).
 OpenCode's canonical binary path is `/usr/local/bin/opencode`; its
 `/usr/local/sbin` launcher is a symlink.
 
@@ -220,3 +230,93 @@ the general development profiles intentionally permit additional network access.
 CPU/GPU selection queues preparation asynchronously so a later disable command
 can cancel a slow image pull. Check status and `/health` for readiness. Status
 does not wait for the reconciliation lock; disabling waits for the service to stop.
+
+## Follow the validated co-located path
+
+This compatibility path is **OpenCode → Praxis → vLLM** on one bootc host. The
+preferred deployment places vLLM on a separate private server; use the earlier
+sections in this guide for that topology. The co-located path uses no
+cloud-provider credential or fallback.
+
+### 1. Start local inference
+
+After deploying the OpenCode bootc image, select CPU or single-L4 GPU mode:
+
+```console
+sudo sss-bootc vllm cpu
+sudo sss-bootc vllm status
+```
+
+Wait for the model to load, then confirm vLLM is answering:
+
+```console
+curl --fail http://127.0.0.1:8000/health
+curl --fail http://127.0.0.1:8000/v1/models
+```
+
+This direct request is a diagnostic. It shows that the model is running; it
+does not show that the sandbox uses the intended route. vLLM is loopback-only
+and is not the endpoint given to the harness.
+
+### 2. Route requests through Praxis
+
+```console
+sudo sss-bootc inference vllm
+sudo sss-bootc inference status
+sudo sss-bootc inference check
+```
+
+The check calls vLLM and then Praxis. The
+[Praxis configuration](https://github.com/redhat-et/secure-single-server/blob/main/configs/vllm/praxis.yaml) binds to `127.0.0.1`,
+strips caller authorization headers, applies two requests per second, and
+enforces a shared one-million-token rolling day with a 4,096-token reservation
+per request. These are shared allowances, not per-user or USD budgets; see
+[quota semantics](../docs/quickstarts/common/token-quotas.md).
+
+### 3. Connect the OpenCode sandbox to Praxis
+
+```console
+sudo sss-bootc harness create --profile dev --name qwen-dev
+sudo sss-bootc harness connect --name qwen-dev
+```
+
+The [OpenCode provider configuration](../configs/vllm/harness/harness-provider.json.in)
+uses the Praxis URL and a placeholder local API key. It contains no provider
+secret. The [sandbox network policy](https://github.com/redhat-et/secure-single-server/blob/main/configs/vllm/harness/profiles/dev/policy.yaml)
+allows OpenCode and Node to use only the listed Praxis model endpoints. The
+sandbox has no direct vLLM or cloud-provider endpoint.
+
+### 4. Run the validation suite
+
+From the host, run the end-to-end test against the sandbox:
+
+```console
+sudo bootc/test-inference qwen-dev
+```
+
+The test checks model listing through Praxis, denies direct connections to
+vLLM and `api.openai.com`, confirms the denials in OpenShell audit records,
+checks a streamed completion and bash tool call, and independently reads back
+a file written in `/sandbox`. It also checks for errors in OpenCode's JSON
+events. The [runtime validation record](VLLM-VALIDATION.md) documents the
+tested images, hardware, and remaining limits.
+
+Optionally stop vLLM and call the gateway:
+
+```console
+sudo sss-bootc vllm disabled
+curl --max-time 30 -i http://127.0.0.1:8080/v1/models
+```
+
+Praxis should return an upstream error instead of sending the request to a
+cloud provider. Re-enable local inference with `sudo sss-bootc vllm cpu` or
+`sudo sss-bootc vllm gpu`.
+
+### 5. Remove the sandbox
+
+Deleting a sandbox destroys its work. Export anything you need first:
+
+```console
+sudo sss-bootc openshell sandbox delete qwen-dev
+sudo sss-bootc vllm disabled
+```

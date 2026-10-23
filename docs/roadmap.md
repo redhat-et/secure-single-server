@@ -93,8 +93,7 @@ correct usage settlement, restart/outage recovery, and evidence that credentials
 network paths and resource boundaries behave as intended. Qualify the exact
 harness, provider/model, API, image and native architecture used.
 
-Use the [testing guide](testing/README.md),
-[quota semantics](examples/praxis-quotas/README.md),
+Use the [testing guide](testing/README.md), [quota semantics](quickstarts/common/token-quotas.md),
 [OpenShell integration matrix](quickstarts/openshell-praxis/users.md) and
 [AWS bootc validation](../bootc/VALIDATION.md) for current evidence and gaps.
 

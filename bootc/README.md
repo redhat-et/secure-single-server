@@ -39,7 +39,8 @@ and scripts/policies. Harness binaries run in the pinned workload containers,
 not directly on the host. When Praxis is activated, this path uses its
 in-memory quota profile; OpenShell is administrator-operated. It does not yet
 provide Valkey, remote-gateway TLS/JWT, or ordinary-user access to OpenShell.
-It is a deployment foundation for the phased gateway goals, not completion of
+It is a deployment
+foundation for the [phased gateway goals](../docs/roadmap.md), not completion of
 the durable-quota or retained-session requirements.
 
 ## Published images
@@ -92,8 +93,8 @@ sudo systemctl reboot
 Substitute the selected variant's published reference. For a fresh single
 server or bare-metal host, use a standard bootc deployment workflow and supply
 one of those published references as the image source; do not create or
-substitute a locally built image. For a VM or cloud-provider server, preserve
-the administrator SSH-key provisioning and required boot and network settings.
+substitute a locally built image. For EC2, preserve the administrator SSH-key
+provisioning and required AWS boot/network configuration.
 
 After the reboot, verify the deployment on the booted host:
 
@@ -108,9 +109,19 @@ sudo sss-bootc openshell sandbox list
 
 Wait for the initial boot service to finish. It reports that Praxis awaits
 secrets; OpenShell can already be inspected. Provider keys go through stdin to
-the Praxis account's Podman secret store. Follow the
-[frontier provider steps](../docs/quickstarts/openshell-single-server/model-access.md#frontier-provider-models-through-praxis)
-for the exact commands.
+the Praxis account's Podman secret store. Example in Bash, with tracing off:
+
+```bash
+set +x
+read -r -s -p 'OpenAI key: ' key; printf '\n'
+printf '%s' "$key" | sudo sss-bootc secret openai v1
+unset key
+read -r -s -p 'Anthropic key: ' key; printf '\n'
+printf '%s' "$key" | sudo sss-bootc secret anthropic v1
+unset key
+sudo sss-bootc activate praxis-openai-api-key-v1 praxis-anthropic-api-key-v1
+sudo sss-bootc status
+```
 
 Both names are required by the default two-provider Praxis configuration.
 The optional `sss-bootc inference vllm` profile requires no cloud secrets. For
@@ -176,18 +187,17 @@ with OpenCode. Do not broaden the whole review workspace to work around it.
 Run [Qwen3-8B with vLLM on a separate server](VLLM.md). The single server keeps
 the OpenCode → Praxis boundary and receives only a private `RFC1918_IP:PORT` upstream.
 The older co-located CPU/single-L4 mode remains available for compatibility but
-is deprecated for new deployments. Use your provider's private-network controls
-to permit TCP 8000 only from the single server, then record the resulting
-`RFC1918_IP:PORT` endpoint.
+is deprecated for new deployments. Use the [AWS helper](../docs/testing/aws.md#separate-vllm-server)
+to grant and discover the private endpoint.
 
 ## Image publication
 
-[Validation CI](../.github/workflows/validate.yml) runs static checks and
+[Validation CI](https://github.com/redhat-et/secure-single-server/blob/main/.github/workflows/validate.yml) runs static checks and
 synthetic OpenAI contracts on native amd64 and arm64 Linux runners. It does not
 use provider credentials, download model weights, exercise GPUs, or replace RHEL
 runtime qualification.
 
-[Bootc image CI](../.github/workflows/bootc-images.yml) is the publisher for
+[Bootc image CI](https://github.com/redhat-et/secure-single-server/blob/main/.github/workflows/bootc-images.yml) is the publisher for
 these images. Repository maintainers use it to review and publish releases;
 deployment guides intentionally use the mutable `v0.1` tag for simplicity and
 do not include image-build instructions.

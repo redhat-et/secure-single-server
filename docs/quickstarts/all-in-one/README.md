@@ -49,7 +49,7 @@ reboots. Users cannot sign in as this account.
 
 | Boundary | Decision |
 | --- | --- |
-| Remote entry | SSH or your cloud provider's supported administrative access |
+| Remote entry | SSH or AWS Systems Manager Session Manager |
 | User identity | One OS account per user; no shared `ssm-user` account |
 | Praxis access | Any admitted server user may call the loopback inference ports |
 | Caller JWT | Not required by the default profiles |
@@ -71,8 +71,8 @@ need subject-keyed state before that identity can receive an individual limit.
 
 For Qwen with optional cloud providers, follow these steps:
 
-1. [Install vLLM and Praxis](../vllm/README.md); use Valkey for persistent quotas.
-2. [Configure providers and unified models](../openshell-praxis/harness-configuration.md). Start with
+1. [Install vLLM and Praxis](../common/vllm.md); use Valkey for persistent quotas.
+2. [Configure providers and unified models](../common/providers.md). Start with
    Qwen alone; add cloud providers independently when ready.
 3. [Create ordinary user logins](accounts.md), unless already created during VM setup.
 4. As each user, [generate native configurations and launch the harnesses](users.md).
@@ -145,7 +145,7 @@ Switchyard gaps to fill are:
    allowance.
 5. Caller JWT validation alone does not provide per-user request or token
    limits.
-6. Qwen installation is a separate [vLLM setup](../vllm/README.md).
+6. Qwen installation is a separate [vLLM setup](../common/vllm.md).
    CPU tasks can take several minutes; prefer GPU for interactive work.
    OpenShell integration has a separate [experimental add-on](../openshell-praxis/README.md).
 
@@ -159,7 +159,7 @@ named volume using AOF with `appendfsync everysec`. A sudden failure may lose
 about the last second of writes. Valkey does not store request-rate buckets or
 Switchyard routing decisions.
 
-The [local-model workflow](../vllm/README.md) pins separate upstream vLLM CPU/GPU
+The [local-model workflow](../common/vllm.md) pins separate upstream vLLM CPU/GPU
 images and offers Qwen3-8B or quantized Qwen3.8-27B weights. Follow
 [user setup](users.md) for harness selection and context limits.
 
@@ -170,7 +170,7 @@ after reconnecting or `tmux`.
 
 ### Request-rate protection and token quotas
 
-To investigate `429` responses, [inspect installed limits and accounting](../../examples/praxis-quotas/README.md#check-installed-limits)
+To investigate `429` responses, [inspect installed limits and accounting](../common/token-quotas.md#check-installed-limits)
 as the administrator.
 
 Each protocol chain has independent limiter instances:
@@ -205,7 +205,6 @@ on `127.0.0.1`; admin port `9901` and Valkey port `6379` remain private.
 
 ## Next step
 
-- Configure providers, local inference, and quotas through
-  [harness configuration](../openshell-praxis/harness-configuration.md) and the
-  [Praxis token quota scenario](../../examples/praxis-quotas/README.md).
+- Configure providers, local inference, and quotas through the
+  [common configuration index](../common/README.md).
 - Move off-host clients to the [remote HTTPS/JWT gateway](../remote-gateway/README.md).

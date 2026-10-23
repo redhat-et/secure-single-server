@@ -8,22 +8,9 @@ install the OpenShell execution boundary:
 | [Manual container deployment](manual.md) | You want to install OpenShell from a reviewed, service-readable `/opt` checkout, create a harness sandbox, and add Praxis separately on a VM or bare-metal host. |
 | [Bootc deployment](bootc.md) | You want to apply the published OS image with the selected harness configuration. |
 
-Choose one route for each host. Do not apply a bootc image and then run the
-manual installer, or mix their service accounts, checkout paths, and lifecycle
-commands on the same server.
-
-## After deployment
-
-1. Run the [harness checks](verification.md) to prove model access, tools, and
-   policy on your own host.
-2. Choose the model path in the [model endpoint guide](model-access.md): a
-   self-hosted or private endpoint, OpenAI through Praxis, or a directly
-   attached frontier provider for evaluation.
-3. Try a [scenario](../../examples/README.md) that shows the boundary in
-   practice.
-
-See the [qualification and policy reference](reference.md) for supported
-behavior, recorded AWS evidence, and enforcement limits.
+After deployment, follow the [harness checks](verification.md). See the
+[qualification and policy reference](reference.md) for supported behavior,
+recorded AWS evidence, and enforcement limits.
 
 Connect entry points accept an optional remote command after the sandbox name.
 For example, use `connect.sh --name opencode-dev bash` for a simple Bash session.

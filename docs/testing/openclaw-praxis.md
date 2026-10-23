@@ -98,7 +98,7 @@ sudo env OPENSHELL_TEST_OWNER=openshell-svc \
 
 Ports 18000/18080 must be free. It creates and deletes its sandbox, fixture, and
 Praxis container; no real credentials are required. The full
-[`openshell/tests/runtime.sh`](../../openshell/tests/runtime.sh) also runs this check.
+`openshell/tests/runtime.sh` also runs this check.
 
 For an already-ready real Praxis upstream, execute as its OpenShell service
 owner from a readable checkout:
@@ -124,14 +124,14 @@ Credentials remain at Praxis. Wait for model readiness before running it.
 
 ## Continuous checks
 
-[Validate OpenShell demos](../../.github/workflows/openshell-validate.yml) runs
+[Validate OpenShell demos](https://github.com/redhat-et/secure-single-server/blob/main/.github/workflows/openshell-validate.yml) runs
 offline regressions and the pinned native client/gateway contract on hosted
 runners for relevant PRs and main changes. Artifacts contain sanitized evidence.
 Its actual OpenShell runtime job is opt-in on a disposable RHEL runner, only
 from `main` via workflow dispatch with `OPENSHELL_SELF_HOSTED=true`.
 Privileged self-hosted runners never execute pull-request code.
 
-[Build bootc images](../../.github/workflows/bootc-images.yml) already selects
+[Build bootc images](https://github.com/redhat-et/secure-single-server/blob/main/.github/workflows/bootc-images.yml) already selects
 harness images when these scripts/configs change. The OpenClaw image contract
 now requires the runner, renderer, and both provider-policy configurations.
 Real-model acceptance remains an opt-in check against a prepared model server;

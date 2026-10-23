@@ -3,23 +3,26 @@
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://redhat-et.github.io/secure-single-server/)
 [![Deploy documentation](https://github.com/redhat-et/secure-single-server/actions/workflows/pages.yml/badge.svg)](https://github.com/redhat-et/secure-single-server/actions/workflows/pages.yml)
 
+> **Published documentation.** The rendered guides are available at
+> [redhat-et.github.io/secure-single-server](https://redhat-et.github.io/secure-single-server/).
+
 Secure single-server AI harness runs [OpenCode](https://github.com/anomalyco/opencode)
 and [OpenClaw](https://github.com/openclaw/openclaw) on one dedicated RHEL 9
 x86_64 host. [OpenShell](https://github.com/NVIDIA/OpenShell/tree/v0.1.4/docs)
 enforces the execution boundary. For the integrated harness paths,
 [Praxis](https://github.com/praxis/praxis) routes model traffic, while
-[Red Hat bootc](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/index)
-packages the reviewed deployment as a repeatable OS image.
+the optional [Red Hat bootc deployment](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/using_image_mode_for_rhel_to_build_deploy_and_manage_operating_systems/index)
+provides a repeatable OS environment managed by a container image.
 
-> **Published documentation.** The rendered guides live at
-> [redhat-et.github.io/secure-single-server](https://redhat-et.github.io/secure-single-server/).
+The simplest way to understand what OpenShell can add to your environment is
+the [Streamlit before-and-after demo](docs/examples/streamlit-security/README.md).
+It runs the same app in an ordinary container and an OpenShell sandbox to show
+credential substitution and filesystem confinement.
 
-## What you can do
-
-- Run OpenCode or OpenClaw in policy-enforced OpenShell sandboxes on one RHEL host.
-- Keep model credentials in Praxis and route approved model traffic centrally.
-- Deploy a repeatable RHEL 9 bootc image or evaluate the stack locally with Podman.
-- Try scenarios such as Praxis quota tuning, the Streamlit security demo, OpenCode PR queue, or delegated PR review.
+> [!IMPORTANT]
+> This is an experimental demonstration, not a production-ready platform. Use
+> a disposable host for first evaluation and review the linked qualification
+> evidence before extending a deployment.
 
 ## How It Works
 
@@ -29,13 +32,9 @@ The integrated request path is:
 OpenCode / OpenClaw → OpenShell sandbox → Praxis → approved model
 ```
 
-OpenCode and OpenClaw keep their coding workflows while Praxis supplies
-approved model access, credential custody, routing, and shared quotas.
+OpenClaw supports bounded coding tasks through Praxis; see the
+[OpenClaw walkthrough](docs/quickstarts/openshell-praxis/openclaw.md) and its test evidence.
 
-- **Agent productivity through Praxis.** OpenCode and OpenClaw turn approved
-  model access into coding, review, and bounded task workflows without
-  receiving provider credentials. Praxis selects the upstream and enforces
-  shared limits, so agents remain useful without becoming a credential-management problem.
 - **Dedicated always-on execution.** Long-running agents continue on the
   server while your laptop disconnects. Workspaces, audit records, and cached
   model artifacts remain on the host.
@@ -49,27 +48,66 @@ approved model access, credential custody, routing, and shared quotas.
   service configuration, and pinned workload references. First boot pulls the
   selected control-plane and harness images into rootless Podman storage.
 
-## Quickstart
+## Deployment methods
 
-All quickstarts are published on GitHub Pages:
+Deploy the stack as a bootc image or install it manually with Podman. Both
+methods support the [post-deployment scenarios](docs/examples/README.md). See
+[Deployment methods](docs/deployment-methods.md) for the guides.
 
-Manual and bootc deployments can use a spare physical server, virtual machine,
-or cloud instance. A GPU is required only when serving models locally; frontier
-models routed through Praxis do not require one.
+## What can I do with this setup?
 
-- [Manual single-server deployment](https://redhat-et.github.io/secure-single-server/docs/quickstarts/openshell-single-server/manual/):
-  install OpenShell on a dedicated RHEL host and create an OpenCode or OpenClaw sandbox.
-- [Podman](https://redhat-et.github.io/secure-single-server/docs/quickstarts/podman/):
-  inspect a published image or make a direct model call. This evaluation path does not
-  run the complete OpenShell sandbox, protect service-account secrets, or start services at boot.
-- [Bootc-enabled operating system](https://redhat-et.github.io/secure-single-server/docs/quickstarts/bootc/):
-  switch a bootc-managed RHEL host to a reviewed image. The published image uses OpenCode;
-  OpenClaw requires a rebuilt image containing that integration.
+For a post-deployment workflow, try the
+[OpenCode PR-candidate queue](docs/examples/opencode-pr-queue/README.md):
 
-Scenarios run after deployment. Praxis token quotas show how to inspect and modify a shared
-model allowance; the Streamlit security demo compares an unsafe application with its
-OpenShell-confined version; the OpenCode PR queue turns issues or prompts into reviewable
-patches; and review as a service delegates pull-request review to a restricted OpenCode
-sandbox. OpenCode and OpenClaw are the available coding harnesses. Once you have deployed
-manually or by bootc, explore the [scenario catalog](docs/examples/README.md) for
-prerequisites and evidence.
+- Queue public GitHub issues or operator prompt files for a public repository.
+- Optionally keep a longer batch alive in `tmux` after disconnecting from SSH.
+- Collect one reviewable bundle per task containing the task, proposed patch,
+  metadata, and report.
+- Review the bundle on your workstation, then apply it and open a draft PR with
+  your local Git and GitHub CLI credentials.
+
+This scenario is issue/prompt-to-patch only. It does not perform pull-request
+reviews, and the sandbox receives no GitHub token or GitHub write access.
+
+For risk-focused security demos, explore these scenarios:
+
+- [API key theft](docs/examples/api-key-theft/README.md): a planted key is
+  discoverable, but attempts to spend it outside the approved gateway are
+  blocked and audited.
+- [Document exfiltration](docs/examples/document-exfiltration/README.md): a
+  malicious skill tries several ways to send a document to an attacker
+  destination; the boundary blocks each attempt.
+- [Model escalation](docs/examples/model-escalation/README.md): compare an
+  unrestricted model choice with the approved gateway catalog, which refuses
+  an unapproved model before credentials are used.
+
+For quota administration, see the [Praxis token quotas scenario](docs/examples/praxis-quotas/README.md). All post-deployment scenarios are indexed in
+[Example scenarios](docs/examples/README.md). Run them from the deployed
+repository checkout: on a bootc image, use
+`/usr/share/secure-single-server`; on a manual deployment, use
+`/opt/secure-single-server`. Published image tags contain only the reviewed
+revision from their build time, so use a rebuilt image or an updated manual
+checkout when trying newer examples.
+
+## Explore Further
+
+- [Architecture overview](docs/quickstarts/architecture-walkthrough/README.md):
+  component roles, model access paths, and system boundaries.
+- [Manual single-server guide](docs/quickstarts/openshell-single-server/manual.md):
+  OpenShell installation from a service-readable checkout, harness setup, Bash
+  sandbox access, verification, and policy tests.
+- [OpenShell Overview](openshell/docs/README.md): deployment assumptions,
+  trust boundaries, and policy qualification evidence.
+- [Praxis integration](docs/quickstarts/openshell-praxis/README.md): model
+  routing, quota semantics, and the experimental harness paths.
+- [Private vLLM inference](bootc/VLLM.md): the separate CPU or GPU server used
+  by the strongest validated local-model path.
+- [Published bootc images](bootc/README.md): available OpenCode and OpenClaw
+  variants and their deployment commands.
+- [Testing and compatibility](docs/testing/README.md): how to reproduce the
+  recorded checks and review the compatibility matrix.
+- [MaaS + PriceTag pilot](docs/testing/pricetag.md): the experimental
+  single-server metering deployment, with its [AWS runbook](docs/testing/aws-pricetag.md)
+  and [performance procedure](docs/testing/pricetag-perf.md).
+- [Documentation map](docs/README.md): alternate deployment shapes and
+  configuration guides, including [how to preview the docs locally](docs/README.md#preview-the-documentation-locally).

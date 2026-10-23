@@ -29,7 +29,7 @@ python3 tests/mocked-provider.py --suite gateways --engine podman
 CONTAINER_ENGINE=podman python3 tests/common/gateway.py --scenario remote --valkey --case quotas
 ```
 
-The existing [`tests/remote-gateway/image.py`](../../tests/remote-gateway/image.py) `[--valkey]` entry point runs the
+The existing `tests/remote-gateway/image.py [--valkey]` entry point runs the
 shared remote suite. Existing image startup, native-architecture, Valkey ACL,
 persistence, caller-credential, TLS assertion and AWS planning tests remain in
 the main runner. The runner returns nonzero on any failure and records each
@@ -96,10 +96,10 @@ an active stream, concurrent admission and reservation expiry are not tested.
 
 ## Fixtures and permitted substitutions
 
-[`tests/common/provider.py`](../../tests/common/provider.py) uses Python's standard library and can also be
+`tests/common/provider.py` uses Python's standard library and can also be
 imported by a later VM smoke runner. Its reusable functions provide complete
 JSON/SSE fixtures, a deterministic tool exchange and controlled error modes.
-[`tests/common/gateway.py`](../../tests/common/gateway.py) runs the actual scenario configuration and unchanged
+`tests/common/gateway.py` runs the actual scenario configuration and unchanged
 authentication, policy, routing, credential and accounting filter chains.
 
 Only the following inputs are substituted:

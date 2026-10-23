@@ -24,7 +24,7 @@ Choose one route:
   the [hidden-prompt secret and activation commands](../bootc/README.md).
   Set `OPENSHELL_MODEL_ID` to an exact model ID available to your account.
 - **An existing local OpenAI-compatible API with a key:** configure the
-  [administrator-owned custom provider](../../examples/praxis-quotas/README.md#enable-openai-anthropic-or-a-compatible-provider).
+  [administrator-owned custom provider](../common/providers.md#another-compatible-provider).
   `sudo scripts/common/providers enable team --openai-url https://inference.example.com/v1`
   prompts for the real key and stores a Podman secret. With a non-unified
   mutable gateway, set `PRAXIS_API_PREFIX=/providers/team` and use the cloud
@@ -32,7 +32,7 @@ Choose one route:
   private upstreams in its reviewed configuration. Custom HTTP upstreams and
   bootc custom-provider management require a separately reviewed configuration. The API must support streaming chat completions and tool calls.
   Keep the key in a Praxis service-account Podman secret, not in the sandbox.
-- **Private vLLM without a key:** use the [separate inference server guide](../vllm/README.md).
+- **Private vLLM without a key:** use the [separate inference server guide](../common/vllm.md).
   The mutable installer serves `qwen3-8b`; the bootc recipe serves `Qwen/Qwen3-8B`.
   Use the ID actually returned by your server's model listing. The dedicated
   vLLM template disables Qwen thinking per request for bounded coding tasks.

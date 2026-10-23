@@ -16,12 +16,19 @@ per-user budgets, USD spend caps, or provider billing limits.
 - Active model requests stopped before applying a capacity change or resetting
   usage.
 
-Run as the server administrator, separately on each gateway.
+Run as the server administrator, separately on each gateway. Use the deployed
+checkout path: `/opt/secure-single-server` for manual deployments or
+`/usr/share/secure-single-server` on the bootc image.
+
+```console
+REPO=/opt/secure-single-server
+# On bootc, set REPO=/usr/share/secure-single-server instead.
+cd "$REPO"
+```
 
 ## Check installed limits
 
 ```console
-cd ~/secure-single-server-deploy
 sudo scripts/common/quota-status
 ```
 
@@ -62,7 +69,6 @@ restart Praxis. Finish active tasks first. Valkey quotas persist across the
 restart. Run from the matching deployment checkout:
 
 ```console
-cd ~/secure-single-server-deploy
 sudo dnf install -y python3-pyyaml
 sudo scripts/common/providers show
 sudo scripts/common/quota-set --list
@@ -272,7 +278,7 @@ sudo scripts/common/providers disable team
 ```
 
 Keep at least one provider enabled. Local inference installation is separate;
-see [optional vLLM deployment](../../quickstarts/vllm/README.md).
+see [optional vLLM deployment](../../quickstarts/common/vllm.md).
 
 | Setting | Managed location |
 | --- | --- |

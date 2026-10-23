@@ -251,14 +251,12 @@ class StreamlitSecurityTests(unittest.TestCase):
 
     def test_documentation_explains_where_to_run_the_demo(self):
         guide = (ROOT / "docs/examples/streamlit-security/README.md").read_text()
-        self.assertIn("VM from", guide)
-        self.assertIn("any cloud provider", guide)
+        self.assertIn("dedicated RHEL 9 x86_64 Linux host", guide)
         self.assertIn("/opt/secure-single-server", guide)
         self.assertIn("Landlock ABI 3", guide)
         self.assertIn("not a supported OpenShell host", guide)
-        self.assertIn(
-            "model-access.md#self-hosted-or-private-openai-compatible-service", guide
-        )
+        self.assertIn("manual.md#4-choose-model-access", guide)
+        self.assertIn("model-access.md#local-openai-compatible-service", guide)
         self.assertIn("--name streamlit-demo-openai", guide)
         self.assertIn("--type streamlit-openai-compatible", guide)
 
@@ -281,14 +279,13 @@ class StreamlitSecurityTests(unittest.TestCase):
     def test_root_readme_introduces_the_example_catalog(self):
         readme = (ROOT / "README.md").read_text()
         self.assertIn("docs/examples/README.md", readme)
-        introduction = (ROOT / "docs/README.md").read_text()
-        self.assertIn("examples/streamlit-security/README.md", introduction)
+        self.assertIn("docs/examples/streamlit-security/README.md", readme)
         self.assertLess(
-            introduction.index("examples/streamlit-security/README.md"),
-            introduction.index("examples/opencode-pr-queue/README.md"),
+            readme.index("docs/examples/streamlit-security/README.md"),
+            readme.index("docs/examples/opencode-pr-queue/README.md"),
         )
-        self.assertIn("/usr/share/secure-single-server", introduction)
-        self.assertIn("/opt/secure-single-server", introduction)
+        self.assertIn("/usr/share/secure-single-server", readme)
+        self.assertIn("/opt/secure-single-server", readme)
 
     def test_demo_entry_points_are_executable(self):
         for name in ("run-unsafe.sh", "run-safe.sh", "verify.sh"):

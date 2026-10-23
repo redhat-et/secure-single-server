@@ -21,7 +21,7 @@ in [compatibility.md](compatibility.md).
 [OpenCode](#opencode) · [OpenClaw / OpenShell](#openclaw--openshell) ·
 [Shared gateway checks](#shared-gateway-checks)
 
-For the **unified all-in-one** workflow, complete [provider setup](../examples/praxis-quotas/README.md#enable-openai-anthropic-or-a-compatible-provider)
+For the **unified all-in-one** workflow, complete [provider setup](../quickstarts/common/providers.md)
 and [ordinary-user configuration](../quickstarts/all-in-one/users.md), then run
 the native commands below in a project directory. Refresh catalogs before testing.
 For each selected model, run the [file/test task](harnesses.md#acceptance-task)
@@ -231,7 +231,7 @@ sudo scripts/common/quota-set --list
 ```
 
 Status links to the list; the list prints commands for setting each quota.
-Use the [quota administration guide](../examples/praxis-quotas/README.md)
+Use the [quota administration guide](../quickstarts/common/token-quotas.md)
 for list → preview → apply. Valkey retains usage across Praxis restarts;
 the status command reads its current ledger separately from process counters.
 

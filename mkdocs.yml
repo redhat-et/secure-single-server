@@ -8,9 +8,6 @@ repo_name: redhat-et/secure-single-server
 edit_uri: edit/main/
 copyright: Experimental demonstration, not a production-ready platform.
 
-# The repository keeps component documentation next to the code it describes.
-# scripts/docs/stage.py assembles those Markdown sources here without changing
-# their repository-relative paths, so relative links keep working.
 docs_dir: .docs-build
 site_dir: site
 use_directory_urls: true
@@ -49,10 +46,11 @@ nav:
   - Home: README.md
   - Start here:
       - Introduction: docs/README.md
-      - Architecture walkthrough: docs/quickstarts/architecture-walkthrough/README.md
-      - Bootc quickstart: docs/quickstarts/bootc/README.md
-      - Podman quickstart: docs/quickstarts/podman/README.md
+      - Architecture overview: docs/quickstarts/architecture-walkthrough/README.md
+      - OpenShell Overview: openshell/docs/README.md
+      - Streamlit before and after OpenShell: docs/examples/streamlit-security/README.md
   - Deployment:
+      - Deployment methods: docs/deployment-methods.md
       - OpenShell single server:
           - Overview: docs/quickstarts/openshell-single-server/README.md
           - Manual container deployment: docs/quickstarts/openshell-single-server/manual.md
@@ -63,9 +61,14 @@ nav:
       - OpenShell + Praxis:
           - Overview: docs/quickstarts/openshell-praxis/README.md
           - Install: docs/quickstarts/openshell-praxis/install.md
-          - Harness configuration: docs/quickstarts/openshell-praxis/harness-configuration.md
+          - Harness configuration: docs/quickstarts/common/harness-configuration.md
           - OpenClaw bounded tasks: docs/quickstarts/openshell-praxis/openclaw.md
           - Integration matrix: docs/quickstarts/openshell-praxis/users.md
+      - Common gateway configuration:
+          - Overview: docs/quickstarts/common/README.md
+          - Harness configuration: docs/quickstarts/common/harness-configuration.md
+          - Provider setup: docs/quickstarts/common/providers.md
+          - Token quota reference: docs/quickstarts/common/token-quotas.md
       - All-in-one gateway:
           - Overview: docs/quickstarts/all-in-one/README.md
           - In-memory deployment: docs/quickstarts/all-in-one/in-memory.md
@@ -78,26 +81,38 @@ nav:
           - Install: docs/quickstarts/remote-gateway/install.md
           - User setup: docs/quickstarts/remote-gateway/users.md
       - Optional vLLM inference:
-          - Mutable RHEL deployment: docs/quickstarts/vllm/README.md
+          - Mutable RHEL deployment: docs/quickstarts/common/vllm.md
           - Bootc image deployment: bootc/VLLM.md
+      - Experimental MaaS + PriceTag pilot:
+          - Overview: docs/testing/pricetag.md
+          - AWS deployment runbook: docs/testing/aws-pricetag.md
+          - Performance procedure: docs/testing/pricetag-perf.md
   - Scenarios:
       - Overview: docs/examples/README.md
       - Praxis token quotas: docs/examples/praxis-quotas/README.md
-      - Streamlit before and after OpenShell: docs/examples/streamlit-security/README.md
       - OpenCode PR-candidate queue: docs/examples/opencode-pr-queue/README.md
       - Demo task prompt: docs/examples/opencode-pr-queue/demo-task.md
+      - API key theft: docs/examples/api-key-theft/README.md
+      - Document exfiltration: docs/examples/document-exfiltration/README.md
+      - Model escalation: docs/examples/model-escalation/README.md
       - Review as a service: docs/development/review-service.md
-  - Additional information:
-      - OpenShell overview: openshell/docs/README.md
-      - OpenShell threat model: openshell/docs/threat-model.md
-      - OpenShell policy walkthrough: openshell/docs/policy-walkthrough.md
-      - OpenCode: openshell/harnesses/opencode/README.md
-      - OpenClaw: openshell/harnesses/openclaw/README.md
+  - Testing:
+      - Testing guide: docs/testing/README.md
+      - Compatibility matrix: docs/testing/compatibility.md
+      - Validation records: bootc/VALIDATION.md
+      - vLLM validation: bootc/VLLM-VALIDATION.md
 
 not_in_nav: |
   bootc/README.md
-  bootc/VALIDATION.md
-  bootc/VLLM-VALIDATION.md
+  docs/quickstarts/bootc/README.md
+  docs/quickstarts/podman/README.md
+  docs/roadmap.md
+  docs/development/documentation-site.md
+  docs/development/openshell-upstream.md
+  openshell/docs/policy-walkthrough.md
+  openshell/docs/threat-model.md
+  openshell/harnesses/openclaw/README.md
+  openshell/harnesses/opencode/README.md
   openshell/harnesses/opencode/review-agents.md
   openshell/harnesses/opencode/pr-queue/instructions.md
   openshell/demos/streamlit-security/README.md
@@ -132,11 +147,6 @@ plugins:
 
 hooks:
   - scripts/docs/mkdocs_hooks.py
-
-watch:
-  - docs
-  - bootc
-  - openshell
 
 extra:
   generator: false

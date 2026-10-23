@@ -1,21 +1,25 @@
-# Optional vLLM inference
+# vLLM administration on RHEL
 
-Deploy private Qwen inference on CPU or one NVIDIA L4. Cloud providers remain
-optional. The preferred topology places vLLM on a separate server and gives
-Praxis a private `RFC1918_IP:PORT` upstream. The older co-located
-container-network mode remains available for compatibility but is deprecated
-for new deployments.
+> **Where this fits:** The private-inference branch of the model-routing stop.
 
-This page covers the mutable RHEL deployment. For the published bootc image
-route, use [vLLM bootc deployment](../../../bootc/VLLM.md).
+Install private Qwen inference on CPU or one NVIDIA L4, with cloud providers optional.
+The preferred topology places vLLM on a separate server and gives Praxis a
+private `RFC1918_IP:PORT` upstream. The older co-located container-network mode
+remains available for compatibility but is deprecated for new deployments.
 
 ## Requirements
 
-Use RHEL 9 x86_64 with SELinux enforcing. Choose one backend:
+Use RHEL 9 x86_64 with SELinux enforcing. Step 2 prepares a new Praxis
+gateway or reuses an installed memory/Valkey profile. Choose one backend:
 
-- **GPU:** one NVIDIA L4, at least 32 GiB RAM, and 200 GiB disk.
-- **CPU:** AVX-512 and 100 GiB disk. Use 64 GiB RAM for quantized 27B; the 8B
-  preset accepts 32 GiB, with 64 GiB recommended.
+- **GPU:** one NVIDIA L4, at least 32 GiB RAM and 200 GiB disk.
+- **CPU:** AVX-512 and 100 GiB disk. Use 64 GiB RAM for quantized 27B;
+  the 8B preset accepts 32 GiB, with 64 GiB recommended.
+
+The installer pins the vLLM image and model revision, preserves downloaded
+weights in the service account's cache, and binds remote mode only to the
+selected private IPv4 address. One model runs at a time; changing the model
+restarts only vLLM. Existing Praxis routes and cloud providers are retained.
 
 | Model option | Weights and template | Intended use |
 | --- | --- | --- |
@@ -29,32 +33,24 @@ Both keep thinking enabled and one concurrent inference request.
 | `qwen3-8b` | 16,384 | 4,096 |
 | `qwen3.8-27b-int4` | 32,768 | 8,192 |
 
-Context includes input and output. Claude and OpenCode use their own compaction
-logic with the configured context and output limits. Claude uses `medium`
-effort for Qwen3.8 because that model rejects `high`; the launcher disables
-misleading 1M-context variants for local Qwen. CPU tasks can take minutes.
+Context includes input and output. Claude and OpenCode use their own compaction logic with the
+configured context/output limits. Claude uses `medium` effort for Qwen3.8
+because that model rejects `high`, and the launcher disables misleading 1M
+context variants for local Qwen. CPU tasks can take minutes.
 
 Short native tool tasks and model-switching checks passed on the 27B GPU preset
-at 32,768 / 8,192. CPU qualification still uses the earlier 16,384 / 4,096
-limits; near-limit sessions and compaction remain unqualified on both. These
-are deployment limits, not the model's native maximum. For deployment-specific
-CPU and GPU requirements, see the
-[host requirements](../../../bootc/VLLM.md#host-requirements).
+at 32,768 / 8,192. CPU qualification still uses the earlier 16,384 / 4,096 limits;
+near-limit sessions and compaction remain unqualified on both.
+These are deployment limits, not the model's native maximum. For full-context
+hardware estimates and Flash variants, see [instance sizing](../../testing/aws.md#model-and-context-sizing).
 
-The 27B preset uses quantized weights rather than roughly 54 GB of BF16
+The 27B preset uses quantized weights rather than the roughly 54 GB BF16
 weights. Total runtime memory also includes cache and working buffers;
-quantized model size alone is not a RAM or VRAM requirement. See the
-[model definition](../../../configs/vllm/qwen3.8-27b-int4.env) and
+quantized model size alone is not a RAM/VRAM requirement.
+[Model definition](https://github.com/redhat-et/secure-single-server/blob/main/configs/vllm/qwen3.8-27b-int4.env),
 [upstream quantization](https://huggingface.co/RedHatAI/Qwen3.8-27B-INT4).
 
-## Deployment of vLLM
-
-The installer pins the vLLM image and model revision, preserves downloaded
-weights in the service account's cache, and binds remote mode only to the
-selected private IPv4 address. One model runs at a time; changing the model
-restarts only vLLM. Existing Praxis routes and cloud providers are retained.
-
-### 1. Transfer the deployment files
+## 1. Transfer the deployment files
 
 From the reviewed checkout in a Bash or zsh workstation shell, select the
 administrator login and key. Leave the key blank to use your SSH configuration
@@ -88,7 +84,7 @@ The remaining commands run on RHEL:
 cd ~/secure-single-server-deploy
 ```
 
-### 2. Prepare Praxis
+## 2. Prepare Praxis
 
 Install host dependencies on the gateway host and, for separate-server mode,
 on the vLLM host:
@@ -103,12 +99,12 @@ Prepare the locked service account on each host:
 sudo scripts/all-in-one/install --prepare
 ```
 
-On a **dedicated inference host**, skip the rest of this step and install vLLM
-in step 3. On the **gateway host**, skip gateway creation if Praxis is already
-installed. Otherwise choose one route in the gateway administrator terminal.
+On a **dedicated inference host**, skip the rest of step 2 and install vLLM in
+step 3. On the **gateway host**, skip gateway creation if Praxis is installed.
+Otherwise choose one route, in the gateway's administrator terminal:
 
-**Separate inference host, preferred:** enter its private IPv4 address and port,
-for example `10.0.1.10:8000`. Permit port 8000 only from the gateway.
+**Separate inference host (preferred):** enter its private IPv4 address and
+port, for example `10.0.1.10:8000`. Permit port 8000 only from the gateway.
 
 ```console
 printf 'Private vLLM endpoint (IPv4:8000): '
@@ -116,7 +112,7 @@ IFS= read -r VLLM_ENDPOINT
 VLLM_ROUTE=(--vllm-endpoint "$VLLM_ENDPOINT")
 ```
 
-**Co-located inference, existing single-VM workflow, deprecated:**
+**Co-located inference (existing single-VM workflow, deprecated):**
 
 ```console
 VLLM_ROUTE=(--vllm)
@@ -134,11 +130,11 @@ sudo scripts/all-in-one/install --profile valkey "${VLLM_ROUTE[@]}" \
 This needs no cloud key. For disposable memory quotas, replace the block above
 with `sudo scripts/all-in-one/install --profile memory "${VLLM_ROUTE[@]}"`.
 
-For a **remote gateway**, follow [gateway installation](../remote-gateway/install.md)
-and select its Qwen option. It prepares TLS/JWT and the private gateway before
-you install inference here. No cloud key is required for Qwen.
+For **remote-gateway**, follow [gateway installation](../remote-gateway/install.md)
+and select its Qwen option. It prepares TLS/JWT and the private gateway
+before you install inference here. No cloud key is required for Qwen.
 
-### 3. Install one backend
+## 3. Install one backend
 
 **GPU only:** prepare the driver and Container Toolkit, then reboot.
 
@@ -151,7 +147,7 @@ The reboot is mandatory. If the running kernel is older than the one the
 enabled repositories carry, the script installs the matched newer kernel and
 headers and reports that the module targets a newer kernel instead of running
 `nvidia-smi`; the reboot boots that kernel. Reconnect and run
-`cd ~/secure-single-server-deploy`. Select one model:
+`cd ~/secure-single-server-deploy`. Select **one model**:
 
 ```console
 VLLM_MODEL=qwen3-8b
@@ -163,9 +159,9 @@ Or select quantized Qwen3.8-27B:
 VLLM_MODEL=qwen3.8-27b-int4
 ```
 
-On the **inference host**, select how vLLM binds.
+On the **inference host**, select how vLLM binds:
 
-**Separate host:** enter its assigned private IPv4 address without a port.
+**Separate host:** enter its assigned private IPv4 address (without a port).
 
 ```console
 printf 'This inference host private IPv4 address: '
@@ -191,20 +187,22 @@ sudo scripts/vllm/install --model "$VLLM_MODEL" "${VLLM_BIND[@]}" gpu
 sudo scripts/vllm/install --model "$VLLM_MODEL" "${VLLM_BIND[@]}" cpu
 ```
 
-Use the verified private address from your infrastructure inventory.
-Workstation shell variables are not transferred into an SSH session; set them
-on the host as shown above.
+Use the verified private address from your infrastructure inventory. Workstation
+shell variables are not transferred into an SSH session; set them on the host
+as shown above.
+
+To switch back, repeat with `VLLM_MODEL=qwen3-8b`. The old weights remain cached.
+The model is selected during application installation; AWS VM configuration
+continues to select hardware and gateway role.
 
 Installation waits up to 30 minutes for the model. Repeating it preserves the
-cache and replaces only its managed service and template. The GPU container
-alone uses `SecurityLabelDisable` for CDI access; host SELinux remains
-enforcing. Use the pinned image for the selected backend. An administrator can
-override it with `--image NAME@sha256:DIGEST` after reviewing that release.
+cache and replaces only its managed service/template. The GPU container alone
+uses `SecurityLabelDisable` for CDI access; host SELinux remains enforcing.
+Use the pinned image for your selected backend. An administrator can override
+it with `--image NAME@sha256:DIGEST` after reviewing that release.
 
-### 4. Connect and verify the gateway
-
-Back on the **gateway host**, verify the route. If Praxis was installed without
-Qwen, enable it first using the matching checkout and private endpoint:
+Back on the **gateway host**, verify it. If it was installed without Qwen,
+enable the route first using the matching checkout and private endpoint:
 
 ```console
 sudo scripts/common/providers enable vllm --vllm-endpoint "$VLLM_ENDPOINT"
@@ -212,23 +210,19 @@ sudo scripts/common/verify --host
 ```
 
 Omit `--vllm-endpoint` only for the deprecated co-located mode. The provider
-change is transactional and retains the existing gateway identity, secrets, and
+change is transactional and retains the existing gateway identity, secrets and
 quota state.
 
-Next, share the vLLM quota as described in the
-[Praxis token quota scenario](../../examples/praxis-quotas/README.md#share-the-local-vllm-quota-across-harnesses),
-then configure harnesses with
-[Harness configuration through Praxis](../openshell-praxis/harness-configuration.md).
-For all-in-one, create [ordinary user logins](../all-in-one/accounts.md) and
+Next, [share the vLLM quota and configure unified models](providers.md#share-the-local-vllm-quota-across-harnesses).
+Add OpenAI, Anthropic or compatible providers there when ready.
+For all-in-one, [create ordinary user logins](../all-in-one/accounts.md) and
 follow [user setup](../all-in-one/users.md). Remote clients follow
 [HTTPS/JWT user setup](../remote-gateway/users.md).
 
-## Administration
+### Update an existing installation's budgets
 
-### Update an existing installation
-
-Transfer updated files from the same reviewed checkout, then rerun the
-deployment command for the installed model and backend. Wait for it to succeed
+Transfer the updated files from the same reviewed checkout, then rerun the
+installer above for the installed model and backend. Wait for it to succeed
 before refreshing the shared launcher on an all-in-one host:
 
 ```console
@@ -236,17 +230,12 @@ sudo install -m 0755 scripts/common/harness.py /usr/local/bin/praxis-harness
 sudo install -m 0755 scripts/common/harness_config.py /usr/local/bin/praxis-harness-config
 ```
 
-Update the [unified model catalog](../openshell-praxis/harness-configuration.md#unified-native-configuration)
-to match the new preset and apply it. Ordinary users run
-`praxis-harness-config` and restart their CLIs. Without unified mode, update
-the launcher on remote clients too. Updating client limits alone does not
-increase server context.
+Update the [unified model catalog](providers.md#choose-cloud-models-and-apply)
+to match the new preset and apply it. Ordinary users run `praxis-harness-config`
+and restart their CLIs. Without unified mode, update the launcher on remote
+clients too. Updating client limits alone does not increase server context.
 
-To switch models, rerun the deployment with the other `VLLM_MODEL`. Old weights
-remain cached. The model is selected during application installation; your VM
-configuration continues to select hardware and gateway role.
-
-### Inspect the backend
+## Inspect the backend
 
 ```console
 sudo bash -c 'source scripts/common/lib.sh; as_service systemctl --user status praxis-vllm.service --no-pager'
@@ -255,15 +244,13 @@ sudo bash -c 'source scripts/common/lib.sh; as_service podman port praxis-vllm'
 ```
 
 The port command prints only the private address in separate-server mode and
-nothing in co-located mode. If the GPU driver is unavailable after a kernel
-update, rerun `prepare-gpu`, reboot, and repeat the install command with the
-intended model.
+nothing in co-located mode. If the GPU driver is unavailable after a
+kernel update, rerun `prepare-gpu`, reboot and repeat the install command with the intended `--model`.
 
-### Remove vLLM
+## Remove vLLM
 
-Enable another provider first if Qwen is the only one; see
-[provider operations](../../examples/praxis-quotas/README.md#enable-openai-anthropic-or-a-compatible-provider).
-Then remove its routes and backend:
+Enable another provider first if Qwen is your only one, then remove its routes
+and backend:
 
 ```console
 sudo scripts/common/providers disable vllm
@@ -272,3 +259,8 @@ sudo scripts/vllm/remove
 
 Removal preserves downloaded images and model cache. To uninstall the entire
 installation, remove vLLM before running `sudo scripts/common/uninstall`.
+
+## Next step
+
+Read [provider setup](providers.md) for optional cloud upstreams, then validate
+the complete path with the [testing guide](../../testing/README.md).

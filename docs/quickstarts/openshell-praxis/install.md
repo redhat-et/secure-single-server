@@ -29,8 +29,7 @@ Export and delete sandbox work before final host disposal. Praxis uninstall
 remains its independent managed lifecycle; drift checks stay enabled.
 
 Praxis listens on loopback 8080 (OpenAI inference) and 8081 (Anthropic inference).
-Its admin health is private inside the container; use
-[`scripts/common/status`](../../../scripts/common/status),
+Its admin health is private inside the container; use `scripts/common/status`,
 not a host health URL. OpenShell uses loopback 8090 (management) and 8091 (health).
 Management requires TLS/mTLS using the registered service-operator identity;
 individual user/workspace authorization is not implemented. Keep its keys

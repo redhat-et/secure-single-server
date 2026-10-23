@@ -21,9 +21,9 @@ not tested.
 
 RHEL base digest:
 `sha256:cfe6b13fa436d39088cc525254f5de9f4e0c7da8b8f0b44b926acd11cdeb42d7`.
-Workload digests are recorded in [vLLM pins](../configs/vllm/images.env),
-[OpenShell pins](../openshell/configs/images.env), and the existing
-[Praxis defaults](../scripts/common/lib.sh).
+Workload digests are recorded in [vLLM pins](https://github.com/redhat-et/secure-single-server/blob/main/configs/vllm/images.env),
+[OpenShell pins](https://github.com/redhat-et/secure-single-server/blob/main/openshell/configs/images.env), and the existing
+[Praxis defaults](https://github.com/redhat-et/secure-single-server/blob/main/scripts/common/lib.sh).
 
 Final **booted** OCI manifests reported by `bootc status`:
 
@@ -41,18 +41,18 @@ The [2026-10-09 OpenClaw results](../docs/testing/openclaw-praxis.md) qualify
 a newer bounded-agent path separately from the historical results below.
 
 Both CPU and GPU base/OpenCode/OpenClaw OS variants built and passed
-[`bootc/test-images`](test-images) (eight images). These image checks do not qualify local
+`bootc/test-images` (eight images). These image checks do not qualify local
 OpenClaw adapters. Build, profile, provider rendering, isolation and
 selector regression tests passed, as did ShellCheck, OpenShell static checks
 and the shared gateway static suite.
 
-Both final OpenCode hosts passed [`bootc/test-host`](test-host): SELinux enforcing,
+Both final OpenCode hosts passed `bootc/test-host`: SELinux enforcing,
 read-only `/usr`, healthy Praxis/OpenShell, and loopback listeners. Both modes
 returned real nonempty Qwen completions directly and through Praxis. CPU
 selection rejected GPU activation when NVIDIA host components were absent,
 preserving the CPU selection.
 
-Both final deployments passed [`bootc/test-inference`](test-inference) in freshly created
+Both final deployments passed `bootc/test-inference` in freshly created
 OpenCode sandboxes after reboot. The smoke test checks a positive Praxis
 request, explicit denied connections to vLLM port 8000 and `api.openai.com:443`, corresponding OpenShell
 audit records, a streamed OpenCode response, and a bash-created file whose

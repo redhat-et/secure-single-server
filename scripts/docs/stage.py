@@ -30,8 +30,17 @@ SOURCES = (
     "openshell/harnesses",
     "openshell/demos",
 )
+PUBLISHED_TESTING_DOCS = frozenset(
+    ROOT / path
+    for path in (
+        "docs/testing/README.md",
+        "docs/testing/compatibility.md",
+        "docs/testing/pricetag.md",
+        "docs/testing/aws-pricetag.md",
+        "docs/testing/pricetag-perf.md",
+    )
+)
 EXCLUDED_SOURCES = (
-    ROOT / "docs/testing",
     ROOT / "docs/roadmap.md",
     ROOT / "openshell/docs/upgrade.md",
     ROOT / "docs/development/workload-templates.md",
@@ -103,6 +112,11 @@ def stage_docs(destination: Path = STAGE) -> int:
             raise SystemExit(f"documentation source does not exist: {entry}")
         for path in markdown_files(source):
             if any(path.is_relative_to(excluded) for excluded in EXCLUDED_SOURCES):
+                continue
+            if (
+                path.is_relative_to(ROOT / "docs/testing")
+                and path not in PUBLISHED_TESTING_DOCS
+            ):
                 continue
             relative = path.relative_to(ROOT)
             relative_key = relative.as_posix()

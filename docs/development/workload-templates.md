@@ -27,8 +27,7 @@ sudo sss-bootc openshell sandbox list \
   --selector managed-by=secure-single-server,harness=opencode --output json
 ```
 
-For a manual installation, run
-[`openshell/scripts/template.sh`](../../openshell/scripts/template.sh) `sync` as the same
+For a manual installation, run `openshell/scripts/template.sh sync` as the same
 service account that owns the gateway, with its `HOME`, `XDG_RUNTIME_DIR`, and
 `DBUS_SESSION_BUS_ADDRESS` set as in the
 [manual guide](../quickstarts/openshell-single-server/manual.md). Set
@@ -49,8 +48,7 @@ settings fails the command. Sync never deletes a sandbox or overwrites a templat
 ## Add a profile
 
 Add a policy file and a catalog entry; no shell profile allowlist needs changing.
-For example, add this object to `templates` in
-[`configs/templates/opencode.json`](../../configs/templates/opencode.json):
+For example, add this object to `templates` in `configs/templates/opencode.json`:
 
 ```json
 {
@@ -72,7 +70,7 @@ Adding a new client still requires qualifying its client configuration and tools
 
 The top-level JSON object has `version: 1` and a `templates` array. Entries are
 unique by `(harness, profile, backend)`. Image variables refer to the central
-[`images.env`](../../openshell/configs/images.env) digest pins. Set either `policy`
+[`images.env`](https://github.com/redhat-et/secure-single-server/blob/main/openshell/configs/images.env) digest pins. Set either `policy`
 for a standalone sandbox or `config_dir` for an integrated policy/provider recipe.
 Paths are relative to the installed repository root, including when a reviewed
 catalog is supplied through `OPENSHELL_TEMPLATE_DIR`; they are not relative to
@@ -96,12 +94,12 @@ for direct provider bindings or protected Praxis secrets instead.
 
 ## Validation
 
-[`openshell/tests/templates.py`](../../openshell/tests/templates.py) exercises sync, pagination, conflict rejection,
+`openshell/tests/templates.py` exercises sync, pagination, conflict rejection,
 concurrent creation, resource overrides, catalog-only profiles, and credential
-field rejection. [`openshell/tests/openshell-static.sh`](../../openshell/tests/openshell-static.sh) runs it in normal CI.
+field rejection. `openshell/tests/openshell-static.sh` runs it in normal CI.
 The existing harness contract tests verify per-sandbox policy/provider attachment,
 labels, client configuration, and absence of inline workload flags when a template
-is selected. [`openshell/tests/templates-runtime.sh`](../../openshell/tests/templates-runtime.sh) verifies real gateway sync and readback
+is selected. `openshell/tests/templates-runtime.sh` verifies real gateway sync and readback
 twice. The opt-in RHEL runtime suite runs it and exercises actual template-based
 OpenCode and OpenClaw creation through the existing entry points.
 
