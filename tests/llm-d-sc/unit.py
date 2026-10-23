@@ -127,6 +127,24 @@ class LlmDScConfig(unittest.TestCase):
         self.assertIn("sha256:", images["LLM_D_SC_TRACE_IMAGE"])
         self.assertNotIn(":latest", " ".join(images.values()))
 
+    def test_opencode_policy_allows_provider_package_and_model_catalog(self):
+        policy_path = ROOT / "configs/llm-d-sc/profiles/dev/policy.yaml"
+        policy_source = policy_path.read_text().replace("@@PRAXIS_PORT@@", "8080")
+        policy_source = policy_source.replace("@@PRAXIS_API_PREFIX@@", "")
+        policy = yaml.safe_load(policy_source)
+        networks = policy["network_policies"]
+        npm_binaries = {item["path"] for item in networks["npm_registry"]["binaries"]}
+        self.assertIn("/usr/local/bin/opencode", npm_binaries)
+        catalog = networks["models_catalog"]
+        self.assertEqual(catalog["endpoints"][0]["host"], "models.opencode.ai")
+        self.assertEqual(catalog["endpoints"][0]["protocol"], "rest")
+        self.assertEqual(catalog["endpoints"][0]["enforcement"], "enforce")
+        self.assertEqual(catalog["endpoints"][0]["access"], "read-only")
+        provider = json.loads(
+            (ROOT / "configs/llm-d-sc/harness-provider.json.in").read_text()
+        )
+        self.assertEqual(provider["provider"]["praxis"]["npm"], "@ai-sdk/openai-compatible")
+
     def test_remote_gpu_mode_requires_real_mode(self):
         spec = importlib.util.spec_from_file_location("llm_d_sc_integration", INTEGRATION_PATH)
         integration = importlib.util.module_from_spec(spec)
@@ -400,6 +418,79 @@ class LlmDScConfig(unittest.TestCase):
                 self.assertEqual(json.loads(response.read()),
                                  {"error": "invalid request target"})
         self.assertEqual(hits, [])
+
+    def test_relay_rejects_invalid_and_oversized_content_lengths(self):
+        spec = importlib.util.spec_from_file_location("llm_d_sc_trace_ui", TRACE_UI_PATH)
+        trace_ui = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(trace_ui)
+        relay = trace_ui.RelayServer(("127.0.0.1", 0), "http://127.0.0.1:9")
+        thread = threading.Thread(target=relay.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(lambda: (relay.shutdown(), relay.server_close(), thread.join(timeout=2)))
+
+        invalid_values = (
+            "nope", "-1", str(trace_ui.MAX_REQUEST_BODY_BYTES + 1), "9" * 5000,
+        )
+        expected = (400, 400, 413, 413)
+        for value, status in zip(invalid_values, expected):
+            with self.subTest(content_length=value):
+                client = http.client.HTTPConnection("127.0.0.1", relay.server_port, timeout=5)
+                self.addCleanup(client.close)
+                client.putrequest("POST", "/v1/chat/completions")
+                client.putheader("Content-Length", value)
+                client.endheaders()
+                response = client.getresponse()
+                self.assertEqual(response.status, status)
+
+    def test_incomplete_upstream_bodies_return_502_and_complete_the_trace(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        spec = importlib.util.spec_from_file_location("llm_d_sc_trace_ui", TRACE_UI_PATH)
+        trace_ui = importlib.util.module_from_spec(spec)
+        with mock.patch.dict(os.environ, {"TRACE_DB_PATH": f"{directory.name}/traces.db"}):
+            spec.loader.exec_module(trace_ui)
+
+        class Upstream(BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(503 if self.path == "/incomplete-error" else 200)
+                self.send_header("Content-Length", "20")
+                self.end_headers()
+                self.wfile.write(b"partial")
+                self.wfile.flush()
+                self.close_connection = True
+
+            def log_message(self, fmt, *args):
+                return
+
+        upstream = ThreadingHTTPServer(("127.0.0.1", 0), Upstream)
+        relay = trace_ui.RelayServer(
+            ("127.0.0.1", 0), f"http://127.0.0.1:{upstream.server_port}"
+        )
+        for server in (upstream, relay):
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            self.addCleanup(lambda server=server, thread=thread: (
+                server.shutdown(), server.server_close(), thread.join(timeout=2)))
+
+        for path in ("/incomplete-success", "/incomplete-error"):
+            with self.subTest(path=path):
+                with self.assertRaises(urllib.error.HTTPError) as failed:
+                    urllib.request.urlopen(
+                        f"http://127.0.0.1:{relay.server_port}{path}", timeout=5
+                    )
+                self.assertEqual(failed.exception.code, 502)
+                error_response = failed.exception
+                try:
+                    self.assertEqual(
+                        json.loads(error_response.read()),
+                        {"error": "upstream response ended early"},
+                    )
+                finally:
+                    error_response.close()
+                trace = next(item for item in trace_ui.traces() if item["path"] == path)
+                self.assertEqual(trace["status"], 502)
+                self.assertIsNotNone(trace["completed_at"])
+                self.assertIn("ended early", trace["error"])
 
 
 if __name__ == "__main__":

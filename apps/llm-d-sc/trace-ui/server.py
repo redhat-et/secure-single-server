@@ -3,10 +3,12 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import gzip
 import json
 import os
+from http.client import IncompleteRead
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import sqlite3
@@ -30,13 +32,17 @@ HOP_BY_HOP = {
     "te", "trailers", "transfer-encoding", "upgrade", "host", "content-length",
 }
 GPU_LABELS = {"COMPLEX", "REASONING"}
+MAX_REQUEST_BODY_BYTES = 16 * 1024 * 1024
 
 
-def connection() -> sqlite3.Connection:
+@contextmanager
+def connection():
     DATABASE.parent.mkdir(parents=True, exist_ok=True)
     database = sqlite3.connect(DATABASE)
-    database.execute(
-        """CREATE TABLE IF NOT EXISTS traces (
+    try:
+        with database:
+            database.execute(
+                """CREATE TABLE IF NOT EXISTS traces (
             id TEXT PRIMARY KEY,
             started_at TEXT NOT NULL,
             completed_at TEXT,
@@ -55,10 +61,10 @@ def connection() -> sqlite3.Connection:
             response_tokens INTEGER,
             response_tokens_est INTEGER,
             response_reasoning_tokens INTEGER
-        )"""
-    )
-    database.execute(
-        """CREATE TABLE IF NOT EXISTS hops (
+                )"""
+            )
+            database.execute(
+                """CREATE TABLE IF NOT EXISTS hops (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             trace_id TEXT NOT NULL,
             route TEXT NOT NULL,
@@ -68,20 +74,22 @@ def connection() -> sqlite3.Connection:
             status INTEGER,
             classifier_us INTEGER,
             error TEXT
-        )"""
-    )
-    for table, columns in (
-        ("traces", (("fallback", "INTEGER NOT NULL DEFAULT 0"), ("response", "TEXT"),
-                    ("response_tokens", "INTEGER"), ("response_tokens_est", "INTEGER"),
-                    ("response_reasoning_tokens", "INTEGER"))),
-        ("hops", (("arrived_at", "REAL"), ("ttfb_ms", "INTEGER"), ("total_ms", "INTEGER"),
-                  ("classifier_us", "INTEGER"))),
-    ):
-        existing = {row[1] for row in database.execute(f"PRAGMA table_info({table})")}
-        for column, kind in columns:
-            if column not in existing:
-                database.execute(f"ALTER TABLE {table} ADD COLUMN {column} {kind}")
-    return database
+                )"""
+            )
+            for table, columns in (
+                ("traces", (("fallback", "INTEGER NOT NULL DEFAULT 0"), ("response", "TEXT"),
+                            ("response_tokens", "INTEGER"), ("response_tokens_est", "INTEGER"),
+                            ("response_reasoning_tokens", "INTEGER"))),
+                ("hops", (("arrived_at", "REAL"), ("ttfb_ms", "INTEGER"), ("total_ms", "INTEGER"),
+                          ("classifier_us", "INTEGER"))),
+            ):
+                existing = {row[1] for row in database.execute(f"PRAGMA table_info({table})")}
+                for column, kind in columns:
+                    if column not in existing:
+                        database.execute(f"ALTER TABLE {table} ADD COLUMN {column} {kind}")
+            yield database
+    finally:
+        database.close()
 
 
 def create_trace(trace_id: str, method: str, path: str, question: str | None) -> None:
@@ -595,8 +603,21 @@ class Handler(BaseHTTPRequestHandler):
                             b'{"error":"invalid request target"}')
             return
         trace_id = uuid.uuid4().hex
-        length = int(self.headers.get("Content-Length", "0"))
+        raw_length = self.headers.get("Content-Length", "0")
+        if not raw_length.isascii() or not raw_length.isdigit():
+            self.send_bytes(400, "application/json", b'{"error":"invalid Content-Length"}')
+            return
+        normalized_length = raw_length.lstrip("0") or "0"
+        limit = str(MAX_REQUEST_BODY_BYTES)
+        if (len(normalized_length) > len(limit)
+                or (len(normalized_length) == len(limit) and normalized_length > limit)):
+            self.send_bytes(413, "application/json", b'{"error":"request body too large"}')
+            return
+        length = int(normalized_length)
         body = self.rfile.read(length) if length else b""
+        if len(body) != length:
+            self.send_bytes(400, "application/json", b'{"error":"incomplete request body"}')
+            return
         if self.server.route is None and self.path.startswith("/ws/"):
             self.send_bytes(404, "application/json", b'{"error":"not found"}')
             return
@@ -705,7 +726,24 @@ class Handler(BaseHTTPRequestHandler):
                     self.wfile.write(response_body)
         except HTTPError as error:
             ttfb_ms = elapsed_ms()
-            response_body = error.read()
+            try:
+                response_body = error.read()
+            except IncompleteRead:
+                message = f"{error}; upstream response ended early"
+                error.close()
+                if self.server.route is None:
+                    complete_trace(trace_id, 502, {}, elapsed_ms(), message)
+                elif hop_trace_id:
+                    record_hop(hop_trace_id, self.server.route,
+                               self.headers.get("X-Llm-D-Sc-Label"), error.code,
+                               message, self.headers.get("X-Llm-D-Sc-Score"),
+                               arrived_at=arrived_at, ttfb_ms=ttfb_ms,
+                               total_ms=elapsed_ms(), classifier_us=classifier_us)
+                if not response_started:
+                    self.send_bytes(502, "application/json",
+                                    b'{"error":"upstream response ended early"}')
+                return
+            error.close()
             if self.server.route is None:
                 complete_trace(trace_id, error.code, error.headers,
                                int((time.monotonic() - started) * 1000), str(error))
@@ -716,6 +754,18 @@ class Handler(BaseHTTPRequestHandler):
                            ttfb_ms=ttfb_ms, total_ms=elapsed_ms(), classifier_us=classifier_us)
             self.send_bytes(error.code, error.headers.get_content_type(),
                             response_body)
+        except IncompleteRead:
+            message = "upstream response ended early"
+            if self.server.route is None:
+                complete_trace(trace_id, 502, {}, elapsed_ms(), message)
+            elif hop_trace_id and not hop_recorded:
+                record_hop(hop_trace_id, self.server.route,
+                           self.headers.get("X-Llm-D-Sc-Label"), None, message,
+                           self.headers.get("X-Llm-D-Sc-Score"), arrived_at=arrived_at,
+                           total_ms=elapsed_ms(), classifier_us=classifier_us)
+            if not response_started:
+                self.send_bytes(502, "application/json",
+                                b'{"error":"upstream response ended early"}')
         except (OSError, URLError) as error:
             if self.server.route is None:
                 complete_trace(trace_id, None, {},

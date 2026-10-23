@@ -258,7 +258,7 @@ class StreamlitSecurityTests(unittest.TestCase):
         self.assertIn("not a supported OpenShell host", normalized)
         self.assertIn("manual.md#4-choose-model-access", normalized)
         self.assertIn(
-            "model-access.md#self-hosted-or-private-openai-compatible-service",
+            "model-access.md#local-openai-compatible-service",
             normalized,
         )
         self.assertIn("--name streamlit-demo-openai", normalized)

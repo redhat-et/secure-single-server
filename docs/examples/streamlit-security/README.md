@@ -88,7 +88,7 @@ in the service-owner shell so the real key is entered at a hidden prompt.
 ### OpenAI-compatible endpoint
 
 For endpoint setup details, see the
-[OpenAI-compatible model guide](../../quickstarts/openshell-single-server/model-access.md#self-hosted-or-private-openai-compatible-service).
+[OpenAI-compatible model guide](../../quickstarts/openshell-single-server/model-access.md#local-openai-compatible-service).
 Edit the host and port in
 `openshell/demos/streamlit-security/providers/openai-compatible.yaml`. The
 profile host and port must match the HTTPS host and port in `MODEL_BASE_URL`.
