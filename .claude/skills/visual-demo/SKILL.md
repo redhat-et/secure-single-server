@@ -63,7 +63,8 @@ other colors or fonts.
 | Theme | `data-site` attribute; the header button flips it |
 
 The page starts in the theme chosen on the site (read from the Material
-palette key in `localStorage`), then falls back to the operating system.
+palette key in `localStorage`). Without one, it uses the choice saved by the
+page's own button, then the operating system.
 
 If `overrides/assets/stylesheets/redhat.css` changes, update the template head
 and render the existing demos again.
@@ -80,5 +81,7 @@ and render the existing demos again.
   endpoints.
 - For security scenarios, use the README's perimeter, classification, and
   trust-level wording.
+- Do not use `<ve-ask>` or other reply prompts. The pages are public, and a
+  reader has no agent to receive a reply.
 - After upgrading the plugin, render one existing demo and compare it before
   committing the new output.

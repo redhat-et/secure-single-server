@@ -53,8 +53,8 @@ code{font-family:var(--font-mono,ui-monospace,Menlo,monospace);font-size:var(--t
 </style>
 <script>
 (function(){var t=null;
-try{t=localStorage.getItem('site-theme')}catch(e){}
-if(!t){try{var p=JSON.parse(localStorage.getItem('/secure-single-server/.__palette'));var s=p&&p.color&&p.color.scheme;t=s==='slate'?'dark':s==='default'?'light':null}catch(e){}}
+try{var p=JSON.parse(localStorage.getItem('/secure-single-server/.__palette'));var s=p&&p.color&&p.color.scheme;t=s==='slate'?'dark':s==='default'?'light':null}catch(e){}
+if(!t){try{t=localStorage.getItem('site-theme')}catch(e){}}
 if(t!=='dark'&&t!=='light')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
 document.documentElement.setAttribute('data-site',t)})();
 </script>
@@ -358,10 +358,7 @@ document.documentElement.setAttribute('data-site',t)})();
 </div>
 <figcaption><span class="fig-n">Fig. 7</span>The raw document moves between two places at the same classification — a workflow mistake. A move to a lower level is a separate operation, and it is not the agent's unilateral decision.</figcaption>
 </figure>
-<ve-ask id="verdict" q="The raw document reaches the results server. What is it?">
-<ve-opt value="exfiltration">Exfiltration — sensitive data left the agent's control</ve-opt>
-<ve-opt value="mistake">A workflow mistake — same level, inside the perimeter</ve-opt>
-</ve-ask>
+<p><b>The raw document reaches the results server. It is a workflow mistake, not exfiltration:</b> the move stays inside the perimeter, at the same classification level.</p>
 <div class="note">
 <span class="chip warn">what the boundary does not do</span>
 <ul>

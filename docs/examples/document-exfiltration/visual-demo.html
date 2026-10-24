@@ -302,22 +302,6 @@ summary { cursor: pointer; font: 500 var(--t-label) var(--font-mono); margin-bot
   .ve-steps path[pathLength][data-s] { stroke-dashoffset: 0; }
   .ve-tok, .ve-vals text:not(:last-child) { display: none; }
 }
-/* <ve-ask> on a kit page (inlined only when the page has one; plans have their own in plan/plan.css) */
-.ask { border: 1px solid var(--border-bright); border-radius: var(--r-1); background: var(--surface); padding: var(--s-4) var(--s-5) var(--s-5); display: grid; gap: var(--s-3); min-width: 0; max-width: 46rem; margin: var(--s-4) 0; }
-.ask legend { float: left; width: 100%; padding: 0; font: 500 var(--t-label) var(--font-mono); color: var(--text-dim); }
-.ask legend b { color: var(--text); font-weight: 600; }
-.ask-q { font-weight: 600; font-size: var(--t-lead); line-height: 1.35; }
-.ask-opts { display: grid; gap: var(--s-2); }
-.ask.row .ask-opts { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
-.opt { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s-3); align-items: start; padding: var(--s-3) var(--s-4); border: 1px solid var(--border); border-radius: var(--r-1); background: var(--bg); cursor: pointer; }
-.opt:hover { border-color: var(--border-bright); }
-.opt:has(input:checked) { border-color: var(--text); background: color-mix(in srgb, var(--text) 5%, var(--surface)); }
-.opt input { margin-top: .3em; accent-color: var(--accent); width: 1rem; height: 1rem; }
-.opt-body { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--s-3); min-width: 0; }
-.opt-label { font-weight: 500; }
-.sug { font: 500 var(--t-label) var(--font-mono); color: var(--text-dim); }
-.opt small { flex-basis: 100%; display: block; color: var(--text-dim); font-size: var(--t-small); }
-@media print { .ask { break-inside: avoid; } }
 </style>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTEuMzUgMTQ1IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IlJlZCBIYXQiPjx0aXRsZT5SZWQgSGF0PC90aXRsZT48cGF0aCBmaWxsPSIjZWUwMDAwIiBkPSJNMTI3LjQ3LDgzLjQ5YzEyLjUxLDAsMzAuNjEtMi41OCwzMC42MS0xNy40NmExNCwxNCwwLDAsMC0uMzEtMy40MmwtNy40NS0zMi4zNmMtMS43Mi03LjEyLTMuMjMtMTAuMzUtMTUuNzMtMTYuNkMxMjQuODksOC42OSwxMDMuNzYuNSw5Ny41MS41LDkxLjY5LjUsOTAsOCw4My4wNiw4Yy02LjY4LDAtMTEuNjQtNS42LTE3Ljg5LTUuNi02LDAtOS45MSw0LjA5LTEyLjkzLDEyLjUsMCwwLTguNDEsMjMuNzItOS40OSwyNy4xNkE2LjQzLDYuNDMsMCwwLDAsNDIuNTMsNDRjMCw5LjIyLDM2LjMsMzkuNDUsODQuOTQsMzkuNDVNMTYwLDcyLjA3YzEuNzMsOC4xOSwxLjczLDkuMDUsMS43MywxMC4xMywwLDE0LTE1Ljc0LDIxLjc3LTM2LjQzLDIxLjc3Qzc4LjU0LDEwNCwzNy41OCw3Ni42LDM3LjU4LDU4LjQ5YTE4LjQ1LDE4LjQ1LDAsMCwxLDEuNTEtNy4zM0MyMi4yNyw1MiwuNSw1NSwuNSw3NC4yMmMwLDMxLjQ4LDc0LjU5LDcwLjI4LDEzMy42NSw3MC4yOCw0NS4yOCwwLDU2LjctMjAuNDgsNTYuNy0zNi42NSwwLTEyLjcyLTExLTI3LjE2LTMwLjgzLTM1Ljc4Ii8+PHBhdGggZmlsbD0iIzAwMCIgZD0iTTE2MCw3Mi4wN2MxLjczLDguMTksMS43Myw5LjA1LDEuNzMsMTAuMTMsMCwxNC0xNS43NCwyMS43Ny0zNi40MywyMS43N0M3OC41NCwxMDQsMzcuNTgsNzYuNiwzNy41OCw1OC40OWExOC40NSwxOC40NSwwLDAsMSwxLjUxLTcuMzNsMy42Ni05LjA2QTYuNDMsNi40MywwLDAsMCw0Mi41Myw0NGMwLDkuMjIsMzYuMywzOS40NSw4NC45NCwzOS40NSwxMi41MSwwLDMwLjYxLTIuNTgsMzAuNjEtMTcuNDZhMTQsMTQsMCwwLDAtLjMxLTMuNDJaIi8+PC9zdmc+Cg==">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -369,8 +353,8 @@ code{font-family:var(--font-mono,ui-monospace,Menlo,monospace);font-size:var(--t
 </style>
 <script>
 (function(){var t=null;
-try{t=localStorage.getItem('site-theme')}catch(e){}
-if(!t){try{var p=JSON.parse(localStorage.getItem('/secure-single-server/.__palette'));var s=p&&p.color&&p.color.scheme;t=s==='slate'?'dark':s==='default'?'light':null}catch(e){}}
+try{var p=JSON.parse(localStorage.getItem('/secure-single-server/.__palette'));var s=p&&p.color&&p.color.scheme;t=s==='slate'?'dark':s==='default'?'light':null}catch(e){}
+if(!t){try{t=localStorage.getItem('site-theme')}catch(e){}}
 if(t!=='dark'&&t!=='light')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
 document.documentElement.setAttribute('data-site',t)})();
 </script>
@@ -672,7 +656,7 @@ document.documentElement.setAttribute('data-site',t)})();
 </div>
 <figcaption><span class="fig-n">Fig. 7</span>The raw document moves between two places at the same classification — a workflow mistake. A move to a lower level is a separate operation, and it is not the agent's unilateral decision.</figcaption>
 </figure>
-<fieldset class="ask" id="ask-verdict" data-ask="verdict"><legend class="ask-n">Question</legend><p class="ask-q">The raw document reaches the results server. What is it?</p><div class="ask-opts"><label class="opt"><input type="radio" name="verdict" value="exfiltration"><span class="opt-body"><span class="opt-label">Exfiltration — sensitive data left the agent's control</span></span></label><label class="opt"><input type="radio" name="verdict" value="mistake"><span class="opt-body"><span class="opt-label">A workflow mistake — same level, inside the perimeter</span></span></label></div></fieldset>
+<p><b>The raw document reaches the results server. It is a workflow mistake, not exfiltration:</b> the move stays inside the perimeter, at the same classification level.</p>
 <div class="note">
 <span class="chip warn">what the boundary does not do</span>
 <ul>
@@ -942,46 +926,6 @@ div.ve-sel { display: flex; gap: var(--s-1); padding: 0; box-shadow: none; } div
 
   return { $, $$, h, toast, deliver, note, closePop, onSelect, sheet, close, isOpen, page, parts, refresh: () => refresh() };
 })();
-
-// <ve-ask> on a kit page (kit/render.mjs inlines this only when the page has one, after kit/reply.js).
-// An answer the reader gives counts toward Reply (N) and goes into the reply; a question left alone is listed with its default, or as no answer.
-{
-const R = window.veReply, asks = R ? R.$$("main fieldset.ask[data-ask]") : [];
-if (asks.length) {
-  const KEY = `ve-page-ask:${location.pathname}`;
-  const inputs = (a) => R.$$("input", a);
-  const read = (a) => { const ins = inputs(a); return ins[0]?.type === "checkbox" ? ins.filter((i) => i.checked).map((i) => i.value) : ins.find((i) => i.checked)?.value ?? null; };
-  const write = (a, v) => { for (const i of inputs(a)) i.checked = Array.isArray(v) ? v.includes(i.value) : i.value === v; };
-  const defaults = new Map(asks.map((a) => [a, read(a)]));
-  const clean = (s) => s.trim().replace(/\s+/g, " ");
-  const label = (a, v) => clean(inputs(a).find((i) => i.value === v)?.closest("label").querySelector(".opt-label").textContent ?? v);
-  const pick = (a, v = read(a)) => (Array.isArray(v) ? v.map((x) => label(a, x)).join(", ") || "none" : v == null ? "no answer" : label(a, v));
-  const q = (a) => clean(R.$(".ask-q", a).textContent);
-  let done = {};
-  try { done = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { /* storage can be off for file:// pages */ }
-  const answered = (a) => Object.hasOwn(done, a.dataset.ask);
-  // a saved answer whose options are gone (the page was revised) is dropped
-  for (const a of asks) if (answered(a)) { const v = done[a.dataset.ask]; if ([v].flat().every((x) => inputs(a).some((i) => i.value === x))) write(a, v); else delete done[a.dataset.ask]; }
-  const save = () => { try { if (Object.keys(done).length) localStorage.setItem(KEY, JSON.stringify(done)); else localStorage.removeItem(KEY); } catch { /* see above */ } };
-  const record = (a) => { done[a.dataset.ask] = read(a); save(); R.refresh(); };
-  for (const a of asks) {
-    a.addEventListener("change", () => record(a));
-    // a click, Space, or Enter on the option already selected is an answer too, though no change fires;
-    // where a change does follow, it records the final value
-    a.addEventListener("click", (e) => { if (e.target.matches("input")) record(a); });
-    a.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target.matches("input:checked")) record(a); });
-  }
-  const state = (a) => (answered(a) ? pick(a) : [read(a) ?? []].flat().length ? `${pick(a)} (default)` : "no answer");
-  R.parts.push({
-    count: () => asks.filter(answered).length,
-    lines: () => asks.map((a) => `- ${a.dataset.ask} (${q(a)}): ${state(a)}`),
-    rows: () => R.h("section", { class: "r-sec" }, R.h("p", { class: "ve-label caps" }, `Questions · ${asks.filter(answered).length} of ${asks.length} answered`),
-      asks.map((a) => R.h("div", { class: "r-row" }, R.h("span", { class: "k" }, answered(a) ? "✓" : "·"), R.h("span", {}, state(a), R.h("small", {}, q(a))),
-        R.h("span", { class: "acts" }, R.h("button", { type: "button", onclick: () => { R.close(); a.scrollIntoView({ block: "center" }); (inputs(a).find((i) => i.checked) || inputs(a)[0]).focus({ preventScroll: true }); } }, answered(a) ? "Change" : "Answer"))))),
-    clear: () => { done = {}; save(); for (const a of asks) write(a, defaults.get(a)); },
-  });
-}
-}
 
 // One block scope, so the kit's names never clash with a page's own script.
 {

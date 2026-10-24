@@ -58,7 +58,8 @@ publishes it unchanged, so Markdown links to it stay relative. The
 `nav`: link them from the scenario page. They use the site's Red Hat red,
 Roboto fonts, favicon, and light and dark colors, but not the Material layout.
 A header button switches the theme. The page starts in the theme you chose on
-the site, or in your operating system's theme.
+the site. Without a site choice, it uses the theme its own button saved, then
+your operating system's theme.
 
 To add a visual demo to another scenario, use the project skill in
 [`.claude/skills/visual-demo/`](../../.claude/skills/visual-demo/SKILL.md). It
