@@ -98,7 +98,7 @@ nav:
       - API key theft: docs/examples/api-key-theft/README.md
       - Document exfiltration: docs/examples/document-exfiltration/README.md
       - Model escalation: docs/examples/model-escalation/README.md
-      - Review as a service: docs/development/review-service.md
+      - Review as a service: docs/examples/review-service/README.md
   - Development:
       - MaaS and PriceTag image publication: docs/development/pricetag-images.md
   - Testing:
