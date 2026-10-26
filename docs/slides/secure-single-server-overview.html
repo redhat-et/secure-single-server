@@ -60,11 +60,11 @@
     .deck { position: fixed; inset: 0; }
     .slide {
       position: absolute; inset: 0;
-      display: none; flex-direction: column; justify-content: center;
+      display: none; flex-direction: column; justify-content: center; justify-content: safe center;
       gap: var(--rh-space-lg, 24px);
       padding: var(--rh-space-4xl, 80px) var(--rh-space-3xl, 64px);
       background: var(--bg-primary);
-      overflow: hidden;
+      overflow-x: hidden; overflow-y: auto;
     }
     .slide > * { position: relative; z-index: 1; }
     .slide::before {
@@ -161,7 +161,7 @@
     .title-slide .headline-xl { max-width: 1000px; }
     .title-slide .headline-xl .accent { font-style: italic; }
     .logo-footer { display: flex; justify-content: center; margin-top: var(--rh-space-xl, 32px); }
-    .thank-you-slide { align-items: center; justify-content: center; text-align: center; }
+    .thank-you-slide { align-items: center; justify-content: center; justify-content: safe center; text-align: center; }
     .thank-you-slide .author-block { color: var(--text-secondary); font-size: var(--rh-font-size-body-text-lg, 1.125rem); }
     .thank-you-slide .author-block .name { color: var(--text-primary); font-weight: 700; font-size: var(--rh-font-size-heading-sm, 1.25rem); }
     .thank-you-slide .contact { font-family: var(--font-mono); font-size: var(--rh-font-size-body-text-sm, 0.875rem); color: var(--text-muted); }
