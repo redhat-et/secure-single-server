@@ -57,6 +57,7 @@ class StreamlitSecurityTests(unittest.TestCase):
         )
 
     def test_model_request_sends_credential_and_model_selection(self):
+        """Verify the model request carries the selected model and credential."""
         requests = []
 
         class FakeResponse:
@@ -226,6 +227,7 @@ class StreamlitSecurityTests(unittest.TestCase):
         )
 
     def test_provider_profiles_bind_credentials_to_native_endpoints(self):
+        """Keep provider profiles aligned with their endpoint policies."""
         openai = yaml.safe_load((DEMO / "providers/openai.yaml").read_text())
         compatible = yaml.safe_load(
             (DEMO / "providers/openai-compatible.yaml").read_text()
@@ -253,6 +255,7 @@ class StreamlitSecurityTests(unittest.TestCase):
         self.assertIn("POST /v1/chat/completions", guide)
 
     def test_documentation_explains_where_to_run_the_demo(self):
+        """Require setup guidance to identify the host and execution location."""
         guide = (ROOT / "docs/examples/streamlit-security/README.md").read_text()
         normalized = " ".join(guide.split())
         self.assertIn("dedicated RHEL 9.8+ x86_64 Linux host", normalized)
@@ -321,8 +324,10 @@ class StreamlitSecurityTests(unittest.TestCase):
         self.assertIn('document.get("next_page_token")', script)
 
     def test_safe_runner_launches_authorized_interpreter(self):
+        """Require the runner to use the Python binary allowed by its profile."""
         script = (DEMO / "run-safe.sh").read_text()
-        self.assertIn("/usr/local/bin/python3 -m streamlit", script)
+        self.assertIn("/usr/local/bin/python3.12 -m streamlit", script)
+        self.assertNotIn("/usr/local/bin/python3 -m streamlit", script)
 
     def test_safe_runner_allows_gateway_websocket_origin(self):
         script = (DEMO / "run-safe.sh").read_text()

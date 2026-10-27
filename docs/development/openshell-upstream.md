@@ -20,7 +20,7 @@ this table.
 | --- | --- | --- | --- |
 | `v0.1.3` | Reviewed | Historical baseline pin; coordinated runtime images and CLI checksums were qualified by the OpenShell test lanes. | No listed usage surfaces affected. |
 | `v0.1.4` | Reviewed | [PR 68](https://github.com/redhat-et/secure-single-server/pull/68) moved the coordinated gateway, supervisor, sandbox, CLI, and prover pins together and checked release assets and manifest digests. See the [compatibility review](../testing/upgrade-0.1.4.md). | Affected usage surfaces: Gateway configuration schema; Supervisor network path; Workload images and CLI checksums. |
-| `v0.1.5` | Reviewed | [Release notes](https://github.com/NVIDIA/OpenShell/releases/tag/v0.1.5): coordinated pins, push config delivery, OCSF JSONL naming and gateway authentication events. See the [compatibility review](../testing/upgrade-0.1.5.md). | Affected usage surfaces: Gateway configuration and policy updates; OCSF log collection; workload/runtime images and CLI/prover checksums. |
+| `v0.1.5` | Reviewed | [Release notes](https://github.com/NVIDIA/OpenShell/releases/tag/v0.1.5): coordinated pins, push config delivery, OCSF JSONL naming and gateway authentication events. See the [compatibility review](../testing/upgrade-0.1.5.md). | Affected usage surfaces: Gateway configuration schema; OCSF audit output; Workload images and CLI checksums. |
 
 ## Usage-surface register
 

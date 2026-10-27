@@ -118,7 +118,7 @@ openshell sandbox create \
   --env HOME=/tmp \
   --env STREAMLIT_SERVER_FILE_WATCHER_TYPE=none \
   --env STREAMLIT_BROWSER_GATHER_USAGE_STATS=false \
-  -- /usr/local/bin/python3 -m streamlit run /opt/openshell-demo/app.py \
+  -- /usr/local/bin/python3.12 -m streamlit run /opt/openshell-demo/app.py \
     --server.port=8501 \
     --server.address=0.0.0.0 \
     --server.corsAllowedOrigins "http://default--${SANDBOX}--streamlit.openshell.localhost:8090" \

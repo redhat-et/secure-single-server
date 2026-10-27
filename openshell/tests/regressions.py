@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 class HarnessTests(unittest.TestCase):
     def setUp(self):
+        """Create isolated CLI and SSH stubs for regression checks."""
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.td = Path(self.temp.name)

@@ -26,6 +26,7 @@ source "$TEST_ROOT/openshell/scripts/gateway-lib.sh"
 ''' + body], env=self.env, capture_output=True, text=True)
 
     def test_config_preserves_workload_and_startup_contracts(self):
+        """Keep generated gateway configuration within the pinned schema."""
         for autostart in ('yes', 'no'):
             self.env['AUTOSTART'] = autostart
             result = self.run_shell('''

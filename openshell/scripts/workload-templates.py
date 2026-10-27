@@ -92,6 +92,7 @@ def select(entries, harness, profile, config, backend):
 
 
 def workload(item):
+    """Build a deterministic workload definition from its template and pins."""
     image = os.environ.get(item['image_variable'], '')
     require(re.fullmatch(r'[^\s@]+@sha256:[a-f0-9]{64}', image), 'template image must be digest-pinned')
     cpu = os.environ.get('OPENSHELL_SANDBOX_CPU', item['cpu'])
