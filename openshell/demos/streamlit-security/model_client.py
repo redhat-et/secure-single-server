@@ -82,8 +82,7 @@ def call_model(
             {"role": "user", "content": ticket},
             *conversation,
         ],
-        "temperature": 0.1,
-        "max_tokens": 300,
+        "max_completion_tokens": 1000,
     }
 
     request = urllib.request.Request(

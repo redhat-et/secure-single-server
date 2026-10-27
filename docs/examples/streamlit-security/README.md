@@ -24,7 +24,7 @@ OpenShell sandbox
 
 ### Where to run it
 
-Run the commands on a dedicated RHEL 9 x86_64 Linux host, such as a local or
+Run the commands on a dedicated RHEL 9.8+ x86_64 Linux host, such as a local or
 cloud VM or bare-metal machine; an ordinary nested container is not a supported
 OpenShell host. Before running the demo, complete the
 [manual gateway setup in OpenShell Overview](../../../openshell/docs/README.md#manual-gateway-setup-on-rhel):

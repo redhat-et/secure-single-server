@@ -1,4 +1,4 @@
-# RHEL 9 bootc images
+# RHEL 9.8+ bootc images
 
 > **Where this fits:** The operations stop. Use it after selecting a deployment
 > route, not as a substitute for understanding its boundaries.

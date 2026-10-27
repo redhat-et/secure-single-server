@@ -61,7 +61,7 @@ if a[:3]==['rule','approve','regression']:
         ssh.write_text('''#!/usr/bin/env python3
 import json,os,sys
 with open(os.environ['MOCK_LOG'],'a') as f: f.write(json.dumps(sys.argv[1:])+'\\n')
-sys.stdin.read()
+sys.stdin.buffer.read()
 ''')
         ssh.chmod(0o755)
         self.env = {**os.environ, 'PATH': str(self.td)+':'+os.environ['PATH'],

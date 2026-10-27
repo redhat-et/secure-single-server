@@ -92,6 +92,9 @@ class StreamlitSecurityTests(unittest.TestCase):
         self.assertEqual(request.headers["Authorization"], "Bearer opaque-placeholder")
         body = json.loads(request.data)
         self.assertEqual(body["model"], "gpt-5.5")
+        self.assertEqual(body["max_completion_tokens"], 1000)
+        self.assertNotIn("max_tokens", body)
+        self.assertNotIn("temperature", body)
 
     def test_model_client_rejects_credential_bearing_endpoint_urls(self):
         for url in (
@@ -229,7 +232,7 @@ class StreamlitSecurityTests(unittest.TestCase):
         )
         for profile in (openai, compatible):
             self.assertEqual(profile["credentials"][0]["env_vars"], ["OPENAI_API_KEY"])
-            self.assertEqual(profile["binaries"], ["/usr/local/bin/python3"])
+            self.assertEqual(profile["binaries"], ["/usr/local/bin/python3.12"])
             endpoint = profile["endpoints"][0]
             self.assertEqual(endpoint["protocol"], "rest")
             self.assertEqual(endpoint["enforcement"], "enforce")
@@ -252,7 +255,7 @@ class StreamlitSecurityTests(unittest.TestCase):
     def test_documentation_explains_where_to_run_the_demo(self):
         guide = (ROOT / "docs/examples/streamlit-security/README.md").read_text()
         normalized = " ".join(guide.split())
-        self.assertIn("dedicated RHEL 9 x86_64 Linux host", normalized)
+        self.assertIn("dedicated RHEL 9.8+ x86_64 Linux host", normalized)
         self.assertIn("/opt/secure-single-server", normalized)
         self.assertIn("Landlock ABI 3", normalized)
         self.assertIn("not a supported OpenShell host", normalized)
