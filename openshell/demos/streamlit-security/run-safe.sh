@@ -112,6 +112,7 @@ openshell sandbox create \
   --detach \
   --no-tty \
   --env DEMO_MODE=safe \
+  --env STREAMLIT_DEMO_PROVIDER="${PROVIDER}" \
   --env MODEL_BASE_URL="${MODEL_BASE_URL}" \
   --env OPENAI_MODEL="${OPENAI_MODEL}" \
   --env DEMO_MARKER=demo-not-a-real-secret \

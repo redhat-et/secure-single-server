@@ -62,6 +62,19 @@ if mismatched:
     raise SystemExit("mismatched pins: " + ", ".join(mismatched))
 PY
 
+# 1c. The prover workflow consumes the reviewed version and checksum from
+# images.env, rather than maintaining an unchecked duplicate pin.
+prover_workflow="${ROOT}/.github/workflows/openshell-validate.yml"
+grep -Fq 'source openshell/configs/images.env' "${prover_workflow}" \
+  || fail 'prover workflow must source the shared image pins'
+grep -Fq "\${OPENSHELL_PROVER_VERSION}" "${prover_workflow}" \
+  || fail 'prover workflow must use the shared version'
+grep -Fq "\${OPENSHELL_PROVER_SHA256_AMD64}" "${prover_workflow}" \
+  || fail 'prover workflow must use the shared AMD64 checksum'
+if grep -Eq '^[[:space:]]*OPENSHELL_PROVER_(VERSION|SHA256)=' "${prover_workflow}"; then
+  fail 'prover workflow must not duplicate a prover pin'
+fi
+
 # 2. All shell scripts under openshell/ pass shellcheck.
 command -v shellcheck >/dev/null 2>&1 || fail "shellcheck is required"
 mapfile -t scripts < <(find "${OS_DIR}" -name '*.sh' -type f)

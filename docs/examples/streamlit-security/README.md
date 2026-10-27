@@ -112,6 +112,10 @@ Register the provider by reusing the hidden-prompt procedure linked above, with
 `--name streamlit-demo-compatible`,
 `--type streamlit-openai-compatible`, and `--credential OPENAI_API_KEY`.
 
+Both request formats use `temperature=0.1`. The OpenAI provider sends
+`max_completion_tokens`; the OpenAI-compatible provider sends `max_tokens` for
+servers that implement the legacy Chat Completions parameter.
+
 ## Run the unsafe version
 
 From the repository root, in your login account's rootless Podman context (not
