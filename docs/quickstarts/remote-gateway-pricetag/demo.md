@@ -62,7 +62,8 @@ As superadmin, open **Administration → User keys**:
 
 1. Select the user under **Issue onboarding key**; you do not need to issue a key.
 2. Choose **View selected user’s usage** or **View selected user’s team**.
-   Confirm with **Continue**.
+   Confirm in the **Change dashboard view** dialog with **Continue**.
+   **Cancel** or Escape keeps the current view; direct URLs use a styled confirmation page.
 3. Show the **Viewing as** banner. Personal Usage must contain only the selected
    identity; the team view must contain only that identity's authorized subtree.
 4. Choose **Back to admin view** in the banner and confirm. Aggregate Usage and
@@ -120,15 +121,16 @@ See [pricing operations](pricing.md) for refresh, catalog and repricing examples
 
 ## 6. Replace keys and offboard
 
-1. Sign in as the user and open **My keys** (`/management`). Create another key
+1. Sign in as the user and open **My keys** (`/management`), then the **Create key** tab. Create another key
    with a distinct name and allowed finite lifetime. Deliberate additional keys
    are supported; repeated submissions while creation is pending are ignored.
 2. **Copy key** or **Download .key**, then **Dismiss key**. The secret is not
    displayed and cannot be retrieved later. Update OpenCode's key-file path,
    restart it and verify inference. Both keys work until one expires or is revoked.
-3. **Revoke** the old key. Active keys appear first; expandable history lists
-   revoked/expired records with status, expiry dates and remaining lifetime.
-   This is revocation, not permanent record deletion.
+3. In **Your keys**, search by name or key ID and **Revoke** the old key.
+   Use **Status** to show Active, Revoked, Expired or All keys. The table shows
+   expiry and remaining lifetime, with five rows per page by default.
+   Revocation preserves the record for audit; it does not permanently delete it.
 4. As superadmin, open **Administration → Users**, select a user, then
    **Check active keys** or confirm **Revoke all keys**. New keys
    can still be issued afterward; this action does not disable the account.

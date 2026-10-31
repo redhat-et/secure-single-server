@@ -66,7 +66,8 @@ and confirm **Revoke all keys**.
 **Administration → User keys → Issue onboarding key** adds a key; it does not replace existing keys. Choose **Copy key** or **Download .key**,
 then **Dismiss key**. The secret is never displayed or saved in browser storage.
 
-Users manage their own keys under **My keys**. Active keys appear first, with expiry
+Users open **My keys** from the top navigation. The **My keys** tab lists keys;
+**Create key** issues a new key with private copy/download controls. Active keys appear first, with expiry
 and remaining lifetime. **Revoke** stops a key; revoked/expired records remain in
 expandable history. Permanent deletion is not supported. The deployed MaaS cleanup
 API targets expired ephemeral keys, not ordinary revoked key records.
@@ -168,7 +169,7 @@ reported old IDs after checking their status.
 | Set the default monthly allowance and post-limit model exceptions | Administrator **Safety Net** (`/api/v1/admin/safety-net`) |
 | Create users or change an individual allowance | Administration → Users / User quota → Per-user monthly quota overrides; SSH `scripts/pricetag/user` uses the same PriceTag APIs |
 | Issue onboarding keys | Administration → User keys → Issue onboarding key |
-| Create/list/revoke your own keys | My keys (`/management`); SSH `scripts/pricetag/maas-key` remains available |
+| Create/search/revoke your own keys | My keys (`/management`): search by name or ID, filter Active/Revoked/Expired/All, and select 5/20/50 rows per page; SSH `scripts/pricetag/maas-key` remains available |
 | Configure providers, credentials and advertised models | SSH [provider helper](providers.md) |
 | View personal/team spending | Usage is personal for users/managers; My team follows manager relationships |
 | Inspect a user’s scoped view without their key | Superadmin View / Team links; read-only impersonation with confirmed return |
