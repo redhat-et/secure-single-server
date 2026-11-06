@@ -32,6 +32,56 @@ Omit `--monthly-usd` to inherit the default; omit `--key-lifetime` for 90 days.
 On your workstation, follow [client setup](README.md#5-prepare-the-local-connection)
 with `INFERENCE_USER=carol`. That key charges Carol's budget.
 
+## Bulk load a roster
+
+There is no single bulk-import endpoint. Automate the normal management API
+sequence instead: upsert each identity, optionally set a budget, and issue each
+key separately. The repository contains a synthetic 100-person example roster at
+`docs/examples/pricetag/users-100.json`. It contains only non-real names,
+subjects, and roles—never credentials.
+
+From a workstation with the [administrator key and CA](README.md#5-prepare-the-local-connection),
+create a private working directory and process the roster. This example issues
+30-day keys and saves every response in a new private file:
+
+```console
+umask 077
+BULK_DIR=$(mktemp -d)
+ROSTER="$REPO/docs/examples/pricetag/users-100.json"
+
+while IFS= read -r user; do
+  subject=$(printf '%s' "$user" | jq -r .subject)
+  printf '%s\n' "$user" >"$BULK_DIR/$subject.user-input.json"
+  python3 "$REPO/scripts/pricetag/api" PUT /api/v1/management/users \
+    --url "$GATEWAY_URL" --key-file "$CLIENT_DIR/admin.key" \
+    --ca-file "$CLIENT_DIR/ca.pem" --input "$BULK_DIR/$subject.user-input.json" \
+    --output "$BULK_DIR/$subject.user-result.json"
+
+  printf '{"subject":"%s","monthly_usd":5}\n' "$subject" \
+    >"$BULK_DIR/$subject.budget-input.json"
+  python3 "$REPO/scripts/pricetag/api" PUT /api/v1/management/budgets \
+    --url "$GATEWAY_URL" --key-file "$CLIENT_DIR/admin.key" \
+    --ca-file "$CLIENT_DIR/ca.pem" --input "$BULK_DIR/$subject.budget-input.json" \
+    --output "$BULK_DIR/$subject.budget-result.json"
+
+  printf '{"subject":"%s","name":"bulk-onboarding","expiresIn":"30d"}\n' "$subject" \
+    >"$BULK_DIR/$subject.key-input.json"
+  python3 "$REPO/scripts/pricetag/api" POST /api/v1/management/keys \
+    --url "$GATEWAY_URL" --key-file "$CLIENT_DIR/admin.key" \
+    --ca-file "$CLIENT_DIR/ca.pem" --input "$BULK_DIR/$subject.key-input.json" \
+    --output "$BULK_DIR/$subject.key-result.json"
+done < <(jq -c '.[]' "$ROSTER")
+
+printf 'Bulk results: %s\n' "$BULK_DIR"
+```
+
+The `*.key-result.json` files contain one-time credentials. Distribute each file
+securely, then remove it from the administrator workstation when it is no longer
+needed. A transport or output failure does not prove that key issuance failed;
+inspect the server and saved response before retrying that person. For a
+resumable import, record each completed subject and key ID in a private manifest
+before advancing to the next person.
+
 ## Change a budget
 
 ```console
