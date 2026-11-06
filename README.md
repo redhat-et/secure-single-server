@@ -107,6 +107,12 @@ repository checkout: on a bootc image, use
 revision from their build time, so use a rebuilt image or an updated manual
 checkout when trying newer examples.
 
+For an OpenShift agent-security evaluation, see the
+[OpenShift agent security example](examples/openshift-agent-security/README.md).
+It demonstrates attested workload identity, certificate-bound MCP access,
+exact-action approval and audit using synthetic workflows.
+The example has its own prerequisites and setup instructions.
+
 ## Explore Further
 
 - [Architecture overview](docs/quickstarts/architecture-walkthrough/README.md):

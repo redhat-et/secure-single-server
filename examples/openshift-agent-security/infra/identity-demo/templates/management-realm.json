@@ -1,0 +1,1138 @@
+{
+  "$common": "realm-common.json",
+  "roles": {
+    "realm": [
+      {
+        "id": "${id.2}",
+        "name": "identity-demo-runtime-admin",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "${id.1}",
+        "attributes": {
+          "identity-demo-owner": [
+            "${owner}"
+          ]
+        }
+      },
+      {
+        "id": "${id.3}",
+        "name": "offline_access",
+        "description": "${role_offline-access}",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "${id.1}",
+        "attributes": {}
+      },
+      {
+        "id": "${id.4}",
+        "name": "uma_authorization",
+        "description": "${role_uma_authorization}",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "${id.1}",
+        "attributes": {}
+      },
+      {
+        "id": "${id.5}",
+        "name": "analyst",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "${id.1}",
+        "attributes": {}
+      },
+      {
+        "id": "${id.6}",
+        "name": "identity-demo-runtime-user",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "${id.1}",
+        "attributes": {
+          "identity-demo-owner": [
+            "${owner}"
+          ]
+        }
+      },
+      {
+        "id": "${id.7}",
+        "name": "viewer",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "${id.1}",
+        "attributes": {}
+      },
+      {
+        "id": "${id.8}",
+        "name": "default-roles-identity-demo",
+        "description": "${role_default-roles}",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "offline_access",
+            "uma_authorization"
+          ],
+          "client": {
+            "account": [
+              "view-profile",
+              "manage-account"
+            ]
+          }
+        },
+        "clientRole": false,
+        "containerId": "${id.1}",
+        "attributes": {}
+      }
+    ],
+    "client": {
+      "realm-management": [
+        {
+          "id": "${id.9}",
+          "name": "realm-admin",
+          "description": "${role_realm-admin}",
+          "composite": true,
+          "composites": {
+            "client": {
+              "realm-management": [
+                "view-realm",
+                "view-users",
+                "manage-events",
+                "view-authorization",
+                "query-groups",
+                "impersonation",
+                "manage-realm",
+                "manage-identity-providers",
+                "view-identity-providers",
+                "manage-users",
+                "view-clients",
+                "query-realms",
+                "manage-clients",
+                "view-events",
+                "create-client",
+                "manage-authorization",
+                "query-clients",
+                "query-users"
+              ]
+            }
+          },
+          "clientRole": true,
+          "containerId": "${id.10}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.11}",
+          "name": "view-realm",
+          "description": "${role_view-realm}",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "${id.10}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.12}",
+          "name": "view-users",
+          "description": "${role_view-users}",
+          "composite": true,
+          "composites": {
+            "client": {
+              "realm-management": [
+                "query-groups",
+                "query-users"
+              ]
+            }
+          },
+          "clientRole": true,
+          "containerId": "${id.10}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.13}",
+          "name": "manage-events",
+          "description": "${role_manage-events}",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "${id.10}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.14}",
+          "name": "query-groups",
+          "description": "${role_query-groups}",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "${id.10}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.15}",
+          "name": "view-authorization",
+          "description": "${role_view-authorization}",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "${id.10}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.16}",
+          "name": "impersonation",
+          "description": "${role_impersonation}",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "${id.10}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.17}",
+          "name": "manage-realm",
+          "description": "${role_manage-realm}",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "${id.10}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.18}",
+          "name": "manage-identity-providers",
+          "description": "${role_manage-identity-providers}",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "${id.10}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.19}",
+          "name": "view-identity-providers",
+          "description": "${role_view-identity-providers}",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "${id.10}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.20}",
+          "name": "manage-users",
+          "description": "${role_manage-users}",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "${id.10}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.21}",
+          "name": "query-realms",
+          "description": "${role_query-realms}",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "${id.10}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.22}",
+          "name": "view-clients",
+          "description": "${role_view-clients}",
+          "composite": true,
+          "composites": {
+            "client": {
+              "realm-management": [
+                "query-clients"
+              ]
+            }
+          },
+          "clientRole": true,
+          "containerId": "${id.10}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.23}",
+          "name": "manage-clients",
+          "description": "${role_manage-clients}",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "${id.10}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.24}",
+          "name": "view-events",
+          "description": "${role_view-events}",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "${id.10}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.25}",
+          "name": "create-client",
+          "description": "${role_create-client}",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "${id.10}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.26}",
+          "name": "manage-authorization",
+          "description": "${role_manage-authorization}",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "${id.10}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.27}",
+          "name": "query-clients",
+          "description": "${role_query-clients}",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "${id.10}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.28}",
+          "name": "query-users",
+          "description": "${role_query-users}",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "${id.10}",
+          "attributes": {}
+        }
+      ],
+      "fixture-gateway-service": [],
+      "fixture-other-service": [],
+      "security-admin-console": [],
+      "admin-cli": [],
+      "account-console": [],
+      "fixture-runtime-operator": [],
+      "broker": [
+        {
+          "id": "${id.29}",
+          "name": "read-token",
+          "description": "${role_read-token}",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "${id.30}",
+          "attributes": {}
+        }
+      ],
+      "identity-demo-ui": [],
+      "account": [
+        {
+          "id": "${id.31}",
+          "name": "manage-account-links",
+          "description": "${role_manage-account-links}",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "${id.32}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.33}",
+          "name": "view-profile",
+          "description": "${role_view-profile}",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "${id.32}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.34}",
+          "name": "manage-consent",
+          "description": "${role_manage-consent}",
+          "composite": true,
+          "composites": {
+            "client": {
+              "account": [
+                "view-consent"
+              ]
+            }
+          },
+          "clientRole": true,
+          "containerId": "${id.32}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.35}",
+          "name": "view-groups",
+          "description": "${role_view-groups}",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "${id.32}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.36}",
+          "name": "view-consent",
+          "description": "${role_view-consent}",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "${id.32}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.37}",
+          "name": "manage-account",
+          "description": "${role_manage-account}",
+          "composite": true,
+          "composites": {
+            "client": {
+              "account": [
+                "manage-account-links"
+              ]
+            }
+          },
+          "clientRole": true,
+          "containerId": "${id.32}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.38}",
+          "name": "delete-account",
+          "description": "${role_delete-account}",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "${id.32}",
+          "attributes": {}
+        },
+        {
+          "id": "${id.39}",
+          "name": "view-applications",
+          "description": "${role_view-applications}",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "${id.32}",
+          "attributes": {}
+        }
+      ],
+      "fixture-runtime-denied": []
+    }
+  },
+  "users": [
+    {
+      "$realm_ref": "users:analyst"
+    },
+    {
+      "$realm_ref": "users:viewer"
+    },
+    {
+      "$realm_ref": "users:service-account-fixture-gateway-service"
+    },
+    {
+      "$realm_ref": "users:service-account-fixture-other-service"
+    },
+    {
+      "$realm_ref": "users:service-account-fixture-runtime-denied"
+    },
+    {
+      "$realm_ref": "users:service-account-fixture-runtime-operator"
+    },
+    {
+      "id": "${id.management.console-realm-user}",
+      "username": "service-account-fixture-console-realm-coordinator",
+      "enabled": true,
+      "serviceAccountClientId": "fixture-console-realm-coordinator",
+      "clientRoles": {
+        "realm-management": [
+          "manage-clients",
+          "view-clients",
+          "query-clients",
+          "manage-identity-providers",
+          "view-identity-providers",
+          "view-realm"
+        ]
+      }
+    }
+  ],
+  "scopeMappings": [
+    {
+      "$realm_ref": "scopeMappings:0"
+    },
+    {
+      "$realm_ref": "scopeMappings:1"
+    }
+  ],
+  "clients": [
+    {
+      "$realm_ref": "clients:account"
+    },
+    {
+      "$realm_ref": "clients:account-console"
+    },
+    {
+      "$realm_ref": "clients:admin-cli"
+    },
+    {
+      "id": "${id.30}",
+      "clientId": "broker",
+      "name": "${client_broker}",
+      "surrogateAuthRequired": false,
+      "enabled": true,
+      "alwaysDisplayInConsole": false,
+      "clientAuthenticatorType": "client-secret",
+      "redirectUris": [],
+      "webOrigins": [],
+      "notBefore": 0,
+      "bearerOnly": true,
+      "consentRequired": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "publicClient": false,
+      "frontchannelLogout": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "realm_client": "true",
+        "post.logout.redirect.uris": "+"
+      },
+      "authenticationFlowBindingOverrides": {},
+      "fullScopeAllowed": false,
+      "nodeReRegistrationTimeout": 0,
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "roles",
+        "profile",
+        "basic",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "organization",
+        "microprofile-jwt"
+      ]
+    },
+    {
+      "id": "${id.49}",
+      "clientId": "fixture-gateway-service",
+      "surrogateAuthRequired": false,
+      "enabled": true,
+      "alwaysDisplayInConsole": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${client_secret.management.fixture-gateway-service}",
+      "redirectUris": [],
+      "webOrigins": [],
+      "notBefore": 0,
+      "bearerOnly": false,
+      "consentRequired": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "frontchannelLogout": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "realm_client": "false",
+        "identity-demo-owner": "${owner}",
+        "post.logout.redirect.uris": "+"
+      },
+      "authenticationFlowBindingOverrides": {},
+      "fullScopeAllowed": false,
+      "nodeReRegistrationTimeout": -1,
+      "protocolMappers": [
+        {
+          "id": "${id.50}",
+          "name": "adapter-https-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "included.custom.audience": "https://fixture-protected-adapter.${core_namespace}.svc:8443/mcp",
+            "userinfo.token.claim": "false"
+          }
+        },
+        {
+          "id": "${id.51}",
+          "name": "adapter-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "included.custom.audience": "http://fixture-protected-adapter.${core_namespace}.svc:8083/mcp",
+            "userinfo.token.claim": "false"
+          }
+        }
+      ],
+      "defaultClientScopes": [
+        "service_account"
+      ],
+      "optionalClientScopes": [
+        "mcp:read"
+      ]
+    },
+    {
+      "id": "${id.52}",
+      "clientId": "fixture-other-service",
+      "surrogateAuthRequired": false,
+      "enabled": true,
+      "alwaysDisplayInConsole": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${client_secret.management.fixture-other-service}",
+      "redirectUris": [],
+      "webOrigins": [],
+      "notBefore": 0,
+      "bearerOnly": false,
+      "consentRequired": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "frontchannelLogout": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "realm_client": "false",
+        "identity-demo-owner": "${owner}",
+        "post.logout.redirect.uris": "+"
+      },
+      "authenticationFlowBindingOverrides": {},
+      "fullScopeAllowed": false,
+      "nodeReRegistrationTimeout": -1,
+      "protocolMappers": [
+        {
+          "id": "${id.53}",
+          "name": "adapter-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "included.custom.audience": "http://fixture-protected-adapter.${core_namespace}.svc:8083/mcp",
+            "userinfo.token.claim": "false"
+          }
+        },
+        {
+          "id": "${id.54}",
+          "name": "adapter-https-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "included.custom.audience": "https://fixture-protected-adapter.${core_namespace}.svc:8443/mcp",
+            "userinfo.token.claim": "false"
+          }
+        }
+      ],
+      "defaultClientScopes": [
+        "service_account"
+      ],
+      "optionalClientScopes": [
+        "mcp:read"
+      ]
+    },
+    {
+      "id": "${id.55}",
+      "clientId": "fixture-runtime-denied",
+      "surrogateAuthRequired": false,
+      "enabled": true,
+      "alwaysDisplayInConsole": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${client_secret.management.fixture-runtime-denied}",
+      "redirectUris": [],
+      "webOrigins": [],
+      "notBefore": 0,
+      "bearerOnly": false,
+      "consentRequired": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "frontchannelLogout": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "realm_client": "false",
+        "identity-demo-owner": "${owner}",
+        "post.logout.redirect.uris": "+"
+      },
+      "authenticationFlowBindingOverrides": {},
+      "fullScopeAllowed": false,
+      "nodeReRegistrationTimeout": -1,
+      "protocolMappers": [
+        {
+          "id": "${id.56}",
+          "name": "runtime-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "included.custom.audience": "identity-demo-runtime",
+            "userinfo.token.claim": "false"
+          }
+        },
+        {
+          "id": "${id.57}",
+          "name": "runtime-role",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "userinfo.token.claim": "false"
+          }
+        }
+      ],
+      "defaultClientScopes": [
+        "service_account"
+      ],
+      "optionalClientScopes": []
+    },
+    {
+      "id": "${id.58}",
+      "clientId": "fixture-runtime-operator",
+      "surrogateAuthRequired": false,
+      "enabled": true,
+      "alwaysDisplayInConsole": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${client_secret.management.fixture-runtime-operator}",
+      "redirectUris": [],
+      "webOrigins": [],
+      "notBefore": 0,
+      "bearerOnly": false,
+      "consentRequired": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "frontchannelLogout": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "realm_client": "false",
+        "identity-demo-owner": "${owner}",
+        "post.logout.redirect.uris": "+"
+      },
+      "authenticationFlowBindingOverrides": {},
+      "fullScopeAllowed": false,
+      "nodeReRegistrationTimeout": -1,
+      "protocolMappers": [
+        {
+          "id": "${id.59}",
+          "name": "runtime-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "included.custom.audience": "identity-demo-runtime",
+            "userinfo.token.claim": "false"
+          }
+        },
+        {
+          "id": "${id.60}",
+          "name": "runtime-role",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "userinfo.token.claim": "false"
+          }
+        }
+      ],
+      "defaultClientScopes": [
+        "service_account"
+      ],
+      "optionalClientScopes": []
+    },
+    {
+      "$realm_ref": "clients:identity-demo-ui"
+    },
+    {
+      "id": "${id.10}",
+      "clientId": "realm-management",
+      "name": "${client_realm-management}",
+      "surrogateAuthRequired": false,
+      "enabled": true,
+      "alwaysDisplayInConsole": false,
+      "clientAuthenticatorType": "client-secret",
+      "redirectUris": [],
+      "webOrigins": [],
+      "notBefore": 0,
+      "bearerOnly": true,
+      "consentRequired": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "publicClient": false,
+      "frontchannelLogout": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "realm_client": "true",
+        "post.logout.redirect.uris": "+"
+      },
+      "authenticationFlowBindingOverrides": {},
+      "fullScopeAllowed": false,
+      "nodeReRegistrationTimeout": 0,
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "roles",
+        "profile",
+        "basic",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "organization",
+        "microprofile-jwt"
+      ]
+    },
+    {
+      "$realm_ref": "clients:security-admin-console"
+    },
+    {
+      "id": "${id.management.console-realm}",
+      "clientId": "fixture-console-realm-coordinator",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${client_secret.management.fixture-console-realm-coordinator}",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "publicClient": false,
+      "fullScopeAllowed": true,
+      "redirectUris": [],
+      "webOrigins": [],
+      "attributes": {
+        "identity-demo-owner": "${owner}"
+      }
+    }
+  ],
+  "clientScopes": [
+    {
+      "$realm_ref": "clientScopes:roles"
+    },
+    {
+      "$realm_ref": "clientScopes:acr"
+    },
+    {
+      "$realm_ref": "clientScopes:offline_access"
+    },
+    {
+      "$realm_ref": "clientScopes:organization"
+    },
+    {
+      "$realm_ref": "clientScopes:role_list"
+    },
+    {
+      "$realm_ref": "clientScopes:microprofile-jwt"
+    },
+    {
+      "$realm_ref": "clientScopes:profile"
+    },
+    {
+      "$realm_ref": "clientScopes:phone"
+    },
+    {
+      "$realm_ref": "clientScopes:email"
+    },
+    {
+      "$realm_ref": "clientScopes:saml_organization"
+    },
+    {
+      "$realm_ref": "clientScopes:mcp:read"
+    },
+    {
+      "$realm_ref": "clientScopes:address"
+    },
+    {
+      "id": "${id.106}",
+      "name": "web-origins",
+      "description": "OpenID Connect scope for add allowed web origins to the access token",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "consent.screen.text": "",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "id": "${id.107}",
+          "name": "allowed web origins",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-allowed-origins-mapper",
+          "consentRequired": false,
+          "config": {
+            "introspection.token.claim": "true",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "$realm_ref": "clientScopes:service_account"
+    },
+    {
+      "$realm_ref": "clientScopes:basic"
+    }
+  ],
+  "defaultDefaultClientScopes": [
+    "role_list",
+    "saml_organization",
+    "profile",
+    "email",
+    "roles",
+    "web-origins",
+    "acr",
+    "basic"
+  ],
+  "enabledEventTypes": [],
+  "components": {
+    "org.keycloak.services.clientregistration.policy.ClientRegistrationPolicy": [
+      {
+        "id": "${id.115}",
+        "name": "Max Clients Limit",
+        "providerId": "max-clients",
+        "subType": "anonymous",
+        "subComponents": {},
+        "config": {
+          "max-clients": [
+            "200"
+          ]
+        }
+      },
+      {
+        "id": "${id.116}",
+        "name": "Allowed Protocol Mapper Types",
+        "providerId": "allowed-protocol-mappers",
+        "subType": "authenticated",
+        "subComponents": {},
+        "config": {
+          "allowed-protocol-mapper-types": [
+            "oidc-address-mapper",
+            "saml-role-list-mapper",
+            "saml-user-property-mapper",
+            "oidc-usermodel-attribute-mapper",
+            "saml-user-attribute-mapper",
+            "oidc-usermodel-property-mapper",
+            "oidc-sha256-pairwise-sub-mapper",
+            "oidc-full-name-mapper"
+          ]
+        }
+      },
+      {
+        "id": "${id.117}",
+        "name": "Full Scope Disabled",
+        "providerId": "scope",
+        "subType": "anonymous",
+        "subComponents": {},
+        "config": {}
+      },
+      {
+        "id": "${id.118}",
+        "name": "Allowed Registration Web Origins",
+        "providerId": "registration-web-origins",
+        "subType": "authenticated",
+        "subComponents": {},
+        "config": {}
+      },
+      {
+        "id": "${id.119}",
+        "name": "Consent Required",
+        "providerId": "consent-required",
+        "subType": "anonymous",
+        "subComponents": {},
+        "config": {}
+      },
+      {
+        "id": "${id.120}",
+        "name": "Trusted Hosts",
+        "providerId": "trusted-hosts",
+        "subType": "anonymous",
+        "subComponents": {},
+        "config": {
+          "host-sending-registration-request-must-match": [
+            "true"
+          ],
+          "client-uris-must-match": [
+            "true"
+          ]
+        }
+      },
+      {
+        "id": "${id.121}",
+        "name": "Allowed Protocol Mapper Types",
+        "providerId": "allowed-protocol-mappers",
+        "subType": "anonymous",
+        "subComponents": {},
+        "config": {
+          "allowed-protocol-mapper-types": [
+            "oidc-full-name-mapper",
+            "oidc-usermodel-property-mapper",
+            "oidc-address-mapper",
+            "oidc-sha256-pairwise-sub-mapper",
+            "oidc-usermodel-attribute-mapper",
+            "saml-user-property-mapper",
+            "saml-user-attribute-mapper",
+            "saml-role-list-mapper"
+          ]
+        }
+      },
+      {
+        "id": "${id.122}",
+        "name": "Allowed Registration Web Origins",
+        "providerId": "registration-web-origins",
+        "subType": "anonymous",
+        "subComponents": {},
+        "config": {}
+      },
+      {
+        "id": "${id.123}",
+        "name": "Allowed Client Scopes",
+        "providerId": "allowed-client-templates",
+        "subType": "anonymous",
+        "subComponents": {},
+        "config": {
+          "allow-default-scopes": [
+            "true"
+          ]
+        }
+      },
+      {
+        "id": "${id.124}",
+        "name": "Allowed Client Scopes",
+        "providerId": "allowed-client-templates",
+        "subType": "authenticated",
+        "subComponents": {},
+        "config": {
+          "allow-default-scopes": [
+            "true"
+          ]
+        }
+      }
+    ],
+    "org.keycloak.keys.KeyProvider": [
+      {
+        "id": "${id.125}",
+        "name": "aes-generated",
+        "providerId": "aes-generated",
+        "subComponents": {},
+        "config": {
+          "priority": [
+            "100"
+          ]
+        }
+      },
+      {
+        "id": "${id.126}",
+        "name": "rsa-generated",
+        "providerId": "rsa-generated",
+        "subComponents": {},
+        "config": {
+          "priority": [
+            "100"
+          ]
+        }
+      },
+      {
+        "id": "${id.127}",
+        "name": "hmac-generated-hs512",
+        "providerId": "hmac-generated",
+        "subComponents": {},
+        "config": {
+          "priority": [
+            "100"
+          ],
+          "algorithm": [
+            "HS512"
+          ]
+        }
+      },
+      {
+        "id": "${id.128}",
+        "name": "rsa-enc-generated",
+        "providerId": "rsa-enc-generated",
+        "subComponents": {},
+        "config": {
+          "priority": [
+            "100"
+          ],
+          "algorithm": [
+            "RSA-OAEP"
+          ]
+        }
+      }
+    ]
+  },
+  "requiredActions": [
+    {
+      "alias": "CONFIGURE_TOTP",
+      "name": "Configure OTP",
+      "providerId": "CONFIGURE_TOTP",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 10,
+      "config": {}
+    },
+    {
+      "$realm_ref": "requiredActions:Terms and Conditions"
+    },
+    {
+      "alias": "UPDATE_PASSWORD",
+      "name": "Update Password",
+      "providerId": "UPDATE_PASSWORD",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 30,
+      "config": {}
+    },
+    {
+      "$realm_ref": "requiredActions:Update Profile"
+    },
+    {
+      "$realm_ref": "requiredActions:Verify Email"
+    },
+    {
+      "$realm_ref": "requiredActions:Delete Account"
+    },
+    {
+      "$realm_ref": "requiredActions:Update Email"
+    },
+    {
+      "$realm_ref": "requiredActions:Webauthn Register"
+    },
+    {
+      "$realm_ref": "requiredActions:Webauthn Register Passwordless"
+    },
+    {
+      "$realm_ref": "requiredActions:Verify Profile"
+    },
+    {
+      "$realm_ref": "requiredActions:Delete Credential"
+    },
+    {
+      "$realm_ref": "requiredActions:Linking Identity Provider"
+    },
+    {
+      "$realm_ref": "requiredActions:Recovery Authentication Codes"
+    },
+    {
+      "$realm_ref": "requiredActions:Update User Locale"
+    }
+  ],
+  "keycloakVersion": "26.6.7.redhat-00003"
+}
